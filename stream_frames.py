@@ -55,11 +55,12 @@ class Bot:
     def __init__(self):
         # Used to only analyze the SU window
         su_rect = get_su_client_rect()
-        self.player_position = Bot.compute_player_position(su_rect)
-        print(f"self.player_position=")
+        self.player_position: Rect = Bot.compute_player_position(su_rect)
+        print(f"{self.player_position=}")
 
     @staticmethod
     def compute_player_position(client_dimensions: Rect) -> Rect:
+        """The top-left of the player sprite is drawn at the center of the screen"""
 
         # the player is always in the center of the window of the game
         #offset
@@ -80,16 +81,24 @@ class Bot:
 
         #BGR colors
         blue = (255, 0, 0)
+        purple = (255, 0, 255)
         green = (0, 255, 0)
         red = (0, 0, 255)
         yellow = (0, 255, 255)
         orange = (0, 215, 255)
 
         templates = {
+            # TemplateMeta(name="aurem-tile", path="assets/template-of-lies-floor-tile1.png", color=red),
             TemplateMeta(name="lister-shipwreck", path="assets/lister-shipwreck-inner.png", color=red),
             TemplateMeta(name="teleportation shrine", path="assets/teleportation-shrine-inner.png", color=blue),
+            TemplateMeta(name="Big Chest", path="assets/aurum-big-chest.png", color=yellow),
             TemplateMeta(name="Altar", path="assets/lister-god-part.png", color=green),
             TemplateMeta(name="Altar", path="assets/gonfurian-altar-min.png", color=yellow),
+            TemplateMeta(name="Altar", path="assets/aurum-altar.png", color=yellow),
+            TemplateMeta(name="Nether Portal", path="assets/nether-portal-frame1.png", color=orange),
+            TemplateMeta(name="Inscription Slate", path="assets/inscription-slate-inner.png", color=purple),
+            TemplateMeta(name="Treasure Map", path="assets/treasure_map_autum.png", color=orange),
+
             TemplateMeta(name="Divination Candle", path="assets/divination-candle-inner.png", color=orange),
             # NPCs in castle
             TemplateMeta(name="Menagerie NPC", path="assets/farm-npc-min.png", color=orange),
@@ -97,7 +106,6 @@ class Bot:
         }
 
 
-        # template = cv2.imread(Path('assets').joinpath('lister-teleportation-shrine.png').as_posix(), 0)
         mon = {"top": 38, "left": 0, "width": 958, "height": 483}
         title = "[MSS] SU Vision"
         with mss.mss() as sct:
@@ -125,8 +133,6 @@ class Bot:
 
 
                 # label player position
-                # center_left = (478, 274)
-                # end_center = (center_left[0] + 32, center_left[1] + 32)
                 cv2.rectangle(img_rgb, self.player_position.top_left().as_tuple(),
                               self.player_position.bottom_right().as_tuple(), (255, 255, 255), 2)
                 # label finding with text
