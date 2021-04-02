@@ -1,17 +1,23 @@
-from typing import Union, List
-
 import cv2
+import numpy as np
 import mss
-import numpy
-import time
-
-import skimage
 import win32gui
 import math
 
 from dataclasses import dataclass
 
+import background_subtract
+
+# BGR colors
+blue = (255, 0, 0)
+purple = (255, 0, 255)
+green = (0, 255, 0)
+red = (0, 0, 255)
+yellow = (0, 255, 255)
+orange = (0, 215, 255)
+
 TILE_SIZE = 32
+
 
 @dataclass(frozen=True)
 class TemplateMeta:
@@ -63,11 +69,22 @@ class Bot:
         # Used to only analyze the SU window
         self.su_client_rect = get_su_client_rect()
         self.player_position: Rect = Bot.compute_player_position(self.su_client_rect)
-        self.frame: numpy.typing.ArrayLike = None
+        self.frame: np.typing.ArrayLike = None
+        self.gray_frame: np.typing.ArrayLike = None
+
+        # Note: images must be read as unchanged when converting to grayscale since IM_READ_GRAYSCALE has platform specific conversion methods and difers from cv2.cv2.BGR2GRAy's implementation in cvtcolor
+        # This is needed to ensure the pixels match exactly for comparision, otherwhise the grayscale differs slightly
+        # https://docs.opencv.org/4.5.1/d4/da8/group__imgcodecs.html
+        self.floor_tile: np.typing.ArrayLike = cv2.imread("assets/floortiles/Yseros' Floor Tile-frame1.png", cv2.IMREAD_COLOR)
+        self.floor_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.floor_tile, cv2.COLOR_BGR2GRAY)
 
         self.grid_rect = Bot.compute_grid_rect(bottom_right_tile=Bot.bottom_right_tile(self.player_position),
                                                top_left_tile=Bot.top_left_tile(self.player_position))
-        print(f"{self.player_position=}")
+
+    def recalculate_player_position(self):
+        pass
+
+
 
     @staticmethod
     def compute_player_position(client_dimensions: Rect) -> Rect:
@@ -108,7 +125,7 @@ class Bot:
 
     @staticmethod
     def compute_grid_rect(top_left_tile: Point, bottom_right_tile: Point) -> Rect:
-        """slice of image that is is occuppied by realm tiles
+        """slice of image that is occuppied by realm tiles
         Rect returns is the (x,y) coords of the top-left tile, the width and height includes the tile size of the bottom-right tile
         All useable tile pixels
         """
@@ -120,26 +137,30 @@ class Bot:
 
     def draw_tiles(self):
 
-        chunk_shape = (TILE_SIZE, TILE_SIZE)
-        print(f"{self.frame.shape}")
-        # skimage.util.view_as_blocks(self.frame[self.top_left_tile().x:, ],)
+        for row in range(self.grid_rect.x, self.grid_rect.x+self.grid_rect.w, TILE_SIZE):
+            for col in range(self.grid_rect.y, self.grid_rect.y + self.grid_rect.h, TILE_SIZE):
+                # cv2.rectangle(self.frame, (row, col), (row + TILE_SIZE, col + TILE_SIZE), green, 1)
+                tile = self.gray_frame[col:col+TILE_SIZE, row:row+TILE_SIZE]
+                fg_mask = background_subtract.subtract_background_from_tile(floor_background_gray=self.floor_tile_gray, tile_gray=tile)
+                tile[:] = fg_mask
 
+    def recompute_grid_offset(self) -> Rect:
+        # find matching realm tile on map
+        # We use matchTemplate since the grid's alignment is not the same when the player is moving
+        # (the tiles smoothly slide to the next 32 increment)
+        res = cv2.matchTemplate(self.gray_frame, self.floor_tile_gray, cv2.TM_CCOEFF_NORMED)
+        min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+        threshold = 0.80
+
+        # Will the player being offset by a few pixels impact tile direction??
+
+
+
+        pass
 
     def run(self):
-        # 800x600 windowed mode
 
-        import cv2
-        from pathlib import Path
-        import numpy as np
-        from matplotlib import pyplot as plt
 
-        #BGR colors
-        blue = (255, 0, 0)
-        purple = (255, 0, 255)
-        green = (0, 255, 0)
-        red = (0, 0, 255)
-        yellow = (0, 255, 255)
-        orange = (0, 215, 255)
 
         templates = {
             # TemplateMeta(name="aurem-tile", path="assets/template-of-lies-floor-tile1.png", color=red),
@@ -162,14 +183,15 @@ class Bot:
 
 
         mon = {"top": self.su_client_rect.y, "left": self.su_client_rect.x, "width": self.su_client_rect.w, "height": self.su_client_rect.h}
-        title = "[MSS] SU Vision"
+        title = "SU Vision"
         with mss.mss() as sct:
             while True:
                 shot = sct.grab(mon)
-                img_rgb = numpy.asarray(shot)
+                img_rgb = np.asarray(shot)
                 self.frame = img_rgb
-                bot.draw_tiles()
                 img = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2GRAY)
+                self.gray_frame = img
+                bot.draw_tiles()
 
                 for template_struct in templates:
                     template = cv2.imread(template_struct.path, 0)
@@ -181,7 +203,7 @@ class Bot:
 
                     loc = np.where(res >= threshold)
                     for pt in zip(*loc[::-1]):
-                        cv2.rectangle(img_rgb, pt, (pt[0] + height, pt[1] + width), template_struct.color, 1)
+                        # cv2.rectangle(img_rgb, pt, (pt[0] + height, pt[1] + width), template_struct.color, 1)
                         # label finding with text
                         # cv2.putText(img_rgb, template_struct.name, (pt[0], pt[1] - 10), cv2.FONT_HERSHEY_PLAIN, 2, (0, 0, 0), 2)
                         # print(f"tile top-left: ({pt[0]},{pt[1]})")
@@ -191,14 +213,14 @@ class Bot:
                         pass
 
 
-
                 # label player position
-                cv2.rectangle(img_rgb, self.player_position.top_left().as_tuple(),
-                              self.player_position.bottom_right().as_tuple(), (255, 255, 255), 1)
+                # top_left = self.player_position.top_left().as_tuple()
+                # bottom_right = self.player_position.bottom_right().as_tuple()
+                # cv2.rectangle(img_rgb, top_left, bottom_right, (255, 255, 255), 1)
                 # label finding with text
 
-                cv2.imshow(title, img_rgb)
-                if cv2.waitKey(20) & 0xFF == ord("q"):
+                cv2.imshow(title, self.gray_frame)
+                if cv2.waitKey(15) & 0xFF == ord("q"):
                     cv2.destroyAllWindows()
                     break
 
