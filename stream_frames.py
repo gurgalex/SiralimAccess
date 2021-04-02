@@ -1,3 +1,5 @@
+from typing import Optional
+
 import cv2
 import numpy as np
 import mss
@@ -48,6 +50,11 @@ class Rect:
     def bottom_right(self) -> Point:
         return Point(x=self.x + self.w, y=self.y + self.h)
 
+    @classmethod
+    def from_cv2_loc(cls, cv2_loc: tuple, w: int, h: int):
+        return cls(x=cv2_loc[0], y=cv2_loc[1], w=w, h=h)
+
+
 
 
 def get_su_client_rect() -> Rect:
@@ -78,13 +85,7 @@ class Bot:
         self.floor_tile: np.typing.ArrayLike = cv2.imread("assets/floortiles/Yseros' Floor Tile-frame1.png", cv2.IMREAD_COLOR)
         self.floor_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.floor_tile, cv2.COLOR_BGR2GRAY)
 
-        self.grid_rect = Bot.compute_grid_rect(bottom_right_tile=Bot.bottom_right_tile(self.player_position),
-                                               top_left_tile=Bot.top_left_tile(self.player_position))
-
-    def recalculate_player_position(self):
-        pass
-
-
+        self.grid_rect: Optional[Rect] = None
 
     @staticmethod
     def compute_player_position(client_dimensions: Rect) -> Rect:
@@ -100,24 +101,22 @@ class Bot:
                     w=TILE_SIZE, h=TILE_SIZE)
 
     @staticmethod
-    def top_left_tile(player_position: Rect) -> Point:
+    def top_left_tile(aligned_floor_tile: Rect, client_rect: Rect) -> Point:
 
-        player_x = player_position.top_left().x
-        player_y = player_position.top_left().y
 
-        top_left_pt =  Point(x=player_x - (player_x // TILE_SIZE) * TILE_SIZE,
-                     y=player_y - (player_y // TILE_SIZE) * TILE_SIZE)
-        print(f"{top_left_pt=}")
+        top_left_pt =  Point(x=aligned_floor_tile.x - (aligned_floor_tile.x // TILE_SIZE) * TILE_SIZE,
+                     y=aligned_floor_tile.y - (aligned_floor_tile.y // TILE_SIZE) * TILE_SIZE)
         return top_left_pt
 
     @staticmethod
-    def bottom_right_tile(player_position: Rect) -> Point:
+    def bottom_right_tile(aligned_tile: Rect, client_rect: Rect) -> Point:
         """Returns top-left coords of bottom-most rectangle"""
-        player_x = player_position.top_left().x
-        player_y = player_position.top_left().y
-        bottom_right_pt = Point(x=player_x + (player_x // TILE_SIZE) * TILE_SIZE - TILE_SIZE,
-                     y=player_y + (player_y // TILE_SIZE) * TILE_SIZE - TILE_SIZE)
-        print(f"{bottom_right_pt=}")
+
+        #todo: Use floor tile alignment and client rect to compute bottom right tile
+
+        bottom_right_pt = Point(x=aligned_tile.x + ((client_rect.w - aligned_tile.x) // TILE_SIZE) * TILE_SIZE - TILE_SIZE,
+                                y=aligned_tile.y + ((client_rect.h - aligned_tile.y) // TILE_SIZE) * TILE_SIZE - TILE_SIZE
+                                )
         return bottom_right_pt
 
 
@@ -129,9 +128,7 @@ class Bot:
         Rect returns is the (x,y) coords of the top-left tile, the width and height includes the tile size of the bottom-right tile
         All useable tile pixels
         """
-        print(f"width = {bottom_right_tile.x=} - {top_left_tile.x=}")
         width = bottom_right_tile.x - top_left_tile.x + TILE_SIZE
-        print(f"{width=}")
         height = bottom_right_tile.y - top_left_tile.y + TILE_SIZE
         return Rect(x=top_left_tile.x, y=top_left_tile.y, w=width, h=height)
 
@@ -144,7 +141,7 @@ class Bot:
                 fg_mask = background_subtract.subtract_background_from_tile(floor_background_gray=self.floor_tile_gray, tile_gray=tile)
                 tile[:] = fg_mask
 
-    def recompute_grid_offset(self) -> Rect:
+    def recompute_grid_offset(self):
         # find matching realm tile on map
         # We use matchTemplate since the grid's alignment is not the same when the player is moving
         # (the tiles smoothly slide to the next 32 increment)
@@ -152,11 +149,14 @@ class Bot:
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
         threshold = 0.80
 
+        tile = Rect.from_cv2_loc(max_loc, w=TILE_SIZE, h=TILE_SIZE)
+
         # Will the player being offset by a few pixels impact tile direction??
 
+        self.grid_rect = Bot.compute_grid_rect(top_left_tile=Bot.top_left_tile(aligned_floor_tile=tile, client_rect=self.su_client_rect),
+                              bottom_right_tile=Bot.bottom_right_tile(aligned_tile=tile, client_rect=self.su_client_rect))
 
 
-        pass
 
     def run(self):
 
@@ -187,13 +187,13 @@ class Bot:
         with mss.mss() as sct:
             while True:
                 shot = sct.grab(mon)
-                img_rgb = np.asarray(shot)
-                self.frame = img_rgb
-                img = cv2.cvtColor(img_rgb, cv2.COLOR_BGR2GRAY)
-                self.gray_frame = img
+                self.frame = np.asarray(shot)
+                self.gray_frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+                self.recompute_grid_offset()
                 bot.draw_tiles()
 
                 for template_struct in templates:
+                    continue
                     template = cv2.imread(template_struct.path, 0)
 
                     height, width = template.shape[::-1]
