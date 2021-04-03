@@ -5,6 +5,9 @@ import numpy as np
 import mss
 import win32gui
 import math
+import time
+from hash_image import ImageInfo, HashDecor
+from pathlib import Path
 
 from dataclasses import dataclass
 
@@ -55,6 +58,19 @@ class Rect:
         return cls(x=cv2_loc[0], y=cv2_loc[1], w=w, h=h)
 
 
+def cache_image_hashes_of_decorations() -> HashDecor:
+    errors = 0
+    hash_decor = HashDecor()
+    for img_path in Path("assets_padded/").glob("*/*.png"):
+        img = cv2.imread(img_path.as_posix(), cv2.IMREAD_UNCHANGED)
+        metadata = ImageInfo(name=img_path.stem)
+        try:
+            hash_decor.hash_transparent_bgra(img, metadata)
+        except TypeError:
+            errors += 1
+            print(f"failed scanning: {img_path.name}")
+
+    return hash_decor
 
 
 def get_su_client_rect() -> Rect:
@@ -86,6 +102,10 @@ class Bot:
         self.floor_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.floor_tile, cv2.COLOR_BGR2GRAY)
 
         self.grid_rect: Optional[Rect] = None
+
+        # precompute image hashes
+        # self.hashes: dict[bytes, ImageInfo] = cache_image_hashes_of_decorations()
+        self.hashes = None
 
     @staticmethod
     def compute_player_position(client_dimensions: Rect) -> Rect:
@@ -138,8 +158,22 @@ class Bot:
             for col in range(self.grid_rect.y, self.grid_rect.y + self.grid_rect.h, TILE_SIZE):
                 # cv2.rectangle(self.frame, (row, col), (row + TILE_SIZE, col + TILE_SIZE), green, 1)
                 tile = self.gray_frame[col:col+TILE_SIZE, row:row+TILE_SIZE]
-                fg_mask = background_subtract.subtract_background_from_tile(floor_background_gray=self.floor_tile_gray, tile_gray=tile)
-                tile[:] = fg_mask
+                fg_only = background_subtract.subtract_background_from_tile(floor_background_gray=self.floor_tile_gray, tile_gray=tile)
+                tile[:] = fg_only
+
+                try:
+                    img_info = self.hashes[tile.tobytes()]
+                    cv2.rectangle(self.gray_frame, (row, col), (row + TILE_SIZE, col + TILE_SIZE), 128, 1)
+                    # label finding with text
+                    cv2.putText(self.gray_frame, img_info.name, (row, col - 10), cv2.FONT_HERSHEY_PLAIN, 0.8, 255, 1)
+                    # print(f"tile top-left: ({pt[0]},{pt[1]})")
+
+                    # print directions
+                    # print(f"player is ({int(round((pt[0]-self.player_position.top_left().x)/TILE_SIZE))},{int(round((pt[1]-self.player_position.top_left().y)/TILE_SIZE))}) from {template_struct.name}")
+
+                except KeyError as e:
+                    pass
+
 
     def recompute_grid_offset(self):
         # find matching realm tile on map
@@ -148,6 +182,10 @@ class Bot:
         res = cv2.matchTemplate(self.gray_frame, self.floor_tile_gray, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
         threshold = 0.80
+        if max_val <= threshold:
+            pass
+            # maybe default to center?
+            # print(f"WARNING: Can't find grid, threshold not high enough: {max_loc=}, {max_val=}")
 
         tile = Rect.from_cv2_loc(max_loc, w=TILE_SIZE, h=TILE_SIZE)
 
@@ -214,9 +252,9 @@ class Bot:
 
 
                 # label player position
-                # top_left = self.player_position.top_left().as_tuple()
-                # bottom_right = self.player_position.bottom_right().as_tuple()
-                # cv2.rectangle(img_rgb, top_left, bottom_right, (255, 255, 255), 1)
+                top_left = self.player_position.top_left().as_tuple()
+                bottom_right = self.player_position.bottom_right().as_tuple()
+                cv2.rectangle(self.gray_frame, top_left, bottom_right, (255), 1)
                 # label finding with text
 
                 cv2.imshow(title, self.gray_frame)
@@ -229,5 +267,6 @@ if __name__ == "__main__":
     bot = Bot()
     print(f"{bot.su_client_rect=}")
     print(f"{bot.grid_rect=}")
-
+    bot.hashes = cache_image_hashes_of_decorations()
+    print(f"hashed {len(bot.hashes)} images")
     bot.run()

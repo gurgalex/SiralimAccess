@@ -7,7 +7,7 @@ import time
 import win32gui
 import math
 import pytesseract
-
+from stream_frames import TILE_SIZE
 import numpy as np
 from numpy.typing import ArrayLike
 from time import sleep
@@ -28,17 +28,22 @@ def detect_green_text(image) -> np.array:
     return mask
 
 
+def next_multiple(number: int, multiple: int) -> int:
+    return multiple * (1 + (number - 1) // multiple)
+
 def save_decoration_as_transparent_cropped(decor_rgba_image, filename):
     gray = cv2.cvtColor(decor_rgba_image, cv2.COLOR_RGB2GRAY)
 
-    # All non-block pixels are set as opaque (visible), all others are set as transparent (0) in the alpha channel
+    # All non-black pixels are set as opaque (visible), all others are set as transparent (0) in the alpha channel
     _, alpha = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY)
     background_marked_as_transparent_img = cv2.bitwise_and(decor_rgba_image, decor_rgba_image, mask=alpha)
 
+    # find minimum crop rectangle to fit decoration in
     points = cv2.findNonZero(alpha)
     x, y, w, h = cv2.boundingRect(points)
 
-    crop_img = background_marked_as_transparent_img[y:y+h, x:x+w]
+    # pad image in 32 pixel dimensions in 32 px increments
+    crop_img = background_marked_as_transparent_img[:next_multiple(y+h, TILE_SIZE), :next_multiple(x+w, TILE_SIZE)]
     cv2.imwrite(f"{filename}", crop_img)
     return crop_img
 
@@ -49,10 +54,11 @@ title = "SU Vision"
 with mss.mss() as sct:
     bot = Bot()
     player_pos = bot.player_position
-    cv2.namedWindow(title, cv2.WINDOW_NORMAL)
+    cv2.namedWindow(title, cv2.WINDOW_GUI_EXPANDED)
     pause_collection = True
+    c_title = "controls"
 
-    decoration_mon = {"top": player_pos.top_left().y, "left": player_pos.top_left().x - 16, "width": 512, "height": 512}
+    decoration_mon = {"top": bot.su_client_rect.y + bot.player_position.y, "left": bot.su_client_rect.x + bot.player_position.x, "width": 256, "height": 256}
     print(f"{decoration_mon=}")
 
     old_line = ""
@@ -76,7 +82,7 @@ with mss.mss() as sct:
 
         img_gray = cv2.cvtColor(decoration_img, cv2.COLOR_BGR2GRAY)
         old_len_hash = len(hashes)
-        hashes.add(hash(img_gray.tobytes()))
+        hashes.add(img_gray.tobytes())
 
         cv2.imshow(title, decoration_img)
         if len(hashes) == old_len_hash:
@@ -110,7 +116,7 @@ with mss.mss() as sct:
                 frame = 1
             else:
                 frame += 1
-            filename = f"assets/utility-npcs/{single_line}-frame{frame}.png"
+            filename = f"assets_padded/misc/{single_line}-frame{frame}.png"
             cropped_decoration_mg = save_decoration_as_transparent_cropped(decoration_img, filename=filename)
             print(f"saved image as {filename}")
             cv2.imshow(title, cropped_decoration_mg)
