@@ -1,0 +1,8 @@
+short_name = "The Barrens Cactus (Short)"
+long_name = "The Barrens Cactus (Short)"
+realm = "The Barrens"
+item_type = "Plant"
+is_quest_item = false
+is_floor_tile = false
+is_global_realm_item = false
+is_project_item = false

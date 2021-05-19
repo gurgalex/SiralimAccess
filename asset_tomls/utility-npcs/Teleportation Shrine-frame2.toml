@@ -1,0 +1,7 @@
+short_name = "Teleportation Shrine"
+long_name = "Teleportation Shrine"
+item_type = "Utility-NPC"
+is_quest_item = false
+is_floor_tile = false
+is_global_realm_item = true
+is_project_item = false

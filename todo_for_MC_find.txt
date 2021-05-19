@@ -1,0 +1,23 @@
+Todo: Detect the Main Character animations for each direction without needing hundreds of sprite sheets
+
+Todo: Organize bot into state action of the game
+* Loading game screen
+* Thylacine logo screen
+* Controller pad screen
+* TItle screen
+* Save select screen
+* Castle screen
+* Realm screen (for each realm)s
+
+
+Idea: Use floor tiles to find area that have an object on that tile (it won't match)
+
+Todo for tomorrow
+Attach metadata to assets
+* Realm quest?
+* realm they are in
+* item type (altar, breakable, plant, etc)
+
+Todo
+Figure out how to track enemies
+Maybe track the grid of my creatures, and search for any areas around that have a gap + detecting an object that could be creature?
