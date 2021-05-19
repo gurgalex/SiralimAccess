@@ -1,0 +1,8 @@
+short_name = "Frostbite Caverns Skeletal Hand"
+long_name = "Frostbite Caverns Skeletal Hand"
+realm = "Frostbite Caverns"
+item_type = "generic"
+is_quest_item = false
+is_floor_tile = false
+is_global_realm_item = false
+is_project_item = false

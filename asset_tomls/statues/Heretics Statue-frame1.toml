@@ -1,0 +1,8 @@
+short_name = "Heretics Statue"
+long_name = "Heretics Statue"
+realm = "Kingdom of Heretics"
+item_type = "Statue"
+is_quest_item = false
+is_floor_tile = false
+is_global_realm_item = false
+is_project_item = false

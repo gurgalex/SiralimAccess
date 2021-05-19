@@ -1,0 +1,2 @@
+(479, 242) x, y.  Topleft of main character
+client size = 958, 483

@@ -1,0 +1,7 @@
+short_name = "Wall"
+long_name = "Erebyss Wall"
+item_type = "Wall"
+is_quest_item = false
+is_floor_tile = false
+is_global_realm_item = false
+is_project_item = false
