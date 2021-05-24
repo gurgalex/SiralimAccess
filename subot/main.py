@@ -367,39 +367,6 @@ class Bot:
                               bottom_right_tile=Bot.bottom_right_tile(aligned_tile=tile, client_rect=self.su_client_rect))
 
 
-    def match_templates(self):
-        threshold = 0.95
-        for template in templates:
-            w, h = template.data.shape[::-1]
-            res = cv2.matchTemplate(self.gray_frame, template.data, cv2.TM_CCOEFF_NORMED)
-            loc = np.where(res >= threshold)
-            for pt in zip(*loc[::-1]):
-                cv2.rectangle(self.frame, pt, (pt[0] + w, pt[1] + h), (0, 0, 255), 2)
-
-    def match_template_optimized(self):
-        tile = np.zeros((32, 32), dtype=np.uint8)
-        diff_tile = np.zeros((32, 32), dtype=np.uint8)
-
-        view = view_as_blocks(self.gray_frame[self.grid_rect.y:self.grid_rect.y+self.grid_rect.h, self.grid_rect.x:self.grid_rect.x + self.grid_rect.w], block_shape=(32,32))
-        flatten_view = view.reshape(view.shape[0], view.shape[1], -1)
-        cv2.equalizeHist(flatten_view, dst=tile)
-        cv2.absdiff(tile, self.gray_frame[:32, :32], dst=diff_tile)
-
-        # for i in range(self.gray_frame.shape[0]//TILE_SIZE):
-        #     for j in range(self.gray_frame.shape[1]//TILE_SIZE):
-        #         for template in templates:
-        #             cv2.equalizeHist(self.gray_frame[:32, :32], dst=tile)
-        #             cv2.absdiff(tile, self.gray_frame[:32, :32], dst=diff_tile)
-
-        # cv2.resize(self.gray_frame, dsize=(self.gray_frame.shape[1]//DOWNSCALE_FACTOR, self.gray_frame.shape[0]//DOWNSCALE_FACTOR), interpolation=cv2.INTER_AREA, dst=self.resized_frame)
-        # threshold = 0.98
-        # for template in templates:
-        #     res = cv2.matchTemplate(self.resized_frame, template.data, cv2.TM_CCOEFF_NORMED)
-        #     # min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        #     loc = np.where(res >= threshold)
-        #     for pt in zip(*loc[::-1]):
-        #         # cv2.rectangle(self.frame, pt, (pt[0] + TILE_SIZE, pt[1] + TILE_SIZE), (0, 0, 255), 2)
-        #         cv2.rectangle(self.resized_frame, pt, (pt[0] + TILE_SIZE//DOWNSCALE_FACTOR, pt[1] + TILE_SIZE//DOWNSCALE_FACTOR), 0, 1)
 
     def enter_realm_scanner(self):
         # check if still in realm
@@ -482,7 +449,6 @@ class Bot:
         mon = {"top": self.su_client_rect.y, "left": self.su_client_rect.x, "width": self.su_client_rect.w, "height": self.su_client_rect.h}
         iters = 0
         every = 5
-        from time import time
         self.player_position_tile = TileCoord(x=self.player_position.x // TILE_SIZE,
                                               y=self.player_position.y // TILE_SIZE)
 
@@ -490,12 +456,11 @@ class Bot:
             while True:
                 self.important_tile_locations.clear()
                 if iters % every == 0:
-                    start = time()
+                    start = time.time()
                 shot = sct.grab(mon)
 
                 self.frame = np.asarray(shot)
                 cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
-                # self.resized_frame = np.zeros((self.gray_frame.shape[0] // 2, self.gray_frame.shape[1] // 2), dtype=np.uint8)
                 self.recompute_grid_offset()
                 self.grid_slice_gray: np.typing.ArrayLike = self.gray_frame[self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
                                   self.grid_rect.x:self.grid_rect.x + self.grid_rect.w]
@@ -534,27 +499,18 @@ class Bot:
                     self.enter_realm_scanner()
                 elif self.mode is BotMode.CASTLE:
                     bot.enter_castle_scanner()
-                # bot.match_templates()
-                # self.match_template_optimized()
-
 
                 # label player position
-                # top_left = (self.player_position.x * TILE_SIZE, self.player_position.y * TILE_SIZE)
-                # bottom_right = ((self.player_position.x + 1)*TILE_SIZE, (self.player_position.y+1)*TILE_SIZE)
-
                 top_left = self.player_position.top_left().as_tuple()
                 bottom_right = self.player_position.bottom_right().as_tuple()
                 cv2.rectangle(self.grid_slice_gray, top_left, bottom_right, (255), 1)
-                # label finding with text
 
-                # area = self.grid_slice[(self.player_position.y-8)*TILE_SIZE:(self.player_position.y+8)*TILE_SIZE,
-                #                   (self.player_position.x-8)*TILE_SIZE:(self.player_position.x+8)*TILE_SIZE]
                 cv2.imshow(title, self.output_debug_gray)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     cv2.destroyAllWindows()
                     break
                 if iters % every == 0:
-                    end = time()
+                    end = time.time()
                     print(f"FPS: {1/((end-start))}")
                 iters += 1
 
