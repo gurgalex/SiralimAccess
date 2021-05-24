@@ -9,21 +9,18 @@ import pytesseract
 import math
 import time
 from skimage.util import view_as_blocks
-from sqlalchemy import create_engine
 
-from read_tags import AssetDB, Asset
+from subot.read_tags import AssetDB, Asset
 
 from numpy.typing import ArrayLike
 
-from hash_image import ImageInfo, HashDecor, CastleDecorationDict
+from subot.hash_image import ImageInfo, HashDecor, CastleDecorationDict
 from pathlib import Path
 
 from dataclasses import dataclass
 
-import background_subtract
-import utils as bot_utils
+import subot.background_subtract as background_subtract
 
-from sqlalchemy.orm import sessionmaker
 from models import Sprite, SpriteFrame, Quest, RealmLookup, Realm, SpriteType
 from models import Session
 
@@ -76,33 +73,13 @@ class Rect:
         return cls(x=cv2_loc[0], y=cv2_loc[1], w=w, h=h)
 
 
-
-
-def hash_realm_items():
-    phasher = cv2.img_hash.PHash_create()
-    errors = 0
-    hash_decor = HashDecor()
-    for img_path in Path("assets_padded/").glob("*/*.png"):
-        img = cv2.imread(img_path.as_posix(), cv2.IMREAD_UNCHANGED)
-        metadata = ImageInfo(long_name=img_path.stem)
-        try:
-            # only cache 32x32 top-left portion of image
-            #one_tile_worth_img: ArrayLike = img[:32, :32, :]
-            # bottom right "works", just need to specialize on some images which have blank spaces
-            one_tile_worth_img: ArrayLike = img[-32:, :32, :]
-
-        except TypeError:
-            errors += 1
-            print(f"failed scanning: {img_path.name}")
-
-
 def get_su_client_rect() -> Rect:
     """Returns Rect class of the Siralim Ultimate window. Coordinates are without title bar and borders
     :raises Exception if the game is not open
     """
     su_hwnd = win32gui.FindWindow(None, "Siralim Ultimate")
-    su_is_not_open = su_hwnd == 0
-    if su_is_not_open:
+    su_is_open = su_hwnd >= 0
+    if not su_is_open:
         raise Exception("Siralim Ultimate is not open")
     print(su_hwnd)
     rect = win32gui.GetWindowRect(su_hwnd)
@@ -188,7 +165,7 @@ class Bot:
         # Note: images must be read as unchanged when converting to grayscale since IM_READ_GRAYSCALE has platform specific conversion methods and difers from cv2.cv2.BGR2GRAy's implementation in cvtcolor
         # This is needed to ensure the pixels match exactly for comparision, otherwhise the grayscale differs slightly
         # https://docs.opencv.org/4.5.1/d4/da8/group__imgcodecs.html
-        self.castle_tile: np.typing.ArrayLike = cv2.imread("assets_padded/floortiles/Standard Floor Tile-frame1.png", cv2.IMREAD_COLOR)
+        self.castle_tile: np.typing.ArrayLike = cv2.imread("../assets_padded/floortiles/Standard Floor Tile-frame1.png", cv2.IMREAD_COLOR)
 
         self.castle_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.castle_tile, cv2.COLOR_BGR2GRAY)
         self.realm_tile: Asset = None

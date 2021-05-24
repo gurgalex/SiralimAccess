@@ -1,7 +1,7 @@
 import mss
 import cv2
 import numpy as np
-from stream_frames import Bot
+from main import Bot
 title = "SU Vision"
 with mss.mss() as sct:
     bot = Bot()

@@ -4,10 +4,10 @@ from typing import Union, List
 import cv2
 import mss
 import pytesseract
-from stream_frames import TILE_SIZE
+from main import TILE_SIZE
 import numpy as np
 
-from stream_frames import Bot, Rect
+from main import Bot, Rect
 from background_subtract import subtract_background_color_tile
 
 
@@ -45,7 +45,7 @@ class Capture:
         self.menu_img_rgb = None
         self.old_line = ""
         self.frame = 1
-        self.castle_tile = cv2.imread("assets_padded/floortiles/Zonte's Floor Tile-frame1.png", cv2.IMREAD_UNCHANGED)
+        self.castle_tile = cv2.imread("../assets_padded/floortiles/Zonte's Floor Tile-frame1.png", cv2.IMREAD_UNCHANGED)
 
     def detect_green_text(self, image) -> np.array:
         """Using a source image of RGB color, extract highlighted menu items which are a green color"""
@@ -96,7 +96,7 @@ class Capture:
 
     def run(self):
 
-        folder_to_save_in = Path("assets_padded/NPCs/")
+        folder_to_save_in = Path("../assets_padded/NPCs/")
 
         CAPTURE_UNNAMED_TILE = "capture_tile"
         CAPTURE_DECORATION = "capture_decoration"
