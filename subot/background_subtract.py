@@ -38,11 +38,11 @@ if __name__ == "__main__":
     with mss.mss() as sct:
         title = "window"
         cv2.namedWindow(title, cv2.WINDOW_GUI_NORMAL)
-        floor_tile_path = "assets/floortiles/Yseros' Floor Tile-frame1.png"
+        floor_tile_path = "../assets/floortiles/Yseros' Floor Tile-frame1.png"
 
         floor_tile = cv2.imread(floor_tile_path, cv2.IMREAD_UNCHANGED)
         # floor_tile_gray = cv2.cvtColor(floor_tile, cv2.COLOR_RGBA2GRAY)
-        frame_path = "test_sets/issue-images/treasure-chest-yserors-issue.png"
+        frame_path = "../test_sets/issue-images/treasure-chest-yserors-issue.png"
         frame = cv2.imread(frame_path, cv2.IMREAD_UNCHANGED)
         # frame_gray = cv2.cvtColor(frame, cv2.COLOR_RGBA2GRAY)
 

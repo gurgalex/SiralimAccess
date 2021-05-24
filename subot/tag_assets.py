@@ -233,12 +233,12 @@ quest_to_item_mapping = {
 }
 
 ct = 0
-for asset_path in Path("assets_padded/").glob("**/**/*.png"):
+for asset_path in Path("../assets_padded/").glob("**/**/*.png"):
     try:
         asset = Asset(path=asset_path)
         toml_fields = asset.as_dict()
         # print(toml.dumps(toml_fields))
-        toml_path = Path("asset_tomls").joinpath(asset_path.relative_to("assets_padded"))
+        toml_path = Path("../asset_tomls").joinpath(asset_path.relative_to("assets_padded"))
         toml_path = toml_path.with_suffix(".toml")
         toml_path.parent.mkdir(parents=True, exist_ok=True)
         toml_path.touch()

@@ -7,7 +7,7 @@ class TypoReplacement:
     replacement: str
 
 ct = 0
-for path in Path("assets_padded/").glob("*/*.png"):
+for path in Path("../assets_padded/").glob("*/*.png"):
     try:
         path.as_posix().encode("ascii")
         err_snips = [TypoReplacement(err_snip="{", replacement="("),

@@ -5,10 +5,8 @@ from pathlib import Path
 import toml
 from enum import Enum
 import cv2
-import numpy as np
 from numpy.typing import ArrayLike
-import hashlib
-from utils import extract_mask_from_rgba_img
+from subot.utils import extract_mask_from_rgba_img
 
 @dataclass(frozen=True)
 class Asset:
