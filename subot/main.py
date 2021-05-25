@@ -35,7 +35,7 @@ yellow = (0, 255, 255)
 orange = (0, 215, 255)
 
 TILE_SIZE = 32
-NEARBY_TILES_WH: int = 7
+NEARBY_TILES_WH: int = 8
 
 title = "SU Vision"
 
