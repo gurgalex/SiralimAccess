@@ -1,3 +1,4 @@
+import enum
 from typing import Optional
 
 import cv2
@@ -34,6 +35,8 @@ yellow = (0, 255, 255)
 orange = (0, 215, 255)
 
 TILE_SIZE = 32
+NEARBY_TILES_WH: int = 7
+
 title = "SU Vision"
 
 
@@ -80,7 +83,7 @@ def get_su_client_rect() -> Rect:
     su_is_open = su_hwnd >= 0
     if not su_is_open:
         raise Exception("Siralim Ultimate is not open")
-    print(su_hwnd)
+    print(f"{su_hwnd=}")
     rect = win32gui.GetWindowRect(su_hwnd)
 
     clientRect = win32gui.GetClientRect(su_hwnd)
@@ -139,6 +142,10 @@ def extract_quest_name_from_quest_area(gray_frame: np.typing.ArrayLike) -> list[
     return quests
 
 
+class GridType(enum.Enum):
+    WHOLE = enum.auto()
+    NEARBY = enum.auto()
+
 class Bot:
     def __init__(self):
         self.quest_sprite_long_names: list[str] = []
@@ -146,6 +153,19 @@ class Bot:
         self.assetDB: AssetDB = AssetDB
         # Used to only analyze the SU window
         self.su_client_rect = get_su_client_rect()
+        """player tile position in grid"""
+        self.player_position: Rect = Bot.compute_player_position(self.su_client_rect)
+        self.player_position_tile: TileCoord = TileCoord(x=self.player_position.x//TILE_SIZE, y=self.player_position.y//TILE_SIZE)
+        print(f"{self.player_position_tile=}")
+        print(f"{self.player_position=}")
+
+        self.nearby_rect: Rect = self.compute_nearby_screenshot_area()
+        self.nearby_tile_top_left: TileCoord = TileCoord(x=self.nearby_rect.x//TILE_SIZE, y=self.nearby_rect.y//TILE_SIZE)
+        print(f"{self.su_client_rect=}")
+        print(f"{self.nearby_rect=}")
+
+        print(f"{self.player_position_tile=}")
+        print(f"{self.nearby_tile_top_left=}")
 
         # Windows TTS speaker
         self.Speaker = win32com.client.Dispatch("SAPI.SpVoice")
@@ -178,7 +198,12 @@ class Bot:
         self.grid_slice_color: np.typing.ArrayLike = None
         self.grid_dims: tuple = (self.su_client_rect.w//TILE_SIZE, self.su_client_rect.h//TILE_SIZE)
 
+        self.grid_near_rect: Optional[Rect] = None
+        self.grid_near_slice_gray: np.typing.ArrayLike = None
+        self.grid_near_slice_color: np.typing.ArrayLike = None
+
         self.output_debug_gray: np.typing.ArrayLike = None
+        self.output_debug_near_gray: np.typing.ArrayLike = None
 
         # hashes of sprite frames that have matching `self.castle_tile` pixels set to black.
         # This avoids false negative matches if the placed object has matching color pixels in a position
@@ -289,9 +314,6 @@ class Bot:
                                 )
         return bottom_right_pt
 
-
-
-
     @staticmethod
     def compute_grid_rect(top_left_tile: Point, bottom_right_tile: Point) -> Rect:
         """slice of image that is occuppied by realm tiles
@@ -301,6 +323,22 @@ class Bot:
         width = bottom_right_tile.x - top_left_tile.x + TILE_SIZE
         height = bottom_right_tile.y - top_left_tile.y + TILE_SIZE
         return Rect(x=top_left_tile.x, y=top_left_tile.y, w=width, h=height)
+
+    def compute_nearby_screenshot_area(self) -> Rect:
+        # xxxxxxx
+        # xxxxxxx
+        # xxxPxxx
+        # xxxxxxx
+        # xxxxxxx
+        #
+        print(f"{self.player_position=}")
+        return Rect(
+            x=(self.player_position_tile.x - NEARBY_TILES_WH//2) * TILE_SIZE,
+            y=(self.player_position_tile.y - NEARBY_TILES_WH//2) * TILE_SIZE,
+            w=TILE_SIZE*NEARBY_TILES_WH,
+            h=TILE_SIZE*NEARBY_TILES_WH,
+        )
+
 
     def enter_castle_scanner(self):
         """Scans for decorations and quests in the castle"""
@@ -313,36 +351,33 @@ class Bot:
             for sprite_long_name in sprite_long_names:
                 self.quest_sprite_long_names.append(sprite_long_name)
 
-        for row in range(0, self.grid_rect.w, TILE_SIZE):
-            for col in range(0, self.grid_rect.h, TILE_SIZE):
-                # cv2.rectangle(self.frame, (row, col), (row + TILE_SIZE, col + TILE_SIZE), green, 1)
-                tile = self.grid_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
+        # print(f"{self.nearby_rect=}")
+        for row in range(0, self.grid_rect.w-TILE_SIZE, TILE_SIZE):
+            for col in range(0, self.grid_rect.h-TILE_SIZE, TILE_SIZE):
+                # print(f"{(row, col)=}")
+                tile_gray = self.grid_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
                 tile_color = self.grid_slice_color[col:col+TILE_SIZE, row:row+TILE_SIZE, :3]
 
-                # fg_only = background_subtract.subtract_background_from_tile(floor_background_gray=self.floor_tile_gray, tile_gray=tile)
                 fg_only = background_subtract.subtract_background_color_tile(tile=tile_color, floor=self.castle_tile)
                 fg_only_gray = cv2.cvtColor(fg_only, cv2.COLOR_BGR2GRAY)
-                tile[:] = fg_only_gray
+                tile_gray[:] = fg_only_gray
                 self.output_debug_gray[col:col + TILE_SIZE, row:row + TILE_SIZE] = fg_only_gray
 
                 try:
-                    img_info = self.castle_item_hashes.get_greyscale(tile[:32, :32])
+                    img_info = self.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
                     if img_info.long_name in self.quest_sprite_long_names:
                         self.important_tile_locations.append(AssetGridLoc(x=row//TILE_SIZE, y=col//TILE_SIZE, short_name=img_info.short_name))
                     # print(f"matched: {img_info.long_name}")
                     cv2.rectangle(self.output_debug_gray, (row, col), (row + TILE_SIZE, col + TILE_SIZE), (255,255,255), 1)
                     # label finding with text
                     cv2.putText(self.output_debug_gray, img_info.long_name, (row, col + TILE_SIZE // 2), cv2.FONT_HERSHEY_PLAIN, 0.9, (255, 255, 255), 2)
-                    # print(f"tile top-left: ({pt[0]},{pt[1]})")
-
-                    # print directions
-                    # print(f"player is ({int(round((pt[0]-self.player_position.top_left().x)/TILE_SIZE))},{int(round((pt[1]-self.player_position.top_left().y)/TILE_SIZE))}) from {template_struct.name}")
 
                 except KeyError as e:
                     pass
         self.speak_nearby_objects()
 
-    def recompute_grid_offset(self):
+
+    def recompute_grid_offset(self, grid_type: GridType):
         # find matching realm tile on map
         # We use matchTemplate since the grid shifts when the player is moving
         # (the tiles smoothly slide to the next `TILE_SIZE increment)
@@ -352,7 +387,12 @@ class Bot:
             floor_tile = self.realm_tile.data_gray
         assert floor_tile is not None
 
-        res = cv2.matchTemplate(self.gray_frame, floor_tile, cv2.TM_CCOEFF_NORMED)
+        if grid_type == GridType.WHOLE:
+            gray_frame = self.gray_frame
+        elif grid_type == GridType.NEARBY:
+            gray_frame = self.near_frame_gray
+
+        res = cv2.matchTemplate(gray_frame, floor_tile, cv2.TM_CCOEFF_NORMED)
         min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
         threshold = 0.95
         if max_val <= threshold:
@@ -360,13 +400,20 @@ class Bot:
             tile = Bot.compute_player_position(self.su_client_rect)
         else:
             tile = Rect.from_cv2_loc(max_loc, w=TILE_SIZE, h=TILE_SIZE)
+            # print(f"aligned floor tile = {tile}")
 
-        # Will the player being offset by a few pixels impact tile direction??
-
-        self.grid_rect = Bot.compute_grid_rect(top_left_tile=Bot.top_left_tile(aligned_floor_tile=tile, client_rect=self.su_client_rect),
-                              bottom_right_tile=Bot.bottom_right_tile(aligned_tile=tile, client_rect=self.su_client_rect))
-
-
+        if grid_type == GridType.WHOLE:
+            top_left_pt = Bot.top_left_tile(aligned_floor_tile=tile, client_rect=self.su_client_rect)
+            bottom_right_pt = Bot.bottom_right_tile(aligned_tile=tile, client_rect=self.su_client_rect)
+            self.grid_rect = Bot.compute_grid_rect(top_left_tile=top_left_pt, bottom_right_tile=bottom_right_pt)
+            # print(f"full grid - {top_left_pt=}, {bottom_right_pt=}")
+            # print(f"{self.grid_rect=}")
+        elif grid_type == GridType.NEARBY:
+            top_left_pt = Bot.top_left_tile(aligned_floor_tile=tile, client_rect=self.nearby_rect)
+            bottom_right_pt = Bot.bottom_right_tile(aligned_tile=tile, client_rect=self.nearby_rect)
+            self.grid_near_rect = Bot.compute_grid_rect(top_left_tile=top_left_pt, bottom_right_tile=bottom_right_pt)
+            # print(f"near grid - {top_left_pt=}, {bottom_right_pt=}")
+            # print(f"{self.nearby_rect=}")
 
     def enter_realm_scanner(self):
         # check if still in realm
@@ -441,12 +488,15 @@ class Bot:
 
         print(f"known quests")
         frames_asset: list[Asset]
-        for quest_name, frames_asset in self.assetDB.lookup["quest_item"].items():
-            for asset in frames_asset:
-                print(f"{quest_name}: {asset.long_name}")
+        with Session() as session:
+            quest: Quest
+            for quest in session.query(Quest).all():
+                print(quest.title, [sprite.long_name for sprite in quest.sprites])
 
 
-        mon = {"top": self.su_client_rect.y, "left": self.su_client_rect.x, "width": self.su_client_rect.w, "height": self.su_client_rect.h}
+        mon_full_window = {"top": self.su_client_rect.y, "left": self.su_client_rect.x, "width": self.su_client_rect.w, "height": self.su_client_rect.h}
+        nearby_mon = {"top": self.su_client_rect.y + self.nearby_rect.y, "left": self.su_client_rect.x + self.nearby_rect.x, "width": self.nearby_rect.w, "height": self.nearby_rect.h}
+
         iters = 0
         every = 5
         self.player_position_tile = TileCoord(x=self.player_position.x // TILE_SIZE,
@@ -457,16 +507,35 @@ class Bot:
                 self.important_tile_locations.clear()
                 if iters % every == 0:
                     start = time.time()
-                shot = sct.grab(mon)
+                shot = sct.grab(mon_full_window)
 
                 self.frame = np.asarray(shot)
                 cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
-                self.recompute_grid_offset()
+                self.recompute_grid_offset(grid_type=GridType.WHOLE)
+
+
+                # grab nearby player tiles
+                self.near_frame = np.asarray(sct.grab(nearby_mon))
+                cv2.cvtColor(self.near_frame, cv2.COLOR_BGRA2GRAY, dst=self.near_frame_gray)
+
+                self.recompute_grid_offset(grid_type=GridType.NEARBY)
                 self.grid_slice_gray: np.typing.ArrayLike = self.gray_frame[self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
                                   self.grid_rect.x:self.grid_rect.x + self.grid_rect.w]
                 self.grid_slice_color: np.typing.ArrayLike = self.frame[self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
                                   self.grid_rect.x:self.grid_rect.x + self.grid_rect.w]
-                self.output_debug_gray = np.copy(self.grid_slice_gray[:])
+
+                self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[self.grid_near_rect.y:self.grid_near_rect.y + self.grid_near_rect.h,
+                                                                   self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
+                self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[self.grid_near_rect.y:self.grid_near_rect.y + self.grid_near_rect.h,
+                                                                    self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
+
+                self.output_debug_gray = self.grid_slice_gray.copy()
+                self.output_debug_near_gray = self.grid_near_slice_gray.copy()
+                # print(f"{self.near_frame_gray.shape=}")
+                # print(f"{self.grid_near_rect=}")
+                # print(f"{self.grid_near_slice_gray.shape=}")
+                # print(f"{self.output_debug_near_gray.shape=}")
+
                 self.player_position = Bot.compute_player_position(self.grid_rect)
                 self.player_position_tile = TileCoord(x=self.player_position.x // TILE_SIZE,
                                                       y=self.player_position.y // TILE_SIZE)
