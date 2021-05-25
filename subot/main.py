@@ -351,26 +351,30 @@ class Bot:
             for sprite_long_name in sprite_long_names:
                 self.quest_sprite_long_names.append(sprite_long_name)
 
-        # print(f"{self.nearby_rect=}")
-        for row in range(0, self.grid_rect.w-TILE_SIZE, TILE_SIZE):
-            for col in range(0, self.grid_rect.h-TILE_SIZE, TILE_SIZE):
-                # print(f"{(row, col)=}")
-                tile_gray = self.grid_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
-                tile_color = self.grid_slice_color[col:col+TILE_SIZE, row:row+TILE_SIZE, :3]
+
+        # block_size = (TILE_SIZE, TILE_SIZE)
+        # grid_in_tiles = view_as_blocks(self.grid_slice_gray, block_size)
+
+        for row in range(0, self.grid_near_rect.w, TILE_SIZE):
+            for col in range(0, self.grid_near_rect.h, TILE_SIZE):
+                tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
+                tile_color = self.grid_near_slice_color[col:col+TILE_SIZE, row:row+TILE_SIZE, :3]
 
                 fg_only = background_subtract.subtract_background_color_tile(tile=tile_color, floor=self.castle_tile)
                 fg_only_gray = cv2.cvtColor(fg_only, cv2.COLOR_BGR2GRAY)
                 tile_gray[:] = fg_only_gray
-                self.output_debug_gray[col:col + TILE_SIZE, row:row + TILE_SIZE] = fg_only_gray
+                self.output_debug_near_gray[col:col + TILE_SIZE, row:row + TILE_SIZE] = fg_only_gray
 
                 try:
                     img_info = self.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
                     if img_info.long_name in self.quest_sprite_long_names:
-                        self.important_tile_locations.append(AssetGridLoc(x=row//TILE_SIZE, y=col//TILE_SIZE, short_name=img_info.short_name))
+                        self.important_tile_locations.append(AssetGridLoc(x=self.nearby_tile_top_left.x + row//TILE_SIZE,
+                                                                          y=self.nearby_tile_top_left.y + col//TILE_SIZE,
+                                                                          short_name=img_info.short_name))
                     # print(f"matched: {img_info.long_name}")
-                    cv2.rectangle(self.output_debug_gray, (row, col), (row + TILE_SIZE, col + TILE_SIZE), (255,255,255), 1)
+                    cv2.rectangle(self.output_debug_near_gray, (row, col), (row + TILE_SIZE, col + TILE_SIZE), (255,255,255), 1)
                     # label finding with text
-                    cv2.putText(self.output_debug_gray, img_info.long_name, (row, col + TILE_SIZE // 2), cv2.FONT_HERSHEY_PLAIN, 0.9, (255, 255, 255), 2)
+                    cv2.putText(self.output_debug_near_gray, img_info.long_name, (row, col + TILE_SIZE // 2), cv2.FONT_HERSHEY_PLAIN, 0.9, (255, 255, 255), 2)
 
                 except KeyError as e:
                     pass
@@ -515,8 +519,8 @@ class Bot:
 
 
                 # grab nearby player tiles
-                self.near_frame = np.asarray(sct.grab(nearby_mon))
-                cv2.cvtColor(self.near_frame, cv2.COLOR_BGRA2GRAY, dst=self.near_frame_gray)
+                self.near_frame_color = np.asarray(sct.grab(nearby_mon))
+                cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGRA2GRAY, dst=self.near_frame_gray)
 
                 self.recompute_grid_offset(grid_type=GridType.NEARBY)
                 self.grid_slice_gray: np.typing.ArrayLike = self.gray_frame[self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
@@ -574,7 +578,7 @@ class Bot:
                 bottom_right = self.player_position.bottom_right().as_tuple()
                 cv2.rectangle(self.grid_slice_gray, top_left, bottom_right, (255), 1)
 
-                cv2.imshow(title, self.output_debug_gray)
+                cv2.imshow(title, self.output_debug_near_gray)
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     cv2.destroyAllWindows()
                     break
