@@ -11,3 +11,5 @@ class DatabaseConfig:
 
 DATABASE_CONFIG = DatabaseConfig()
 IMAGE_PATH: Path = Path("../")
+
+DEBUG = False
