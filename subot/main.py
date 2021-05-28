@@ -1,5 +1,6 @@
 import enum
 import multiprocessing
+from collections import deque
 import queue
 from multiprocessing import Queue
 from threading import Thread
@@ -8,13 +9,14 @@ from typing import Optional
 import cv2
 import numpy as np
 import mss
+import pygame
 import win32gui
-import win32com.client
 import pytesseract
 import math
 import time
 from skimage.util import view_as_blocks
 
+from subot.audio import AudioSystem, AudioLocation
 from subot.messageTypes import NewFrame, MessageImpl, MessageType, ScanForItems, DrawDebug
 from subot.read_tags import AssetDB, Asset
 
@@ -26,12 +28,13 @@ from dataclasses import dataclass
 
 import subot.background_subtract as background_subtract
 
-from subot.models import Sprite, SpriteFrame, Quest, RealmLookup, Realm, SpriteType
+from subot.models import Sprite, SpriteFrame, Quest
 from subot.models import Session
 import subot.settings as settings
 
 from readerwriterlock import rwlock
 
+from subot.utils import Point
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
 
@@ -44,7 +47,7 @@ yellow = (0, 255, 255)
 orange = (0, 215, 255)
 
 TILE_SIZE = 32
-NEARBY_TILES_WH: int = 8
+NEARBY_TILES_WH: int = 12
 
 title = "SU Vision"
 
@@ -55,15 +58,6 @@ class TemplateMeta:
     data: np.typing.ArrayLike
     color: tuple
     mask: np.typing.ArrayLike
-
-
-@dataclass(frozen=True)
-class Point:
-    x: int
-    y: int
-
-    def as_tuple(self):
-        return self.x, self.y
 
 
 @dataclass(frozen=True)
@@ -179,9 +173,14 @@ def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect
 
 class Bot:
     def __init__(self):
+        pygame.init()
+        self.audio_system: AudioSystem = AudioSystem()
+
         self.color_frame_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=1)
         self.out_quests: multiprocessing.Queue = multiprocessing.Queue()
         self.color_nearby_queue = multiprocessing.Queue(maxsize=1)
+
+        self.nearby_send_deque = deque(maxlen=1)
         self.quest_sprite_long_names: set[str] = set()
         self.mode: BotMode = BotMode.UNDETERMINED
         self.assetDB: AssetDB = AssetDB
@@ -217,12 +216,6 @@ class Bot:
 
         self.output_debug_gray: np.typing.ArrayLike = None
 
-        # Windows TTS speaker
-        self.Speaker = win32com.client.Dispatch("SAPI.SpVoice")
-        # don't block the program when speaking. Cancel any pending speaking directions
-        self.SVSFlag = 3  # SVSFlagsAsync = 1 + SVSFPurgeBeforeSpeak = 2
-        self.Speaker.Voice = self.Speaker.getVoices('Name=Microsoft Zira Desktop').Item(0)
-
         # Note: images must be read as unchanged when converting to grayscale since IM_READ_GRAYSCALE has platform specific conversion methods and difers from cv2.cv2.BGR2GRAy's implementation in cvtcolor
         # This is needed to ensure the pixels match exactly for comparision, otherwhise the grayscale differs slightly
         # https://docs.opencv.org/4.5.1/d4/da8/group__imgcodecs.html
@@ -246,10 +239,12 @@ class Bot:
 
         self.nearby_process = NearbyFrameGrabber(name=NearbyFrameGrabber.__name__,
                                                  nearby_area=self.nearby_mon, nearby_queue=self.color_nearby_queue)
+        print(f"{self.nearby_process=}")
         self.nearby_process.start()
 
         self.nearby_processing_thandle = NearPlayerProcessing(name=NearPlayerProcessing.__name__,
-                                                              nearby_queue=self.color_nearby_queue,
+                                                              nearby_frame_queue=self.color_nearby_queue,
+                                                              nearby_comm_deque=self.nearby_send_deque,
                                                               parent=self)
         self.nearby_processing_thandle.start()
 
@@ -257,6 +252,7 @@ class Bot:
                                                               outgoing_color_frame_queue=self.color_frame_queue,
                                                               out_quests=self.out_quests,
                                                               screenshot_area=self.mon_full_window)
+        print(f"{self.window_framegrabber_phandle=}")
         self.window_framegrabber_phandle.start()
 
         self.whole_window_thandle = WholeWindowAnalyzer(name=WholeWindowAnalyzer.__name__,
@@ -347,30 +343,6 @@ class Bot:
                     # new castle hasher
                     self.castle_item_hashes.insert_transparent_bgra_image(one_tile_worth_img, metadata)
 
-    def play_important_objects(self):
-        if self.important_tile_locations == self.previous_important_tile_locations:
-            pass
-
-    def speak_nearby_objects(self):
-        with self.important_tile_locations_lock.gen_rlock():
-            if self.important_tile_locations == self.previous_important_tile_locations:
-                return
-                # skip speaking since nothing (besides enemies) have changed positions
-
-            for tile in self.important_tile_locations:
-                distance_x = tile.x - self.player_position_tile.x
-                distance_y = tile.y - self.player_position_tile.y
-                y_letter = 'UP' if distance_y < 0 else "D"
-                x_letter = 'L' if distance_x < 0 else "R"
-                abs_x = abs(distance_x)
-                abs_y = abs(distance_y)
-                distance_text = f"{tile.short_name} is {abs_x}{x_letter}{abs_y}{y_letter}"
-
-                print(distance_text)
-                self.Speaker.Speak(distance_text, self.SVSFlag)
-
-            self.previous_important_tile_locations = self.important_tile_locations[:]
-
     def run(self):
         # start assetDB
         self.assetDB = self.assetDB()
@@ -386,10 +358,7 @@ class Bot:
         every = 5
         start = time.time()
 
-
-
         while True:
-            # grab_screenshot
             if iters % every == 0:
                 start = time.time()
 
@@ -420,7 +389,7 @@ class Bot:
             elif self.mode is BotMode.REALM:
                 self.enter_realm_scanner()
             elif self.mode is BotMode.CASTLE:
-                self.color_nearby_queue.put(ScanForItems)
+                self.nearby_send_deque.append(ScanForItems)
                 # bot.nearby_processing_thandle.enter_castle_scanner()
 
             # label player position
@@ -433,8 +402,24 @@ class Bot:
                 # print(f"FPS: {1 / max((end - start)*every, 0.0001)}")
             iters += 1
             if settings.DEBUG:
-                self.color_nearby_queue.put(DrawDebug())
-            time.sleep(1/100)
+                self.nearby_send_deque.append(DrawDebug())
+            time.sleep(1/80)
+
+    def speak_nearby_objects(self):
+        audio_locations: list[AudioLocation] = []
+        with self.important_tile_locations_lock.gen_rlock():
+
+            same_player_position = self.important_tile_locations == self.previous_important_tile_locations
+            if same_player_position:
+                return
+
+            for tile in self.important_tile_locations[:1]:
+
+                distance = Point(x=tile.x - self.player_position_tile.x,
+                                 y=tile.y - self.player_position_tile.y,)
+                audio_locations.append(AudioLocation(distance=distance))
+            self.audio_system.play_locations(audio_locations)
+            self.previous_important_tile_locations = self.important_tile_locations[:]
 
 
 class WholeWindowGrabber(multiprocessing.Process):
@@ -451,11 +436,11 @@ class WholeWindowGrabber(multiprocessing.Process):
 
         with mss.mss() as sct:
             while not should_stop:
+                time.sleep(1)
                 try:
                     # Performance: copying overhead is not an issue for needing a frame at 1-2 FPS
                     frame_np: ArrayLike = np.asarray(sct.grab(self.screenshot_area))
                     self.color_frame_queue.put_nowait(frame_np)
-                    time.sleep(3)
                 except queue.Full:
                     continue
 
@@ -490,7 +475,7 @@ class WholeWindowAnalyzer(Thread):
                 msg = self.incoming_frame_queue.get(timeout=10)
                 shot = msg
             except queue.Empty:
-                raise Exception("No new full frame for 2 seconds")
+                raise Exception("No new full frame for 10 seconds")
             if shot is None:
                 break
             number += 1
@@ -546,10 +531,14 @@ class NearbyFrameGrabber(multiprocessing.Process):
 
 
 class NearPlayerProcessing(Thread):
-    def __init__(self, nearby_queue: Queue, parent: Bot, **kwargs):
+    def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: deque, parent: Bot, **kwargs):
         super().__init__(**kwargs)
         self.parent = parent
-        self.nearby_queue = nearby_queue
+        # used for multiprocess communication
+        self.nearby_queue = nearby_frame_queue
+
+        # Used for across thread communication
+        self.nearby_comm_deque: deque = nearby_comm_deque
 
         self.near_frame_color: np.typing.ArrayLike = np.zeros(
             (NEARBY_TILES_WH * TILE_SIZE, NEARBY_TILES_WH * TILE_SIZE, 3), dtype='uint8')
@@ -698,7 +687,7 @@ class NearPlayerProcessing(Thread):
                                     1)
                         cv2.rectangle(self.output_debug_gray, top_left, bottom_right, (255), 1)
                     break
-        self.speak_nearby_objects()
+        self.parent.speak_nearby_objects()
 
     def realm_tile_has_matching_decoration(self) -> bool:
         pass
@@ -732,14 +721,20 @@ class NearPlayerProcessing(Thread):
             msg: MessageImpl = self.nearby_queue.get(timeout=15)
             if msg.type is MessageType.NEW_FRAME:
                 self.handle_new_frame(msg)
-            elif msg.type is MessageType.SCAN_FOR_ITEMS:
-                self.enter_castle_scanner()
+            try:
+                # we don't block since we must be ready for new incoming frames ^^
+                comm_msg: MessageImpl = self.nearby_comm_deque.pop()
 
-            elif msg.type is MessageType.DRAW_DEBUG:
-                cv2.imshow("SU Vision - Near bbox", self.output_debug_near_gray)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    cv2.destroyAllWindows()
-                    break
+                if comm_msg.type is MessageType.SCAN_FOR_ITEMS:
+                    self.enter_castle_scanner()
+
+                elif comm_msg.type is MessageType.DRAW_DEBUG:
+                    cv2.imshow("SU Vision - Near bbox", self.output_debug_near_gray)
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        cv2.destroyAllWindows()
+                        break
+            except IndexError:
+                continue
 
 
 if __name__ == "__main__":
