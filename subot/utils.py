@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 import cv2
 import numpy as np
 
@@ -11,3 +13,12 @@ def extract_mask_from_rgba_img(img):
 
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     return img
+
+
+@dataclass(frozen=True)
+class Point:
+    x: int
+    y: int
+
+    def as_tuple(self):
+        return self.x, self.y
