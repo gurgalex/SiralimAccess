@@ -78,10 +78,11 @@ class Capture:
             print(f"saved image as {filename}")
             cv2.imshow(self.title, cropped_decoration_img)
 
-    def capture_costume_no_ocr(self, folder, filename: str):
+    def capture_costume_no_ocr(self, filepath: Path):
+
         cleaned_costume_img = subtract_background_color_tile(floor=self.castle_tile, tile=self.decoration_img)
-        cv2.imwrite(f"{filename}", cleaned_costume_img)
-        print(f"saved image as {filename}")
+        cv2.imwrite(f"{filepath.as_posix()}", cleaned_costume_img)
+        print(f"saved image as {filepath.as_posix()}")
         cv2.imshow(self.title, cleaned_costume_img)
 
     def save_floortile_img(self, filename: str):
@@ -96,7 +97,6 @@ class Capture:
 
     def run(self):
 
-        folder_to_save_in = Path("../assets_padded/NPCs/")
 
         CAPTURE_UNNAMED_TILE = "capture_tile"
         CAPTURE_DECORATION = "capture_decoration"
@@ -124,9 +124,9 @@ class Capture:
                 if cv2.waitKey(10) & 0xFF == ord("p"):
                     pause_collection = not pause_collection
                     if pause_collection:
-                        print("Collection paused")
+                        print("press p to resume capture")
                     else:
-                        print("Collection started")
+                        print("press p to pause capture")
 
                 self.decoration_img = np.asarray(sct.grab(capture_area))
                 self.menu_img_rgb = np.asarray(sct.grab(MENU_CAPTURE_AREA))
@@ -144,18 +144,20 @@ class Capture:
                 frame += 1
                 print("new image found")
 
-                filename = f"assets_padded/NPCs/Castle/Menagerie/frame{frame}.png"
+                filename = f"{frame}.png"
+                filepath = folder_to_save_in.joinpath(filename)
 
                 if mode == CAPTURE_UNNAMED_TILE:
                     self.save_tile(filename)
                 elif mode == CAPTURE_DECORATION:
                     self.capture_decoration(folder=folder_to_save_in)
                 elif mode == CAPTURE_NPC_NO_OCR:
-                    self.capture_costume_no_ocr(folder=folder_to_save_in, filename=filename)
+                    self.capture_costume_no_ocr(filepath=filepath)
                 print(f"captured {len(hashes)} images")
                 if cv2.waitKey(25) & 0xFF == ord("Q"):
                     cv2.destroyAllWindows()
                     break
 
-capture = Capture()
-capture.run()
+if __name__ == "__main__":
+    capture = Capture()
+    capture.run()

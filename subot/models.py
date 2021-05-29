@@ -29,6 +29,13 @@ class SpriteFrame(Base):
         new_image_path = IMAGE_PATH.joinpath(self._filepath)
         return new_image_path.as_posix()
 
+    @filepath.setter
+    def filepath(self, value: str):
+        self._filepath = value
+
+    def __repr__(self):
+        return f"{SpriteFrame.__name__}({self.id=},{self._filepath=},{self.sprite_id=},{self.meta_extra=})"
+
 
 
 class SpriteType(enum.Enum):
@@ -40,7 +47,7 @@ class SpriteType(enum.Enum):
     ENEMY = "enemy"
     # Costume the player can wear
     WARDROBE = "wardrobe"
-
+    NPC = "NPC"
 
 class SpriteTypeLookup(Base):
     __tablename__ = 'sprite_type'
@@ -77,6 +84,7 @@ class QuestType(enum.Enum):
     rescue = "rescue"
     false_god = "false god"
     nether_boss = "nether boss"
+    story = "story"
 
 
 class QuestAppearance(enum.Enum):

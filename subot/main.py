@@ -612,12 +612,12 @@ class NearPlayerProcessing(Thread):
 
                     try:
                         img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
+                        # print(f"matched: {img_info.long_name}")
                         if img_info.long_name in self.parent.quest_sprite_long_names:
                             self.parent.important_tile_locations.append(
                                 AssetGridLoc(x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE,
                                              y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE,
                                              short_name=img_info.short_name))
-                        # print(f"matched: {img_info.long_name}")
                         if settings.DEBUG:
                             cv2.rectangle(self.output_debug_near_gray, (row, col), (row + TILE_SIZE, col + TILE_SIZE),
                                           (255, 255, 255), 1)

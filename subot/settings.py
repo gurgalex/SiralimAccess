@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-sqlite_path = Path.cwd().parent.joinpath('assets.db')
+sqlite_path = Path(__file__).parent.parent.joinpath('assets.db')
 print(f"{sqlite_path=}")
 
 @dataclass()
@@ -10,6 +10,6 @@ class DatabaseConfig:
 
 
 DATABASE_CONFIG = DatabaseConfig()
-IMAGE_PATH: Path = Path("../")
-
+IMAGE_PATH = Path(__file__).parent.parent
+print(f"{IMAGE_PATH=}")
 DEBUG = False

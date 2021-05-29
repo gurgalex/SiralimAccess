@@ -12,9 +12,10 @@ class AudioLocation:
 
 class AudioSystem:
     def __init__(self):
-        self.quest_item_normal_sound = pygame.mixer.Sound("../audio/sfx_coin_single2.wav")
-        self.quest_item_high_sound = pygame.mixer.Sound("../audio/sfx_coin_single2-high.wav")
-        self.quest_item_low_sound = pygame.mixer.Sound("../audio/sfx_coin_single2-low.wav")
+        self.quest_item_normal_sound = pygame.mixer.Sound("../audio/tone-normal.wav")
+        self.quest_item_high_sound = pygame.mixer.Sound("../audio/tone-high.wav")
+        self.quest_item_low_sound = pygame.mixer.Sound("../audio/tone-low.wav")
+
         self.channel = pygame.mixer.find_channel()
 
         # Windows TTS speaker
