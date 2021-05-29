@@ -1,6 +1,6 @@
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
-from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Table
+from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Table, Computed
 import sqlalchemy as db
 import enum
 
@@ -175,6 +175,13 @@ class Quest(Base):
     __tablename__ = 'quest'
     id = Column(Integer, primary_key=True, nullable=False)
     title = Column(String, nullable=False, unique=True, index=True)
+
+    computed_title_first_line_sql = """CASE
+    WHEN instr(title, "\r\n") > 0
+    THEN substr(title, 0, instr(title, "\r\n"))
+    ELSE title END"""
+
+    title_first_line = Column(String, Computed(computed_title_first_line_sql), nullable=False, index=True)
     quest_type = Column(db.Enum(QuestType, name="enum_quest_type"), nullable=False)
 
     # What realm the quest is tied to. Null if non-specific

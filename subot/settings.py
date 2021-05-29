@@ -10,6 +10,7 @@ class DatabaseConfig:
 
 
 DATABASE_CONFIG = DatabaseConfig()
+print(f"{DATABASE_CONFIG.uri=}")
 IMAGE_PATH = Path(__file__).parent.parent
 print(f"{IMAGE_PATH=}")
 DEBUG = False
