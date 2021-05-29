@@ -1,0 +1,17 @@
+# Set the default behavior to always be linefeed for linux
+* text=auto
+
+# Definitively text files
+*.txt text eol=lf
+*.php text eol=lf
+*.html text eol=lf
+...
+
+# Ensure those won't be changed
+*.jpg -text
+*.png -text
+*.wav -text
+*.ogg -text
+*.db -text
+*.sqlite -text
+
