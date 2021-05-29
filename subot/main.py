@@ -83,7 +83,7 @@ def get_su_client_rect() -> Rect:
     :raises Exception if the game is not open
     """
     su_hwnd = win32gui.FindWindow(None, "Siralim Ultimate")
-    su_is_open = su_hwnd >= 0
+    su_is_open = su_hwnd > 0
     if not su_is_open:
         raise Exception("Siralim Ultimate is not open")
     print(f"{su_hwnd=}")
