@@ -34,10 +34,10 @@ def cli():
 def add_quest(title: str, sprites_long_name: str, quest_type: Optional[str], specific_realm: Optional[str]):
     with Session() as session:
         quest = Quest(title=title)
-        if realm_enum := specific_realm is not None:
+        if (realm_enum := specific_realm) is not None:
             realm = session.query(RealmLookup).filter_by(enum=Realm[realm_enum]).first()
             if realm is None:
-                raise Exception(f"No realm was returend for {realm_enum=}")
+                raise Exception(f"No realm was returned for {realm_enum=}")
             quest.specific_realm = realm
         quest_type = QuestType[quest_type]
         quest.quest_type = quest_type
@@ -92,44 +92,6 @@ def add_sprite(short_name: Optional[str], long_name: str, type: str, sprite_fold
         session.commit()
     click.echo(f"Added new Sprite: {long_name}")
 
-
-# class DataEntryManagerCmdLine():
-#     """Add new data to the database"""
-#     def __init__(self, *args, **kwargs):
-#         super().__init__(*args, **kwargs)
-#
-#
-#     add_quest_parser = Cmd2ArgumentParser()
-#     add_quest_parser.add_argument("--title", help="Bolded title of quest", required=True)
-#     add_quest_parser.add_argument("--sprites-long-name", required=True,  help="Comma separated list of the 'long_name' of each sprite for a quest in the DB")
-#     add_quest_parser.add_argument("--quest_type", default=QuestType.decoration, choices=[quest_type.name for quest_type in QuestType])
-#     add_quest_parser.add_argument("--specific_realm", required=False, choices=[realm.name for realm in Realm])
-#
-#
-#
-#     @cmd2.with_argparser(add_quest_parser)
-#     def do_add_quest(self, args: argparse.Namespace) -> None:
-#         with self.Session() as session:
-#
-#             quest = Quest(title=args.title)
-#             if realm_enum := args.specific_realm is not None:
-#                 realm = session.query(RealmLookup).filter_by(enum=Realm[realm_enum]).first()
-#                 if realm is None:
-#                     raise Exception(f"No realm was returend for {realm_enum=}")
-#                 quest.specific_realm = realm
-#             quest_type = QuestType[args.quest_type.name]
-#             quest.quest_type = quest_type
-#
-#             if args.sprites_long_name is not None or args.sprites_long_name != "":
-#                 for sprite_name in args.sprites_long_name.split(","):
-#                     sprite = session.query(Sprite).filter_by(long_name=sprite_name).first()
-#                     if sprite is None:
-#                         raise Exception(f"sprite long name `{sprite_name}` could not be found in the database")
-#                     quest.sprites.append(sprite)
-#             session.add(quest)
-#             session.commit()
-#
-#         self.poutput(f"entered Quest info: {args.title=}\n {args.sprites_long_name=}\n{args.quest_type=}\n")
 
 
 cli.add_command(add_sprite)

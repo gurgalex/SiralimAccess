@@ -176,21 +176,23 @@ class Quest(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     title = Column(String, nullable=False, unique=True, index=True)
 
-    computed_title_first_line_sql = """CASE
+    _computed_title_first_line_sql = """CASE
     WHEN instr(title, "\r\n") > 0
     THEN substr(title, 0, instr(title, "\r\n"))
     ELSE title END"""
+    _computed_title_first_line_obj = db.Computed(_computed_title_first_line_sql)
 
-    title_first_line = Column(String, Computed(computed_title_first_line_sql), nullable=False, index=True)
+    title_first_line = Column(String, _computed_title_first_line_obj, nullable=False, index=True)
     quest_type = Column(db.Enum(QuestType, name="enum_quest_type"), nullable=False)
 
     # What realm the quest is tied to. Null if non-specific
-    specific_realm = Column(String, ForeignKey('realm.id'), nullable=True)
+    specific_realm_id = Column('specific_realm', Integer, ForeignKey('realm.id'), nullable=True)
 
     sprites = relationship('Sprite', secondary="quest_sprite", uselist=True, lazy='joined', doc="returns 0 or more sprites associated with a realm quest")
+    specific_realm = relationship('RealmLookup', uselist=False)
 
     def __repr__(self):
-        return f"Quest({self.id=}, {self.title=}, {self.quest_type=}, {self.specific_realm=}, {self.sprites=}"
+        return f"Quest({self.id=}, {self.title=}, {self.quest_type=}, {self.specific_realm_id=}, {self.sprites=}"
 
 
 class QuestSprite(Base):
