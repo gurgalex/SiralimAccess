@@ -6,6 +6,8 @@ import toml
 from enum import Enum
 import cv2
 from numpy.typing import ArrayLike
+
+from subot.models import SpriteFrame
 from subot.utils import extract_mask_from_rgba_img
 
 @dataclass(frozen=True)
@@ -37,17 +39,18 @@ class Realm(Enum):
 set_hashes = set()
 dups = []
 
+
 class AssetDB:
     def __init__(self):
+        self.long_names: dict[str, list[Asset]] = {}
+        self.realm_floortiles = defaultdict[str, SpriteFrame]
 
-        # store all possible realm objects for quick access
-        data_lookup = dict()
+        data_lookup = {}
         data_lookup["global_realm"]: list[Asset] = []
         data_lookup["realm"] = defaultdict(list)
         data_lookup["quest"] = defaultdict(list)
         data_lookup["floortile"] = defaultdict(list)
         data_lookup["all_realm_tiles"]: list[Asset] = []
-        data_lookup["long_name"]: dict[str, Asset] = {}
 
         # Quest single line mapping to Asset decoration frames for quest
         data_lookup["quest_item"]:  dict[str, list[Asset]] = {}

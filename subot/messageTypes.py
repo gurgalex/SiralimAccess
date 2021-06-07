@@ -8,8 +8,12 @@ from typing import Union
 class MessageType(Enum):
     NEW_FRAME = auto()
     SCAN_FOR_ITEMS = auto()
+    CHECK_WHAT_REALM_IN = auto()
     DRAW_DEBUG = auto()
 
+@dataclass()
+class CheckWhatRealmIn:
+    type: MessageType = field(init=False, default=MessageType.CHECK_WHAT_REALM_IN)
 
 @dataclass()
 class ScanForItems:
