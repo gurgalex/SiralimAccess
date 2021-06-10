@@ -252,7 +252,6 @@ class Bot:
 
         self.castle_tile: np.typing.ArrayLike = cv2.imread("../assets_padded/floortiles/Standard Floor Tile-frame1.png",
                                                            cv2.IMREAD_COLOR)
-        # self.castle_tile: np.typing.ArrayLike = cv2.imread("../assets_padded/floortiles/Yseros' Floor Tile-frame1.png", cv2.IMREAD_COLOR)
 
         self.castle_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.castle_tile, cv2.COLOR_BGR2GRAY)
         self.realm_tile: Asset = None

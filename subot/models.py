@@ -133,6 +133,8 @@ class QuestType(enum.Enum):
     nether_boss = "nether boss"
     story = "story"
     renegade = "renegade"
+    rebel = "rebel"
+    citizen = "citizen"
 
 
 class QuestAppearance(enum.Enum):
