@@ -1,10 +1,13 @@
 import enum
+import logging
 import multiprocessing
 from collections import deque
 import queue
+from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
+from pathlib import Path
 from threading import Thread
-from typing import Optional
+from typing import Optional, Union
 
 import cv2
 import numpy as np
@@ -15,10 +18,11 @@ import pytesseract
 import math
 import time
 from skimage.util import view_as_blocks
+from sqlalchemy.orm import joinedload
 
 from subot.audio import AudioSystem, AudioLocation
-from subot.messageTypes import NewFrame, MessageImpl, MessageType, ScanForItems, DrawDebug
-from subot.read_tags import AssetDB, Asset
+from subot.messageTypes import NewFrame, MessageImpl, MessageType, ScanForItems, DrawDebug, CheckWhatRealmIn
+from subot.read_tags import Asset
 
 from numpy.typing import ArrayLike
 
@@ -28,7 +32,7 @@ from dataclasses import dataclass
 
 import subot.background_subtract as background_subtract
 
-from subot.models import Sprite, SpriteFrame, Quest
+from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup
 from subot.models import Session
 import subot.settings as settings
 
@@ -133,7 +137,7 @@ def extract_quest_name_from_quest_area(gray_frame: np.typing.ArrayLike) -> list[
     :return: List of quests that appeared in the quest area. an empty list is returned if no quests were found
     """
     quests: list[Quest] = []
-    y_text_dim = int(gray_frame.shape[0] * 0.15)
+    y_text_dim = int(gray_frame.shape[0] * 0.33)
     x_text_dim = int(gray_frame.shape[1] * 0.33)
     thresh, threshold_white = cv2.threshold(gray_frame[:y_text_dim, -x_text_dim:], 220, 255, cv2.THRESH_BINARY_INV)
     text = pytesseract.pytesseract.image_to_string(threshold_white, lang="eng")
@@ -152,7 +156,7 @@ class GridType(enum.Enum):
     NEARBY = enum.auto()
 
 
-def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect: Rect) -> Rect:
+def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect: Rect) -> Optional[Rect]:
     # find matching realm tile on map
     # We use matchTemplate since the grid shifts when the player is moving
     # (the tiles smoothly slide to the next `TILE_SIZE increment)
@@ -161,14 +165,36 @@ def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
     threshold = 0.99
     if max_val <= threshold:
-        # maybe default to center?
-        tile = Bot.compute_player_position(mss_rect)
-    else:
-        tile = Rect.from_cv2_loc(max_loc, w=TILE_SIZE, h=TILE_SIZE)
+        return
+        # # maybe default to center?
+        # tile = Bot.compute_player_position(mss_rect)
+    tile = Rect.from_cv2_loc(max_loc, w=TILE_SIZE, h=TILE_SIZE)
 
     top_left_pt = Bot.top_left_tile(aligned_floor_tile=tile, client_rect=mss_rect)
     bottom_right_pt = Bot.bottom_right_tile(aligned_tile=tile, client_rect=mss_rect)
     return Bot.compute_grid_rect(top_left_tile=top_left_pt, bottom_right_tile=bottom_right_pt)
+
+root = logging.getLogger()
+
+que = queue.Queue(-1)  # no limit on size
+queue_handler = QueueHandler(que)
+handler = logging.StreamHandler()
+if settings.DEBUG:
+    root.setLevel(logging.DEBUG)
+    handler.setLevel(logging.DEBUG)
+    queue_handler.setLevel(logging.DEBUG)
+else:
+    root.setLevel(logging.INFO)
+    handler.setLevel(logging.INFO)
+    queue_handler.setLevel(logging.INFO)
+listener = QueueListener(que, handler)
+
+root.addHandler(queue_handler)
+formatter = logging.Formatter('%(threadName)s %(levelname)s %(relativeCreated)s: %(message)s')
+handler.setFormatter(formatter)
+listener.start()
+
+
 
 
 class Bot:
@@ -183,7 +209,6 @@ class Bot:
         self.nearby_send_deque = deque(maxlen=1)
         self.quest_sprite_long_names: set[str] = set()
         self.mode: BotMode = BotMode.UNDETERMINED
-        self.assetDB: AssetDB = AssetDB
         # Used to only analyze the SU window
         self.su_client_rect = get_su_client_rect()
 
@@ -204,8 +229,8 @@ class Bot:
                                  "left": self.su_client_rect.x + self.nearby_rect_mss.x,
                                  "width": self.nearby_rect_mss.w, "height": self.nearby_rect_mss.h}
 
-        print(f"{self.player_position_tile=}")
-        print(f"{self.player_position=}")
+        root.info(f"{self.player_position_tile=}")
+        root.info(f"{self.player_position=}")
 
         print(f"{self.player_position_tile=}")
         print(f"{self.nearby_tile_top_left=}")
@@ -219,9 +244,14 @@ class Bot:
         # Note: images must be read as unchanged when converting to grayscale since IM_READ_GRAYSCALE has platform specific conversion methods and difers from cv2.cv2.BGR2GRAy's implementation in cvtcolor
         # This is needed to ensure the pixels match exactly for comparision, otherwhise the grayscale differs slightly
         # https://docs.opencv.org/4.5.1/d4/da8/group__imgcodecs.html
+
+        # Floor tiles detected in current frame
+        self.active_floor_tiles: list[np.typing.ArrayLike] = []
+        self.active_floor_tiles_gray: list[np.typing.ArrayLike] = []
+
+
         self.castle_tile: np.typing.ArrayLike = cv2.imread("../assets_padded/floortiles/Standard Floor Tile-frame1.png",
                                                            cv2.IMREAD_COLOR)
-        # self.castle_tile: np.typing.ArrayLike = cv2.imread("../assets_padded/floortiles/Yseros' Floor Tile-frame1.png", cv2.IMREAD_COLOR)
 
         self.castle_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.castle_tile, cv2.COLOR_BGR2GRAY)
         self.realm_tile: Asset = None
@@ -264,7 +294,13 @@ class Bot:
                                                         )
         self.whole_window_thandle.start()
 
+    @staticmethod
+    def default_grid_rect(mss_rect: Rect) -> Rect:
+        tile = Bot.compute_player_position(mss_rect)
 
+        top_left_pt = Bot.top_left_tile(aligned_floor_tile=tile, client_rect=mss_rect)
+        bottom_right_pt = Bot.bottom_right_tile(aligned_tile=tile, client_rect=mss_rect)
+        return Bot.compute_grid_rect(top_left_tile=top_left_pt, bottom_right_tile=bottom_right_pt)
 
     @staticmethod
     def compute_player_position(client_dimensions: Rect) -> Rect:
@@ -335,6 +371,8 @@ class Bot:
                     metadata = ImageInfo(short_name=sprite.short_name, long_name=sprite.long_name)
 
                     # bottom right "works", just need to specialize on some images which have blank spaces
+                    if img is None:
+                        raise ValueError(f"no image for path: {sprite_frame.filepath}")
                     one_tile_worth_img: ArrayLike = img[-32:, :32, :]
                     if one_tile_worth_img.shape != (32, 32, 4):
                         print(f"not padded tile -skipping - {sprite_frame.filepath}")
@@ -344,8 +382,6 @@ class Bot:
                     self.castle_item_hashes.insert_transparent_bgra_image(one_tile_worth_img, metadata)
 
     def run(self):
-        # start assetDB
-        self.assetDB = self.assetDB()
 
         print(f"known quests")
         frames_asset: list[Asset]
@@ -364,30 +400,34 @@ class Bot:
 
             if self.mode is BotMode.UNDETERMINED:
 
-                if self.nearby_processing_thandle.detect_if_in_castle():
-                    self.mode = BotMode.CASTLE
-                if realm_in := self.nearby_processing_thandle.detect_what_realm_in():
-                    self.realm = realm_in
-                    self.unique_realm_assets = self.assetDB.get_realm_assets_for_realm(self.realm)
-                    print(f"items to scan: {len(self.unique_realm_assets)}")
-                    print([x.long_name for x in self.unique_realm_assets])
-
-                    quests: list[Quest] = extract_quest_name_from_quest_area(gray_frame=self.gray_frame)
-                    print(quests)
-                    for quest in quests:
-                        try:
-                            quest_items = self.assetDB.lookup["quest_item"][quest_name]
-                            print("got matching quest items")
-                            for quest_asset in quest_items:
-                                print(quest_asset.long_name)
-                                self.quest_items.append(quest_asset)
-                        except KeyError:
-                            print(f"no quest items for quest: {quest_name}")
-
+                # if self.nearby_processing_thandle.detect_if_in_castle():
+                #     self.mode = BotMode.CASTLE
+                if realm_alignment := self.nearby_processing_thandle.detect_what_realm_in():
+                    if isinstance(realm_alignment, RealmAlignment):
+                        self.realm = realm_alignment.realm
+                    # # self.unique_realm_assets = self.assetDB.get_realm_assets_for_realm(self.realm)
+                    # # print(f"items to scan: {len(self.unique_realm_assets)}")
+                    # # print([x.long_name for x in self.unique_realm_assets])
+                    #
+                    # # quests: list[Quest] = extract_quest_name_from_quest_area(gray_frame=self.gray_frame)
+                    # quests: list[Quest] = []
+                    # print(quests)
+                    # for quest in quests:
+                    #     try:
+                    #         pass
+                    #     #     quest_items = self.assetDB.lookup["quest_item"][quest_name]
+                    #     #     print("got matching quest items")
+                    #     #     for quest_asset in quest_items:
+                    #     #         print(quest_asset.long_name)
+                    #     #         self.quest_items.append(quest_asset)
+                    #     except KeyError:
+                    #         print(f"no quest items for quest: {quest_name}")
+                    #
                     self.mode = BotMode.REALM
 
             elif self.mode is BotMode.REALM:
-                self.enter_realm_scanner()
+                self.nearby_send_deque.append(CheckWhatRealmIn)
+                # self.enter_realm_scanner()
             elif self.mode is BotMode.CASTLE:
                 self.nearby_send_deque.append(ScanForItems)
                 # bot.nearby_processing_thandle.enter_castle_scanner()
@@ -481,14 +521,16 @@ class WholeWindowAnalyzer(Thread):
             number += 1
             end = time.time()
             latency = (end - start)
-            # print(f"Quest: took {math.ceil(latency * 1000)}ms")
             start = time.time()
 
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
 
-            self.grid_rect = recompute_grid_offset(floor_tile=self.parent_ro.castle_tile_gray, gray_frame=self.gray_frame,
-                                                   mss_rect=self.parent_ro.su_client_rect)
+            if aligned_rect := recompute_grid_offset(floor_tile=self.parent_ro.castle_tile_gray, gray_frame=self.gray_frame,
+                                                   mss_rect=self.parent_ro.su_client_rect):
+                self.grid_rect = aligned_rect
+            else:
+                self.grid_rect = Bot.default_grid_rect(self.parent_ro.su_client_rect)
 
             self.grid_slice_gray: np.typing.ArrayLike = self.gray_frame[
                                                         self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
@@ -499,7 +541,8 @@ class WholeWindowAnalyzer(Thread):
 
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
-            # print(f"quests = {[quest.title for quest in quests]}")
+            root.info(f"quests = {[quest.title for quest in quests]}")
+            root.info(f"quest items = {[sprite.short_name for quest in quests for sprite in quest.sprites]}")
             for quest in quests:
                 for sprite in quest.sprites:
                     self.parent_ro.quest_sprite_long_names.add(sprite.long_name)
@@ -529,6 +572,17 @@ class NearbyFrameGrabber(multiprocessing.Process):
                 except queue.Full:
                     continue
 
+@dataclass
+class RealmAlignment(object):
+    """Tells the realm detected and the alignment for the realm"""
+    realm: Realm
+    alignment: Rect
+
+
+@dataclass
+class CastleAlignment:
+    alignment: Rect
+
 
 class NearPlayerProcessing(Thread):
     def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: deque, parent: Bot, **kwargs):
@@ -553,28 +607,59 @@ class NearPlayerProcessing(Thread):
 
         self.realm_hashes: HashDecor = HashDecor()
 
-        self.realm: Optional[str] = None
+        self.realm: Optional[Realm] = None
         self.unique_realm_assets = list[Asset]
 
         # The current active quests
         self.active_quests: list[Quest] = []
         # self.quest_item_locations: list[QuestAssetGridLoc] = []
 
-    def detect_what_realm_in(self) -> Optional[str]:
+    def detect_what_realm_in(self) -> Optional[Union[RealmAlignment, CastleAlignment]]:
         # Scan a 7x7 tile area for lit tiles to determine what realm we are in currently
         # This area was chosen since the player + 6 creatures are at most this long
         # At least 1 tile will not be dimmed by the fog of war
-        realm_tiles = self.parent.assetDB.all_realm_floortiles()
+
+        # fast: if still in same realm
+        for last_tile in self.parent.active_floor_tiles_gray:
+            if aligned_rect := recompute_grid_offset(floor_tile=last_tile, gray_frame=self.near_frame_gray,
+                                     mss_rect=self.parent.nearby_rect_mss):
+                return RealmAlignment(realm=self.realm, alignment=aligned_rect)
+
+        with Session() as session:
+            floor_tiles = session.query(FloorSprite).options(joinedload('realm')).all()
 
         block_size = (TILE_SIZE, TILE_SIZE)
         grid_in_tiles = view_as_blocks(self.grid_near_slice_gray, block_size)
 
-        for y_i, col in enumerate(grid_in_tiles):
-            for x_i, row in enumerate(col):
-                for realm_tile in realm_tiles:
-                    if row.tobytes() == realm_tile.data_gray.tobytes():
-                        self.realm_tile = realm_tile
-                        return realm_tile.realm
+        floor_tile: FloorSprite
+        for floor_tile in floor_tiles:
+            tile_frame: SpriteFrame
+            for frame_num, tile_frame in enumerate(floor_tile.frames, start=1):
+                if aligned_rect := recompute_grid_offset(floor_tile=tile_frame.data_gray,
+                                                         gray_frame=self.grid_near_slice_gray,
+                                                         mss_rect=self.grid_near_rect):
+                    # print(f"{realm_tile=}")
+                    # print(f"in realm: {realm_tile.realm.enum}")
+                    root.debug(f"floor tile = {floor_tile.long_name}")
+                    if realm := floor_tile.realm:
+                        return RealmAlignment(realm=realm.enum, alignment=aligned_rect)
+                    else:
+                        root.info("in castle")
+                        return CastleAlignment(alignment=aligned_rect)
+
+                    # for y_i, col in enumerate(grid_in_tiles):
+            # for x_i, row in enumerate(col):
+
+                        # if row.tobytes() == tile_frame.data_gray.tobytes():
+                        #     self.realm_tile = tile_frame
+                        #     realm_in_enum = realm_tile.realm.enum
+                        #     print(f"#2 detected being in realm: {realm_in_enum} - Used tile {tile_frame.filepath=}")
+                        #     test_path = Path("test_img.png").absolute().as_posix()
+                        #     print(f"{test_path=}")
+                        #     cv2.imwrite(test_path, row)
+                        #     return realm_in_enum
+
+
 
     def detect_if_in_castle(self) -> bool:
         # Check configured castle tile
@@ -602,92 +687,118 @@ class NearPlayerProcessing(Thread):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
                     tile_color = self.grid_near_slice_color[col:col + TILE_SIZE, row:row + TILE_SIZE, :3]
 
-                    # print(f"bg subtract - {tile_color.shape=}  {self.parent.castle_tile.shape=}")
-                    fg_only = background_subtract.subtract_background_color_tile(tile=tile_color,
-                                                                                 floor=self.parent.castle_tile)
-                    fg_only_gray = cv2.cvtColor(fg_only, cv2.COLOR_BGR2GRAY)
-                    tile_gray[:] = fg_only_gray
-                    # if settings.DEBUG:
-                    #     self.output_debug_near_gray[col:col + TILE_SIZE, row:row + TILE_SIZE] = fg_only_gray
+                    for floor_tile in self.parent.active_floor_tiles:
 
-                    try:
-                        img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
-                        # print(f"matched: {img_info.long_name}")
-                        if img_info.long_name in self.parent.quest_sprite_long_names:
-                            self.parent.important_tile_locations.append(
-                                AssetGridLoc(x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE,
-                                             y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE,
-                                             short_name=img_info.short_name))
-                        if settings.DEBUG:
-                            cv2.rectangle(self.output_debug_near_gray, (row, col), (row + TILE_SIZE, col + TILE_SIZE),
-                                          (255, 255, 255), 1)
-                            # label finding with text
-                            cv2.putText(self.output_debug_near_gray, img_info.long_name, (row, col + TILE_SIZE // 2),
-                                        cv2.FONT_HERSHEY_PLAIN, 0.9, (255, 255, 255), 2)
+                        # print(f"bg subtract - {tile_color.shape=}  {self.parent.castle_tile.shape=}")
+                        floor_tile = floor_tile[:, :, :3]
+                        # print(f"shape tile = {tile_color.shape}, shape floor={floor_tile.shape}")
+                        fg_only = background_subtract.subtract_background_color_tile(tile=tile_color,
+                                                                                     floor=floor_tile)
+                        fg_only_gray = cv2.cvtColor(fg_only, cv2.COLOR_BGR2GRAY)
+                        tile_gray[:] = fg_only_gray
+                        # if settings.DEBUG:
+                        #     self.output_debug_near_gray[col:col + TILE_SIZE, row:row + TILE_SIZE] = fg_only_gray
 
-                    except KeyError as e:
-                        pass
+                        try:
+                            img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
+                            root.debug(f"matched: {img_info.long_name}")
+                            if img_info.long_name in self.parent.quest_sprite_long_names:
+                                self.parent.important_tile_locations.append(
+                                    AssetGridLoc(x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE,
+                                                 y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE,
+                                                 short_name=img_info.short_name))
+                            if settings.DEBUG:
+                                cv2.rectangle(self.output_debug_near_gray, (row, col), (row + TILE_SIZE, col + TILE_SIZE),
+                                              (255, 255, 255), 1)
+                                # label finding with text
+                                cv2.putText(self.output_debug_near_gray, img_info.long_name, (row, col + TILE_SIZE // 2),
+                                            cv2.FONT_HERSHEY_PLAIN, 0.9, (255, 255, 255), 2)
+                            break
+
+                        except KeyError as e:
+                            pass
         self.parent.speak_nearby_objects()
 
     def enter_realm_scanner(self):
-        # check if still in realm
-        if realm_in := self.detect_what_realm_in():
-            if realm_in != self.realm:
-                self.realm = realm_in
-                self.quest_items.clear()
-                self.unique_realm_assets = self.assetDB.get_realm_assets_for_realm(self.realm)
-                self.mode = BotMode.REALM
-                print(f"new realm entered: {self.realm}")
+        realm_alignment = self.detect_what_realm_in()
+        if isinstance(realm_alignment, CastleAlignment):
+            self.parent.active_floor_tiles = [self.parent.castle_tile]
+            self.parent.active_floor_tiles_gray = [self.parent.castle_tile_gray]
+            self.enter_castle_scanner()
+            return
 
-        threshold = 0.10
+        if not realm_alignment:
+            self.enter_castle_scanner()
+            return
 
-        block_size = (TILE_SIZE, TILE_SIZE)
-        grid_in_tiles = view_as_blocks(self.grid_slice_gray, block_size)
+        if realm_alignment.realm != self.realm:
+            self.realm = realm_alignment.realm
+            with Session() as session:
+                realm = session.query(RealmLookup).filter_by(enum=realm_alignment.realm).one()
+                realm_tiles = session.query(FloorSprite).filter_by(realm_id=realm.id).all()
+                temp = []
+                temp_gray = []
+                for realm_tile in realm_tiles:
+                    for frame in realm_tile.frames:
+                        temp.append(frame.data_color)
+                        temp_gray.append(frame.data_gray)
+                self.parent.active_floor_tiles = temp
+                self.parent.active_floor_tiles_gray = temp_gray
+            # self.quest_items.clear()
+            # self.unique_realm_assets = self.assetDB.get_realm_assets_for_realm(self.realm)
+            # self.mode = BotMode.REALM
+            root.info(f"new realm entered: {self.realm.name}")
 
-        for y_i, col in enumerate(grid_in_tiles):
-            for x_i, row in enumerate(col):
-                for realm_item in self.quest_items:
-                    res = cv2.matchTemplate(row, realm_item.data_gray[-32:, :32], cv2.TM_SQDIFF_NORMED,
-                                            mask=realm_item.mask[-32:, :32])
-                    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+        self.enter_castle_scanner()
+        # threshold = 0.10
+        #
+        # block_size = (TILE_SIZE, TILE_SIZE)
+        # grid_in_tiles = view_as_blocks(self.grid_near_slice_gray, block_size)
 
-                    if not min_val <= threshold:
-                        continue
-
-                    # loc = np.where(res <= threshold)
-                    top_left = (x_i * TILE_SIZE, y_i * TILE_SIZE)
-                    bottom_right = ((x_i + 1) * TILE_SIZE, (y_i + 1) * TILE_SIZE)
-
-                    self.important_tile_locations.append(AssetGridLoc(x=x_i, y=y_i, short_name=realm_item.short_name))
-                    if settings.DEBUG:
-                        cv2.putText(self.output_debug_gray, realm_item.short_name,
-                                    (x_i * TILE_SIZE, y_i * TILE_SIZE - TILE_SIZE // 2), cv2.FONT_HERSHEY_PLAIN, 0.9, (255),
-                                    1)
-                        cv2.rectangle(self.output_debug_gray, top_left, bottom_right, (255), 1)
-                    break
-                continue
-
-                realm_item: Asset
-                for realm_item in self.unique_realm_assets:
-                    res = cv2.matchTemplate(row, realm_item.data_gray[-32:, :32], cv2.TM_SQDIFF_NORMED,
-                                            mask=realm_item.mask[-32:, :32])
-                    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-
-                    if not min_val <= threshold:
-                        continue
-
-                    # loc = np.where(res <= threshold)
-                    top_left = (x_i * TILE_SIZE, y_i * TILE_SIZE)
-                    bottom_right = ((x_i + 1) * TILE_SIZE, (y_i + 1) * TILE_SIZE)
-
-                    self.important_tile_locations.append(AssetGridLoc(x=x_i, y=y_i, short_name=realm_item.short_name))
-                    if settings.DEBUG:
-                        cv2.putText(self.output_debug_gray, realm_item.short_name,
-                                    (x_i * TILE_SIZE, y_i * TILE_SIZE - TILE_SIZE // 2), cv2.FONT_HERSHEY_PLAIN, 0.9, (255),
-                                    1)
-                        cv2.rectangle(self.output_debug_gray, top_left, bottom_right, (255), 1)
-                    break
-        self.parent.speak_nearby_objects()
+        # for y_i, col in enumerate(grid_in_tiles):
+        #     for x_i, row in enumerate(col):
+        #         for realm_item in self.quest_items:
+        #             res = cv2.matchTemplate(row, realm_item.data_gray[-32:, :32], cv2.TM_SQDIFF_NORMED,
+        #                                     mask=realm_item.mask[-32:, :32])
+        #             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+        #
+        #             if not min_val <= threshold:
+        #                 continue
+        #
+        #             # loc = np.where(res <= threshold)
+        #             top_left = (x_i * TILE_SIZE, y_i * TILE_SIZE)
+        #             bottom_right = ((x_i + 1) * TILE_SIZE, (y_i + 1) * TILE_SIZE)
+        #
+        #             self.important_tile_locations.append(AssetGridLoc(x=x_i, y=y_i, short_name=realm_item.short_name))
+        #             if settings.DEBUG:
+        #                 cv2.putText(self.output_debug_gray, realm_item.short_name,
+        #                             (x_i * TILE_SIZE, y_i * TILE_SIZE - TILE_SIZE // 2), cv2.FONT_HERSHEY_PLAIN, 0.9, (255),
+        #                             1)
+        #                 cv2.rectangle(self.output_debug_gray, top_left, bottom_right, (255), 1)
+        #             break
+        #         continue
+        #
+        #         realm_item: Asset
+        #         for realm_item in self.unique_realm_assets:
+        #             res = cv2.matchTemplate(row, realm_item.data_gray[-32:, :32], cv2.TM_SQDIFF_NORMED,
+        #                                     mask=realm_item.mask[-32:, :32])
+        #             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+        #
+        #             if not min_val <= threshold:
+        #                 continue
+        #
+        #             # loc = np.where(res <= threshold)
+        #             top_left = (x_i * TILE_SIZE, y_i * TILE_SIZE)
+        #             bottom_right = ((x_i + 1) * TILE_SIZE, (y_i + 1) * TILE_SIZE)
+        #
+        #             self.important_tile_locations.append(AssetGridLoc(x=x_i, y=y_i, short_name=realm_item.short_name))
+        #             if settings.DEBUG:
+        #                 cv2.putText(self.output_debug_gray, realm_item.short_name,
+        #                             (x_i * TILE_SIZE, y_i * TILE_SIZE - TILE_SIZE // 2), cv2.FONT_HERSHEY_PLAIN, 0.9, (255),
+        #                             1)
+        #                 cv2.rectangle(self.output_debug_gray, top_left, bottom_right, (255), 1)
+        #             break
+        # self.parent.speak_nearby_objects()
 
     def realm_tile_has_matching_decoration(self) -> bool:
         pass
@@ -700,9 +811,12 @@ class NearPlayerProcessing(Thread):
         cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGRA2GRAY, dst=self.near_frame_gray)
 
         # calculate the correct alignment for grid
-        self.grid_near_rect = recompute_grid_offset(floor_tile=self.parent.castle_tile_gray,
-                                                    gray_frame=self.near_frame_gray,
-                                                    mss_rect=self.parent.nearby_rect_mss)
+        if realm_alignment := self.detect_what_realm_in():
+            # print(f"nearby new aligned grid: {aligned_rect}")
+            self.grid_near_rect = realm_alignment.alignment
+        else:
+            root.debug(f"using default nearby grid")
+            self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
 
         self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[
                                                          self.grid_near_rect.y:self.grid_near_rect.y + self.grid_near_rect.h,
@@ -727,9 +841,11 @@ class NearPlayerProcessing(Thread):
 
                 if comm_msg.type is MessageType.SCAN_FOR_ITEMS:
                     self.enter_castle_scanner()
+                elif comm_msg.type is MessageType.CHECK_WHAT_REALM_IN:
+                    self.enter_realm_scanner()
 
                 elif comm_msg.type is MessageType.DRAW_DEBUG:
-                    cv2.imshow("SU Vision - Near bbox", self.output_debug_near_gray)
+                    cv2.imshow("SU Vision - Near bbox", self.grid_near_slice_gray)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         cv2.destroyAllWindows()
                         break
@@ -738,6 +854,7 @@ class NearPlayerProcessing(Thread):
 
 
 if __name__ == "__main__":
+
     bot = Bot()
     bot.cache_image_hashes_of_decorations()
     print(f"{bot.su_client_rect=}")

@@ -47,6 +47,8 @@ class Capture:
         self.frame = 1
         self.castle_tile = cv2.imread("../assets_padded/floortiles/Zonte's Floor Tile-frame1.png", cv2.IMREAD_UNCHANGED)
 
+
+
     def detect_green_text(self, image) -> np.array:
         """Using a source image of RGB color, extract highlighted menu items which are a green color"""
         lower_green = np.array([60, 50, 100])
@@ -90,13 +92,15 @@ class Capture:
         self.frame += 1
         print(f"saved floor tile: {filename}")
 
-    def save_tile(self, filename: str):
-        cv2.imwrite(filename, self.decoration_img)
+    def save_tile(self, filepath: Path):
+        filepath_str = filepath.as_posix()
+        cv2.imwrite(filepath_str, self.decoration_img)
         self.frame += 1
-        print(f"saved floor tile: {filename}")
+        print(f"saved floor tile: {filepath_str}")
 
     def run(self):
 
+        folder_to_save_in = Path("../assets_padded/Enemies/Loid/")
 
         CAPTURE_UNNAMED_TILE = "capture_tile"
         CAPTURE_DECORATION = "capture_decoration"
@@ -148,7 +152,7 @@ class Capture:
                 filepath = folder_to_save_in.joinpath(filename)
 
                 if mode == CAPTURE_UNNAMED_TILE:
-                    self.save_tile(filename)
+                    self.save_tile(filepath)
                 elif mode == CAPTURE_DECORATION:
                     self.capture_decoration(folder=folder_to_save_in)
                 elif mode == CAPTURE_NPC_NO_OCR:

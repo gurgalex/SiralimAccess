@@ -1,3 +1,9 @@
+import pathlib
+from dataclasses import dataclass
+from functools import cache
+
+from cv2 import cv2
+from numpy.typing import ArrayLike
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
 from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Table, Computed
@@ -16,6 +22,30 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
+class SpriteType(enum.Enum):
+    """How is the sprite commonly used in the game"""
+    # all sprites in the game that could be inspected
+    CREATURE = 1
+    # A catch-all for every other graphic asset in the game
+    DECORATION = 2
+    ENEMY = 3
+    # Costume the player can wear
+    WARDROBE = 4
+    NPC = 5
+    FLOOR = 6
+    ALTAR = 7
+
+
+@cache
+def read_data_color(filepath: str) -> ArrayLike:
+    return cv2.imread(filepath, cv2.IMREAD_UNCHANGED)
+
+
+@cache
+def read_data_gray(filepath: str) -> ArrayLike:
+    img_color = read_data_color(filepath)
+    return cv2.cvtColor(img_color, cv2.COLOR_BGRA2GRAY)
+
 
 class SpriteFrame(Base):
     __tablename__ = "sprite_frame"
@@ -24,30 +54,25 @@ class SpriteFrame(Base):
     meta_extra = Column(String, nullable=True)
     _filepath = Column('filepath', String, nullable=False, unique=True)
 
-    @hybrid_property
-    def filepath(self):
-        new_image_path = IMAGE_PATH.joinpath(self._filepath)
-        return new_image_path.as_posix()
+    @property
+    def filepath(self) -> str:
+        return IMAGE_PATH.joinpath(self._filepath).as_posix()
 
     @filepath.setter
     def filepath(self, value: str):
         self._filepath = value
 
+    @property
+    def data_color(self):
+        return read_data_color(self.filepath)
+
+    @property
+    def data_gray(self):
+        return read_data_gray(self.filepath)
+
     def __repr__(self):
         return f"{SpriteFrame.__name__}({self.id=},{self._filepath=},{self.sprite_id=},{self.meta_extra=})"
 
-
-
-class SpriteType(enum.Enum):
-    """How is the sprite commonly used in the game"""
-    # all sprites in the game that could be inspected
-    CREATURE = "creature"
-    # A catch-all for every other graphic asset in the game
-    DECORATION = "decoration"
-    ENEMY = "enemy"
-    # Costume the player can wear
-    WARDROBE = "wardrobe"
-    NPC = "NPC"
 
 class SpriteTypeLookup(Base):
     __tablename__ = 'sprite_type'
@@ -71,8 +96,30 @@ class Sprite(Base):
     type = relationship('SpriteTypeLookup', backref='sprites', uselist=False)
     frames = relationship("SpriteFrame", backref="sprite", lazy='joined')
 
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.DECORATION.value,
+        'polymorphic_on': type_id,
+    }
 
     # Todo: Add collision rect in tiles from top-left (x, y, w, h)
+
+    @classmethod
+    def detetermine_child_class(cls, discriminator: SpriteType):
+        if discriminator is SpriteType.DECORATION:
+            return Sprite
+        elif discriminator is SpriteType.FLOOR:
+            return FloorSprite
+        elif discriminator is SpriteType.ALTAR:
+            return AltarSprite
+        elif discriminator is SpriteType.WARDROBE:
+            return WardrobeSprite
+        elif discriminator is SpriteType.NPC:
+            return NPCSprite
+        elif discriminator is SpriteType.ENEMY:
+            return EnemySprite
+        elif discriminator is SpriteType.CREATURE:
+            return CreatureSprite
+
 
 
 class QuestType(enum.Enum):
@@ -85,12 +132,16 @@ class QuestType(enum.Enum):
     false_god = "false god"
     nether_boss = "nether boss"
     story = "story"
+    renegade = "renegade"
+    rebel = "rebel"
+    citizen = "citizen"
 
 
 class QuestAppearance(enum.Enum):
     single_realm = 1
     all_realm = 2
     castle = 3
+
 
 class Realm(enum.Enum):
     UNSULLIED_MEADOWS = 'Unsullied Meadows'
@@ -123,10 +174,10 @@ class RealmLookup(Base):
     name = Column(String, nullable=False, unique=True,index=True)
 
     god_altar_sprite = relationship("Sprite", secondary="altar_sprite", uselist=False)
-    sprites = relationship("Sprite", secondary="realm_sprite", uselist=True, backref='realm')
+    sprites = relationship("Sprite", secondary="realm_sprite", uselist=True)
 
 
-class AltarSprite(Base):
+class AltarSprite(Sprite):
     __tablename__ = 'altar_sprite'
     sprite_id = Column(Integer, ForeignKey('sprite.id'), unique=True, primary_key=True)
     realm_id = Column(Integer, ForeignKey('realm.id'), unique=True, primary_key=True)
@@ -134,11 +185,29 @@ class AltarSprite(Base):
     sprite = relationship('Sprite', uselist=False, viewonly=True)
     realm = relationship('RealmLookup', uselist=False, viewonly=True)
 
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.ALTAR.value
+    }
+
 
 class RealmSprite(Base):
     __tablename__ = 'realm_sprite'
     realm_id = Column(Integer, ForeignKey('realm.id'), nullable=False, primary_key=True)
     sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
+
+
+class FloorSprite(Sprite):
+    __tablename__ = "floor_sprite"
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
+    realm_id = Column(Integer, ForeignKey('realm.id'), nullable=True, index=True)
+
+    sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
+    realm = relationship('RealmLookup', uselist=False, viewonly=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FLOOR.value,
+    }
+
 
 
 class ProjectType(enum.Enum):
@@ -199,6 +268,59 @@ class QuestSprite(Base):
     __tablename__ = 'quest_sprite'
     quest_id = Column(ForeignKey('quest.id'), primary_key=True, nullable=False)
     sprite_id = Column(ForeignKey('sprite.id'), primary_key=True, nullable=False)
+
+
+class NPCSprite(Sprite):
+    __tablename__ = "npc_sprite"
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
+    realm_id = Column(Integer, ForeignKey('realm.id'), nullable=True, index=True)
+
+    sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
+    realm = relationship('RealmLookup', uselist=False, viewonly=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.NPC.value
+    }
+
+
+class WardrobeSprite(Sprite):
+    __tablename__ = "wardrobe_sprite"
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
+    realm_id = Column(Integer, ForeignKey('realm.id'), nullable=True, index=True)
+
+    sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
+    realm = relationship('RealmLookup', uselist=False, viewonly=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.WARDROBE.value
+    }
+
+
+class EnemySprite(Sprite):
+    __tablename__ = "enemy_sprite"
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
+    realm_id = Column(Integer, ForeignKey('realm.id'), nullable=True, index=True)
+
+    sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
+    realm = relationship('RealmLookup', uselist=False, viewonly=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.ENEMY.value
+    }
+
+
+class CreatureSprite(Sprite):
+    __tablename__ = "creature_sprite"
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
+    realm_id = Column(Integer, ForeignKey('realm.id'), nullable=True, index=True)
+
+    sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
+    realm = relationship('RealmLookup', uselist=False, viewonly=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.CREATURE.value
+    }
+
 
 
 debug = False
