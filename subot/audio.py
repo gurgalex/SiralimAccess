@@ -12,6 +12,22 @@ class AudioLocation:
     distance: Point
 
 
+Left = float
+Right = float
+
+
+def volume_from_distance(distance: Point) -> tuple[Left, Right]:
+    if distance.x > 0:
+        return Left(0),\
+               Right(1 / (distance.x + 1 + abs(distance.y)))
+    elif distance.x < 0:
+        return Left(1 / (abs(abs(distance.x) + abs(distance.y)) + 1)),\
+               Right(0)
+    else:
+        return Left(1 / (abs(distance.y) + 1)),\
+               Right(1 / (abs(distance.y) + 1))
+
+
 class AudioSystem:
     def __init__(self):
         self.master_npc_low_sound = pygame.mixer.Sound("../audio/horse_sound_cc0-low.wav")
@@ -38,13 +54,9 @@ class AudioSystem:
         """stop playing item nearness sound if no objects are detected in range"""
         self.master_npc_channel.stop()
 
-    def play_master(self, master_location: Optional[AudioLocation]):
-        no_locations = master_location is None
-        if no_locations:
-            return
+    def play_master(self, master_location: AudioLocation):
 
         audio_tile = master_location
-        distance_x = audio_tile.distance.x
         distance_y = audio_tile.distance.y
 
         if distance_y > 0:
@@ -54,19 +66,12 @@ class AudioSystem:
         else:
             sound = self.master_npc_normal_sound
 
-        if distance_x > 0:
-            volume = (0, 1/(distance_x + 1 + abs(distance_y)))
-        elif distance_x < 0:
-            volume = (1/(abs(abs(distance_x) + abs(distance_y)) + 1),0)
-        else:
-            volume = (1 / (abs(distance_y) + 1), 1 / (abs(distance_y) + 1))
-
+        volume = volume_from_distance(audio_tile.distance)
         if self.master_npc_channel.get_sound() != sound:
             self.master_npc_channel.play(sound, -1)
             self.master_npc_channel.set_volume(*volume)
 
         self.master_npc_channel.set_volume(*volume)
-
 
     def play_locations(self, audio_locations: list[AudioLocation]):
         no_locations = len(audio_locations) == 0
@@ -86,16 +91,10 @@ class AudioSystem:
             else:
                 sound = self.quest_item_normal_sound
 
-            if distance_x > 0:
-                volume = (0, 1/(distance_x + 1 + abs(distance_y)))
-            elif distance_x < 0:
-                volume = (1/(abs(abs(distance_x) + abs(distance_y)) + 1),0)
-            else:
-                volume = (1 / (abs(distance_y) + 1), 1 / (abs(distance_y) + 1))
+            volume = volume_from_distance(audio_tile.distance)
 
             if self.quest_channel.get_sound() != sound:
                 self.quest_channel.play(sound, -1)
                 self.quest_channel.set_volume(*volume)
 
             self.quest_channel.set_volume(*volume)
-

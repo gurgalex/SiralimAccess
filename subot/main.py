@@ -465,7 +465,6 @@ class Bot:
                                  y=tile.y - self.player_position_tile.y,)
                 audio_locations.append(AudioLocation(distance=distance))
 
-
             self.audio_system.play_locations(audio_locations)
             self.previous_important_tile_locations = self.important_tile_locations[:]
 
