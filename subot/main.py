@@ -397,12 +397,11 @@ class Bot:
                 print(quest.title, [sprite.long_name for sprite in quest.sprites])
 
         iters = 0
-        every = 5
-        start = time.time()
+        every = 10
+        FPS = 75
+        clock = pygame.time.Clock()
 
         while True:
-            if iters % every == 0:
-                start = time.time()
 
             if self.mode is BotMode.UNDETERMINED:
 
@@ -411,24 +410,6 @@ class Bot:
                 if realm_alignment := self.nearby_processing_thandle.detect_what_realm_in():
                     if isinstance(realm_alignment, RealmAlignment):
                         self.realm = realm_alignment.realm
-                    # # self.unique_realm_assets = self.assetDB.get_realm_assets_for_realm(self.realm)
-                    # # print(f"items to scan: {len(self.unique_realm_assets)}")
-                    # # print([x.long_name for x in self.unique_realm_assets])
-                    #
-                    # # quests: list[Quest] = extract_quest_name_from_quest_area(gray_frame=self.gray_frame)
-                    # quests: list[Quest] = []
-                    # print(quests)
-                    # for quest in quests:
-                    #     try:
-                    #         pass
-                    #     #     quest_items = self.assetDB.lookup["quest_item"][quest_name]
-                    #     #     print("got matching quest items")
-                    #     #     for quest_asset in quest_items:
-                    #     #         print(quest_asset.long_name)
-                    #     #         self.quest_items.append(quest_asset)
-                    #     except KeyError:
-                    #         print(f"no quest items for quest: {quest_name}")
-                    #
                     self.mode = BotMode.REALM
 
             elif self.mode is BotMode.REALM:
@@ -444,12 +425,11 @@ class Bot:
             cv2.rectangle(self.grid_slice_gray, top_left, bottom_right, (255), 1)
 
             if iters % every == 0:
-                end = time.time()
-                # print(f"FPS: {1 / max((end - start)*every, 0.0001)}")
+                print(f"FPS: {clock.get_fps()}")
             iters += 1
             if settings.DEBUG:
                 self.nearby_send_deque.append(DrawDebug())
-            time.sleep(1/80)
+            clock.tick(FPS)
 
     def speak_nearby_objects(self):
         audio_locations: list[AudioLocation] = []
@@ -525,8 +505,6 @@ class WholeWindowAnalyzer(Thread):
 
     def run(self):
 
-        number = 0
-        start = time.time()
         while True:
             try:
                 msg = self.incoming_frame_queue.get(timeout=10)
@@ -535,10 +513,6 @@ class WholeWindowAnalyzer(Thread):
                 raise Exception("No new full frame for 10 seconds")
             if shot is None:
                 break
-            number += 1
-            end = time.time()
-            latency = (end - start)
-            start = time.time()
 
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
@@ -766,61 +740,9 @@ class NearPlayerProcessing(Thread):
                         temp_gray.append(frame.data_gray)
                 self.parent.active_floor_tiles = temp
                 self.parent.active_floor_tiles_gray = temp_gray
-            # self.quest_items.clear()
-            # self.unique_realm_assets = self.assetDB.get_realm_assets_for_realm(self.realm)
-            # self.mode = BotMode.REALM
             root.info(f"new realm entered: {self.realm.name}")
 
         self.enter_castle_scanner()
-        # threshold = 0.10
-        #
-        # block_size = (TILE_SIZE, TILE_SIZE)
-        # grid_in_tiles = view_as_blocks(self.grid_near_slice_gray, block_size)
-
-        # for y_i, col in enumerate(grid_in_tiles):
-        #     for x_i, row in enumerate(col):
-        #         for realm_item in self.quest_items:
-        #             res = cv2.matchTemplate(row, realm_item.data_gray[-32:, :32], cv2.TM_SQDIFF_NORMED,
-        #                                     mask=realm_item.mask[-32:, :32])
-        #             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        #
-        #             if not min_val <= threshold:
-        #                 continue
-        #
-        #             # loc = np.where(res <= threshold)
-        #             top_left = (x_i * TILE_SIZE, y_i * TILE_SIZE)
-        #             bottom_right = ((x_i + 1) * TILE_SIZE, (y_i + 1) * TILE_SIZE)
-        #
-        #             self.important_tile_locations.append(AssetGridLoc(x=x_i, y=y_i, short_name=realm_item.short_name))
-        #             if settings.DEBUG:
-        #                 cv2.putText(self.output_debug_gray, realm_item.short_name,
-        #                             (x_i * TILE_SIZE, y_i * TILE_SIZE - TILE_SIZE // 2), cv2.FONT_HERSHEY_PLAIN, 0.9, (255),
-        #                             1)
-        #                 cv2.rectangle(self.output_debug_gray, top_left, bottom_right, (255), 1)
-        #             break
-        #         continue
-        #
-        #         realm_item: Asset
-        #         for realm_item in self.unique_realm_assets:
-        #             res = cv2.matchTemplate(row, realm_item.data_gray[-32:, :32], cv2.TM_SQDIFF_NORMED,
-        #                                     mask=realm_item.mask[-32:, :32])
-        #             min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-        #
-        #             if not min_val <= threshold:
-        #                 continue
-        #
-        #             # loc = np.where(res <= threshold)
-        #             top_left = (x_i * TILE_SIZE, y_i * TILE_SIZE)
-        #             bottom_right = ((x_i + 1) * TILE_SIZE, (y_i + 1) * TILE_SIZE)
-        #
-        #             self.important_tile_locations.append(AssetGridLoc(x=x_i, y=y_i, short_name=realm_item.short_name))
-        #             if settings.DEBUG:
-        #                 cv2.putText(self.output_debug_gray, realm_item.short_name,
-        #                             (x_i * TILE_SIZE, y_i * TILE_SIZE - TILE_SIZE // 2), cv2.FONT_HERSHEY_PLAIN, 0.9, (255),
-        #                             1)
-        #                 cv2.rectangle(self.output_debug_gray, top_left, bottom_right, (255), 1)
-        #             break
-        # self.parent.speak_nearby_objects()
 
     def realm_tile_has_matching_decoration(self) -> bool:
         pass
@@ -851,7 +773,6 @@ class NearPlayerProcessing(Thread):
 
     def run(self):
         stop = False
-        count = 0
 
         while not stop:
             msg: MessageImpl = self.nearby_queue.get(timeout=15)
