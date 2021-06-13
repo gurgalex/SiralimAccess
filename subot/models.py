@@ -22,6 +22,7 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
     cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
+
 class SpriteType(enum.Enum):
     """How is the sprite commonly used in the game"""
     # all sprites in the game that could be inspected
@@ -34,6 +35,8 @@ class SpriteType(enum.Enum):
     NPC = 5
     FLOOR = 6
     ALTAR = 7
+    # Sprite of each creature race's master
+    MASTER_NPC = 8
 
 
 @cache
@@ -90,7 +93,7 @@ class Sprite(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     short_name = Column(String, nullable=False)
     long_name = Column(String, nullable=False, unique=True)
-    # todo: today: add relationship for RealmSprite table
+    # todo: add relationship for RealmSprite table
 
     type_id = Column(Integer, ForeignKey('sprite_type.id'))
     type = relationship('SpriteTypeLookup', backref='sprites', uselist=False)
@@ -119,6 +122,8 @@ class Sprite(Base):
             return EnemySprite
         elif discriminator is SpriteType.CREATURE:
             return CreatureSprite
+        elif discriminator is SpriteType.MASTER_NPC:
+            return MasterNPCSprite
 
 
 
@@ -209,12 +214,9 @@ class FloorSprite(Sprite):
     }
 
 
-
 class ProjectType(enum.Enum):
-
     MISSION = "mission"
     SPECIAL_PROJECT = "special_project"
-
 
 
 class Project(Base):
@@ -280,6 +282,17 @@ class NPCSprite(Sprite):
 
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.NPC.value
+    }
+
+
+class MasterNPCSprite(Sprite):
+    __tablename__ = "master_npc_sprite"
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
+
+    sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.MASTER_NPC.value
     }
 
 
