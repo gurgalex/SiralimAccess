@@ -82,6 +82,9 @@ class SpriteTypeLookup(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(db.Enum(SpriteType), unique=True, nullable=False)
 
+    def __repr__(self):
+        return f"{self.__class__}(enum={self.name})"
+
 
 class Sprite(Base):
     """A collection of sprite frames for a particular game graphic asset
@@ -97,12 +100,15 @@ class Sprite(Base):
 
     type_id = Column(Integer, ForeignKey('sprite_type.id'))
     type = relationship('SpriteTypeLookup', backref='sprites', uselist=False)
-    frames = relationship("SpriteFrame", backref="sprite", lazy='joined')
+    frames = relationship("SpriteFrame", backref="sprite", lazy='joined', cascade='all, delete-orphan')
 
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.DECORATION.value,
         'polymorphic_on': type_id,
     }
+
+    def __repr__(self):
+        return f"{self.__tablename__}(id={self.id},short_name={self.short_name},long_name={self.long_name}, type={self.type},frames={self.frames})"
 
     # Todo: Add collision rect in tiles from top-left (x, y, w, h)
 
@@ -188,7 +194,7 @@ class AltarSprite(Sprite):
     realm_id = Column(Integer, ForeignKey('realm.id'), unique=True, primary_key=True)
 
     sprite = relationship('Sprite', uselist=False, viewonly=True)
-    realm = relationship('RealmLookup', uselist=False, viewonly=True)
+    realm = relationship('RealmLookup', uselist=False)
 
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.ALTAR.value

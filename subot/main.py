@@ -18,7 +18,8 @@ import pytesseract
 import math
 import time
 from skimage.util import view_as_blocks
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, Load
+from sqlalchemy.orm.strategy_options import load_only
 
 from subot.audio import AudioSystem, AudioLocation
 from subot.messageTypes import NewFrame, MessageImpl, MessageType, ScanForItems, DrawDebug, CheckWhatRealmIn
@@ -32,7 +33,7 @@ from dataclasses import dataclass
 
 import subot.background_subtract as background_subtract
 
-from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, SpriteType
+from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, SpriteType, AltarSprite
 from subot.models import Session
 import subot.settings as settings
 
@@ -51,7 +52,7 @@ yellow = (0, 255, 255)
 orange = (0, 215, 255)
 
 TILE_SIZE = 32
-NEARBY_TILES_WH: int = 12
+NEARBY_TILES_WH: int = 13
 
 title = "SU Vision"
 
@@ -124,10 +125,13 @@ class BotMode(Enum):
 
 @dataclass(frozen=True)
 class AssetGridLoc:
-    """Tile coordinate + game asset name on map"""
+    """Tile coordinate relative to player + game asset name on map"""
     x: int
     y: int
     short_name: str
+
+    def point(self) -> Point:
+        return Point(x=self.x, y=self.y)
 
 
 def extract_quest_name_from_quest_area(gray_frame: np.typing.ArrayLike) -> list[Quest]:
@@ -197,6 +201,9 @@ listener.start()
 
 class Bot:
     def __init__(self):
+        with Session() as session:
+            altar_names_results: list[tuple] = session.query(AltarSprite).with_entities(AltarSprite.long_name).all()
+            self.altars: set[str] = set(result[0] for result in altar_names_results)
         self.masters = set()
         pygame.init()
         self.audio_system: AudioSystem = AudioSystem()
@@ -266,6 +273,9 @@ class Bot:
 
         # master location
         self.master_tile_location: Optional[AssetGridLoc] = None
+
+        # altar location
+        self.altar_tile_location: Optional[AssetGridLoc] = None
 
         # used to tell if the player has moved since last scanning for objects
         self.previous_important_tile_locations: list[AssetGridLoc] = []
@@ -425,7 +435,7 @@ class Bot:
             cv2.rectangle(self.grid_slice_gray, top_left, bottom_right, (255), 1)
 
             if iters % every == 0:
-                print(f"FPS: {clock.get_fps()}")
+                root.debug(f"FPS: {clock.get_fps()}")
             iters += 1
             if settings.DEBUG:
                 self.nearby_send_deque.append(DrawDebug())
@@ -435,28 +445,28 @@ class Bot:
         audio_locations: list[AudioLocation] = []
         with self.important_tile_locations_lock.gen_rlock():
 
-            # same_player_position = self.important_tile_locations == self.previous_important_tile_locations
-            # if same_player_position:
-            #     return
-
             for tile in self.important_tile_locations[:1]:
 
-                distance = Point(x=tile.x - self.player_position_tile.x,
-                                 y=tile.y - self.player_position_tile.y,)
-                audio_locations.append(AudioLocation(distance=distance))
+                audio_locations.append(AudioLocation(distance=tile.point()))
 
-            self.audio_system.play_locations(audio_locations)
+            self.audio_system.play_quest_items(audio_locations)
             self.previous_important_tile_locations = self.important_tile_locations[:]
 
         if self.master_tile_location:
-            master_distance = Point(x=self.master_tile_location.x - self.player_position_tile.x,
-                                    y=self.master_tile_location.y - self.player_position_tile.y, )
-            master_distance_audio = AudioLocation(distance=master_distance)
+            master_distance_audio = AudioLocation(distance=self.master_tile_location.point())
             self.audio_system.play_master(master_distance_audio)
             self.previous_master_location = self.master_tile_location
             self.master_tile_location = None
         else:
             self.audio_system.stop_master()
+
+        if self.altar_tile_location:
+            self.audio_system.play_altar(AudioLocation(distance=self.altar_tile_location.point()))
+            self.altar_tile_location = None
+        else:
+            self.audio_system.stop_altar()
+
+
 
 
 class WholeWindowGrabber(multiprocessing.Process):
@@ -603,7 +613,6 @@ class NearPlayerProcessing(Thread):
 
         # The current active quests
         self.active_quests: list[Quest] = []
-        # self.quest_item_locations: list[QuestAssetGridLoc] = []
 
     def detect_what_realm_in(self) -> Optional[Union[RealmAlignment, CastleAlignment]]:
         # Scan a 7x7 tile area for lit tiles to determine what realm we are in currently
@@ -650,8 +659,6 @@ class NearPlayerProcessing(Thread):
                         #     cv2.imwrite(test_path, row)
                         #     return realm_in_enum
 
-
-
     def detect_if_in_castle(self) -> bool:
         # Check configured castle tile
         block_size = (TILE_SIZE, TILE_SIZE)
@@ -676,33 +683,29 @@ class NearPlayerProcessing(Thread):
             for row in range(0, self.grid_near_rect.w, TILE_SIZE):
                 for col in range(0, self.grid_near_rect.h, TILE_SIZE):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
-                    tile_color = self.grid_near_slice_color[col:col + TILE_SIZE, row:row + TILE_SIZE, :3]
 
-                    for floor_tile in self.parent.active_floor_tiles:
+                    for floor_tile in self.parent.active_floor_tiles_gray:
 
-                        # print(f"bg subtract - {tile_color.shape=}  {self.parent.castle_tile.shape=}")
-                        floor_tile = floor_tile[:, :, :3]
-                        # print(f"shape tile = {tile_color.shape}, shape floor={floor_tile.shape}")
-                        fg_only = background_subtract.subtract_background_color_tile(tile=tile_color,
-                                                                                     floor=floor_tile)
-                        fg_only_gray = cv2.cvtColor(fg_only, cv2.COLOR_BGR2GRAY)
+                        fg_only_gray = background_subtract.subtract_background_from_tile(tile_gray=tile_gray,floor_background_gray=floor_tile)
                         tile_gray[:] = fg_only_gray
-                        # if settings.DEBUG:
-                        #     self.output_debug_near_gray[col:col + TILE_SIZE, row:row + TILE_SIZE] = fg_only_gray
 
                         try:
                             img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
                             root.debug(f"matched: {img_info.long_name}")
 
+                            asset_location = AssetGridLoc(x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE - self.parent.player_position_tile.x,
+                                                          y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
+                                                          short_name=img_info.short_name,
+                                                          )
+
                             if img_info.long_name in self.parent.quest_sprite_long_names:
-                                self.parent.important_tile_locations.append(
-                                    AssetGridLoc(x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE,
-                                                 y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE,
-                                                 short_name=img_info.short_name))
+                                self.parent.important_tile_locations.append(asset_location)
                             elif img_info.long_name in self.parent.masters:
-                                self.parent.master_tile_location = AssetGridLoc(x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE,
-                                                 y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE,
-                                                 short_name=img_info.short_name,)
+                                self.parent.master_tile_location = asset_location
+                            elif img_info.long_name in self.parent.altars:
+                                root.debug(f"matched altar {img_info.long_name}")
+                                self.parent.altar_tile_location = asset_location
+
                             if settings.DEBUG:
                                 cv2.rectangle(self.output_debug_near_gray, (row, col), (row + TILE_SIZE, col + TILE_SIZE),
                                               (255, 255, 255), 1)

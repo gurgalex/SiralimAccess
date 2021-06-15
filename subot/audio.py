@@ -30,6 +30,10 @@ def volume_from_distance(distance: Point) -> tuple[Left, Right]:
 
 class AudioSystem:
     def __init__(self):
+        self.altar_low_sound = pygame.mixer.Sound("../audio/altar-low.wav")
+        self.altar_normal_sound = pygame.mixer.Sound("../audio/altar_normal-amplifiedl.wav")
+        self.altar_high_sound = pygame.mixer.Sound("../audio/altar-high.wav")
+
         self.master_npc_low_sound = pygame.mixer.Sound("../audio/horse_sound_cc0-low.wav")
         self.master_npc_normal_sound = pygame.mixer.Sound("../audio/horse_sound_cc0.wav")
         self.master_npc_high_sound = pygame.mixer.Sound("../audio/horse_sound_cc0-high.wav")
@@ -43,12 +47,38 @@ class AudioSystem:
         # audio channel for master NPC sound
         self.master_npc_channel = pygame.mixer.Channel(1)
 
+        # audio channel for realm realm altar sound
+        self.altar_channel = pygame.mixer.Channel(2)
+
 
         # Windows TTS speaker
         self.Speaker = win32com.client.Dispatch("SAPI.SpVoice")
         # don't block the program when speaking. Cancel any pending speaking directions
         self.SVSFlag = 3  # SVSFlagsAsync = 1 + SVSFPurgeBeforeSpeak = 2
         self.Speaker.Voice = self.Speaker.getVoices('Name=Microsoft Zira Desktop').Item(0)
+
+    def play_altar(self, audio_location: AudioLocation):
+        audio_tile = audio_location
+        distance_y = audio_tile.distance.y
+
+        if distance_y > 0:
+            sound = self.altar_low_sound
+        elif distance_y < 0:
+            sound = self.altar_high_sound
+        else:
+            sound = self.altar_normal_sound
+
+        volume = volume_from_distance(audio_tile.distance)
+        if self.altar_channel.get_sound() != sound:
+            self.altar_channel.play(sound, -1)
+            self.altar_channel.set_volume(*volume)
+
+        self.altar_channel.set_volume(*volume)
+
+    def stop_altar(self):
+        self.altar_channel.stop()
+
+
 
     def stop_master(self):
         """stop playing item nearness sound if no objects are detected in range"""
@@ -73,7 +103,7 @@ class AudioSystem:
 
         self.master_npc_channel.set_volume(*volume)
 
-    def play_locations(self, audio_locations: list[AudioLocation]):
+    def play_quest_items(self, audio_locations: list[AudioLocation]):
         no_locations = len(audio_locations) == 0
         # stop playing item nearness sound if no objects are detected in range
         if no_locations:
@@ -81,7 +111,6 @@ class AudioSystem:
             return
 
         for audio_tile in audio_locations[:1]:
-            distance_x = audio_tile.distance.x
             distance_y = audio_tile.distance.y
 
             if distance_y > 0:
