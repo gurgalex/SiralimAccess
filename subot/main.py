@@ -52,7 +52,7 @@ yellow = (0, 255, 255)
 orange = (0, 215, 255)
 
 TILE_SIZE = 32
-NEARBY_TILES_WH: int = 12
+NEARBY_TILES_WH: int = 13
 
 title = "SU Vision"
 
@@ -435,7 +435,7 @@ class Bot:
             cv2.rectangle(self.grid_slice_gray, top_left, bottom_right, (255), 1)
 
             if iters % every == 0:
-                print(f"FPS: {clock.get_fps()}")
+                root.debug(f"FPS: {clock.get_fps()}")
             iters += 1
             if settings.DEBUG:
                 self.nearby_send_deque.append(DrawDebug())
@@ -683,19 +683,11 @@ class NearPlayerProcessing(Thread):
             for row in range(0, self.grid_near_rect.w, TILE_SIZE):
                 for col in range(0, self.grid_near_rect.h, TILE_SIZE):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
-                    tile_color = self.grid_near_slice_color[col:col + TILE_SIZE, row:row + TILE_SIZE, :3]
 
-                    for floor_tile in self.parent.active_floor_tiles:
+                    for floor_tile in self.parent.active_floor_tiles_gray:
 
-                        # print(f"bg subtract - {tile_color.shape=}  {self.parent.castle_tile.shape=}")
-                        floor_tile = floor_tile[:, :, :3]
-                        # print(f"shape tile = {tile_color.shape}, shape floor={floor_tile.shape}")
-                        fg_only = background_subtract.subtract_background_color_tile(tile=tile_color,
-                                                                                     floor=floor_tile)
-                        fg_only_gray = cv2.cvtColor(fg_only, cv2.COLOR_BGR2GRAY)
+                        fg_only_gray = background_subtract.subtract_background_from_tile(tile_gray=tile_gray,floor_background_gray=floor_tile)
                         tile_gray[:] = fg_only_gray
-                        # if settings.DEBUG:
-                        #     self.output_debug_near_gray[col:col + TILE_SIZE, row:row + TILE_SIZE] = fg_only_gray
 
                         try:
                             img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
