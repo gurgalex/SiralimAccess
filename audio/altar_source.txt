@@ -1,0 +1,4 @@
+title: Phone vibration
+license: CC0 1.0
+license url: https://creativecommons.org/publicdomain/zero/1.0/legalcode
+url: https://freesound.org/people/Breviceps/sounds/515295/
