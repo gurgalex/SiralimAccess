@@ -37,6 +37,8 @@ class SpriteType(enum.Enum):
     ALTAR = 7
     # Sprite of each creature race's master
     MASTER_NPC = 8
+    # Sprite for an item of a project
+    PROJ_ITEM = 9
 
 
 @cache
@@ -240,6 +242,16 @@ class Project(Base):
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String, unique=True, nullable=False, index=True)
     type = Column(db.Enum(ProjectType), nullable=False)
+
+class ProjectItemSprite(Sprite):
+    __tablename__ = "project_item_sprite"
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
+
+    sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.PROJ_ITEM.value
+    }
 
 
 class Quest(Base):

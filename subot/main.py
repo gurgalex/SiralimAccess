@@ -33,7 +33,8 @@ from dataclasses import dataclass
 
 import subot.background_subtract as background_subtract
 
-from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, SpriteType, AltarSprite
+from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, SpriteType, AltarSprite, \
+    ProjectItemSprite
 from subot.models import Session
 import subot.settings as settings
 
@@ -201,9 +202,15 @@ listener.start()
 
 class Bot:
     def __init__(self):
+        self.project_item_locations: list[AssetGridLoc] = []
         with Session() as session:
             altar_names_results: list[tuple] = session.query(AltarSprite).with_entities(AltarSprite.long_name).all()
             self.altars: set[str] = set(result[0] for result in altar_names_results)
+
+            project_item_results: list[tuple] = session.query(ProjectItemSprite).with_entities(ProjectItemSprite.long_name).all()
+            self.project_items: set[str] = set(result[0] for result in project_item_results)
+
+        print(f"number project items = {len(self.project_items)}")
         self.masters = set()
         pygame.init()
         self.audio_system: AudioSystem = AudioSystem()
@@ -466,7 +473,12 @@ class Bot:
         else:
             self.audio_system.stop_altar()
 
-
+        if self.project_item_locations:
+            for tile in self.project_item_locations[:1]:
+                self.audio_system.play_project_items(AudioLocation(distance=tile.point()))
+            self.project_item_locations.clear()
+        else:
+            self.audio_system.stop_project_item()
 
 
 class WholeWindowGrabber(multiprocessing.Process):
@@ -615,7 +627,7 @@ class NearPlayerProcessing(Thread):
         self.active_quests: list[Quest] = []
 
     def detect_what_realm_in(self) -> Optional[Union[RealmAlignment, CastleAlignment]]:
-        # Scan a 7x7 tile area for lit tiles to determine what realm we are in currently
+        # Scan the nearby tile area for lit tiles to determine what realm we are in currently
         # This area was chosen since the player + 6 creatures are at most this long
         # At least 1 tile will not be dimmed by the fog of war
 
@@ -705,13 +717,10 @@ class NearPlayerProcessing(Thread):
                             elif img_info.long_name in self.parent.altars:
                                 root.debug(f"matched altar {img_info.long_name}")
                                 self.parent.altar_tile_location = asset_location
+                            elif img_info.long_name in self.parent.project_items:
+                                root.debug(f"matched project item {img_info.long_name}")
+                                self.parent.project_item_locations.append(asset_location)
 
-                            if settings.DEBUG:
-                                cv2.rectangle(self.output_debug_near_gray, (row, col), (row + TILE_SIZE, col + TILE_SIZE),
-                                              (255, 255, 255), 1)
-                                # label finding with text
-                                cv2.putText(self.output_debug_near_gray, img_info.long_name, (row, col + TILE_SIZE // 2),
-                                            cv2.FONT_HERSHEY_PLAIN, 0.9, (255, 255, 255), 2)
                             break
 
                         except KeyError as e:
@@ -771,8 +780,6 @@ class NearPlayerProcessing(Thread):
         self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[
                                                           self.grid_near_rect.y:self.grid_near_rect.y + self.grid_near_rect.h,
                                                           self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
-        if settings.DEBUG:
-            self.output_debug_near_gray = self.grid_near_slice_gray.copy()
 
     def run(self):
         stop = False
