@@ -30,6 +30,11 @@ def volume_from_distance(distance: Point) -> tuple[Left, Right]:
 
 class AudioSystem:
     def __init__(self):
+
+        self.project_item_low_sound = pygame.mixer.Sound("../audio/project-item-low.ogg")
+        self.project_item_normal_sound = pygame.mixer.Sound("../audio/project-item-normal.ogg")
+        self.project_item_high_sound = pygame.mixer.Sound("../audio/project-item-high.ogg")
+
         self.altar_low_sound = pygame.mixer.Sound("../audio/altar-angel-low.ogg")
         self.altar_normal_sound = pygame.mixer.Sound("../audio/altar-angel-normal.ogg")
         self.altar_high_sound = pygame.mixer.Sound("../audio/altar-angel-high.ogg")
@@ -47,15 +52,37 @@ class AudioSystem:
         # audio channel for master NPC sound
         self.master_npc_channel = pygame.mixer.Channel(1)
 
-        # audio channel for realm realm altar sound
+        # audio channel for realm altar sound
         self.altar_channel = pygame.mixer.Channel(2)
 
+        # audio channel for project item sound
+        self.project_item_channel = pygame.mixer.Channel(3)
 
         # Windows TTS speaker
         self.Speaker = win32com.client.Dispatch("SAPI.SpVoice")
         # don't block the program when speaking. Cancel any pending speaking directions
         self.SVSFlag = 3  # SVSFlagsAsync = 1 + SVSFPurgeBeforeSpeak = 2
         self.Speaker.Voice = self.Speaker.getVoices('Name=Microsoft Zira Desktop').Item(0)
+
+    def play_project_items(self, audio_tile: AudioLocation):
+        distance_y = audio_tile.distance.y
+
+        if distance_y > 0:
+            sound = self.project_item_low_sound
+        elif distance_y < 0:
+            sound = self.project_item_high_sound
+        else:
+            sound = self.project_item_normal_sound
+
+        volume = volume_from_distance(audio_tile.distance)
+        if self.project_item_channel.get_sound() != sound:
+            self.project_item_channel.play(sound, -1)
+            self.project_item_channel.set_volume(*volume)
+
+        self.project_item_channel.set_volume(*volume)
+
+    def stop_project_item(self):
+        self.project_item_channel.stop()
 
     def play_altar(self, audio_location: AudioLocation):
         audio_tile = audio_location

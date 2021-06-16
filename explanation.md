@@ -32,3 +32,7 @@ Sprites can be grouped into these categories with the following filename pattern
 * altar - `spr_god_*.png` 32x64 dim
 * realm wall - `spr_wall_*` example `spr_wall_cave` 32x32 dim
 * painting - `*painting*.png`
+
+
+todo: Performance - On every realm change. take every decoration and overlay it on top of the realm tiles. Store result for checking against exactly. Avoids background subtract.
+Also possibly fixes false negative matches due to same pixel grayscale values.
