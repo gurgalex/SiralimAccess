@@ -9,10 +9,11 @@ import re
 import sqlalchemy
 from sqlalchemy.exc import NoResultFound
 
-from subot.models import MasterNPCSprite, SpriteFrame, Session, AltarSprite, Realm, RealmLookup
+from subot.models import MasterNPCSprite, SpriteFrame, Session, AltarSprite, Realm, RealmLookup, ProjectItemSprite
 
 master_name_regex = re.compile(r"master_(?P<race>.*)_[\d].png")
 realm_altar_regex = re.compile(r"spr_(?:altar|god)_(?P<realm>.*)_[\d].png")
+project_item_regex = re.compile(r"project_(?P<name>.*)_[\d].png")
 
 MASTER_ICON_SIZE = 16
 MASTER_NPC_SIZE = 32
@@ -168,6 +169,48 @@ def altars(sprite_export_dir: Path, dest_dir: Path):
             session.commit()
 
 
+def insert_project_items(export_dir: Path, dest_dir: Path):
+
+    sprites: dict[str, ProjectItemSprite] = {}
+
+    for ct, project_item_path in enumerate(export_dir.glob("project_*.png")):
+        sprite_frame_match = project_item_regex.match(project_item_path.name)
+        if not sprite_frame_match:
+            continue
+
+        item_name_short: str = (sprite_frame_match.groups()[0])
+        item_name_short: str = item_name_short.replace("_", " ")
+        item_name_long: str = f"Project item {item_name_short}"
+
+        destination_file = dest_dir.joinpath(project_item_path.name)
+        shutil.copy(project_item_path, destination_file)
+
+        sprites.setdefault(item_name_long, ProjectItemSprite(short_name=item_name_short, long_name=item_name_long))\
+            .frames.append(SpriteFrame(_filepath=destination_file.as_posix()))
+
+    print(f"{len(sprites)} project items")
+    with Session() as session:
+        for item_name_long, sprite in sprites.items():
+            try:
+                project_item = session.query(ProjectItemSprite).filter_by(long_name=item_name_long).one()
+            except NoResultFound:
+                project_item = sprite
+
+            project_item.short_name = sprite.short_name
+            project_item.long_name = sprite.long_name
+
+            project_item.frames.clear()
+            session.flush()
+
+            frame: SpriteFrame
+            for frame in sprite.frames:
+                sprite_frame = SpriteFrame()
+                sprite_frame.filepath = frame._filepath
+                project_item.frames.append(sprite_frame)
+            session.add(project_item)
+            session.commit()
+
+
 if __name__ == "__main__":
     export_dir = Path("C:/Program Files (x86)/Steam/steamapps/common/Siralim Ultimate/Export_Textures_0.9.11/")
     dest_dir = Path("extracted_assets")
@@ -176,3 +219,4 @@ if __name__ == "__main__":
     except sqlalchemy.exc.IntegrityError:
         logging.info("Reimporting or updating master sprites is not implemented")
     altars(export_dir, dest_dir)
+    insert_project_items(export_dir, dest_dir)
