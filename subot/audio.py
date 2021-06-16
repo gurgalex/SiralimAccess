@@ -30,9 +30,9 @@ def volume_from_distance(distance: Point) -> tuple[Left, Right]:
 
 class AudioSystem:
     def __init__(self):
-        self.altar_low_sound = pygame.mixer.Sound("../audio/altar-low.wav")
-        self.altar_normal_sound = pygame.mixer.Sound("../audio/altar_normal-amplifiedl.wav")
-        self.altar_high_sound = pygame.mixer.Sound("../audio/altar-high.wav")
+        self.altar_low_sound = pygame.mixer.Sound("../audio/altar-angel-low.ogg")
+        self.altar_normal_sound = pygame.mixer.Sound("../audio/altar-angel-normal.ogg")
+        self.altar_high_sound = pygame.mixer.Sound("../audio/altar-angel-high.ogg")
 
         self.master_npc_low_sound = pygame.mixer.Sound("../audio/horse_sound_cc0-low.wav")
         self.master_npc_normal_sound = pygame.mixer.Sound("../audio/horse_sound_cc0.wav")
