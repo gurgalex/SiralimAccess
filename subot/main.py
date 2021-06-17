@@ -34,7 +34,7 @@ from dataclasses import dataclass
 import subot.background_subtract as background_subtract
 
 from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, SpriteType, AltarSprite, \
-    ProjectItemSprite
+    ProjectItemSprite, NPCSprite
 from subot.models import Session
 import subot.settings as settings
 
@@ -202,13 +202,18 @@ listener.start()
 
 class Bot:
     def __init__(self):
+        self.npc_normal_locations: list[AssetGridLoc] = []
         self.project_item_locations: list[AssetGridLoc] = []
         with Session() as session:
             altar_names_results: list[tuple] = session.query(AltarSprite).with_entities(AltarSprite.long_name).all()
             self.altars: set[str] = set(result[0] for result in altar_names_results)
 
-            project_item_results: list[tuple] = session.query(ProjectItemSprite).with_entities(ProjectItemSprite.long_name).all()
-            self.project_items: set[str] = set(result[0] for result in project_item_results)
+            npc_name_results: list[tuple] = session.query(ProjectItemSprite).with_entities(ProjectItemSprite.long_name).all()
+            self.project_items: set[str] = set(result[0] for result in npc_name_results)
+
+            npc_name_results: list[tuple] = session.query(NPCSprite).with_entities(NPCSprite.long_name).all()
+            self.npc_normals: set[str] = set(result[0] for result in npc_name_results)
+
 
         print(f"number project items = {len(self.project_items)}")
         self.masters = set()
@@ -720,6 +725,9 @@ class NearPlayerProcessing(Thread):
                             elif img_info.long_name in self.parent.project_items:
                                 root.debug(f"matched project item {img_info.long_name}")
                                 self.parent.project_item_locations.append(asset_location)
+                            elif img_info.long_name in self.parent.npc_normals:
+                                root.debug(f"matched NPC noraml {img_info.long_name}")
+                                self.parent.npc_normal_locations.append(asset_location)
 
                             break
 
