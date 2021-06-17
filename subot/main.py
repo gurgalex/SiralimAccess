@@ -21,7 +21,7 @@ from skimage.util import view_as_blocks
 from sqlalchemy.orm import joinedload, Load
 from sqlalchemy.orm.strategy_options import load_only
 
-from subot.audio import AudioSystem, AudioLocation
+from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.messageTypes import NewFrame, MessageImpl, MessageType, ScanForItems, DrawDebug, CheckWhatRealmIn
 from subot.read_tags import Asset
 
@@ -113,6 +113,9 @@ class TileCoord:
     """Tells position in tile units"""
     x: int
     y: int
+
+    def point(self) -> Point:
+        return Point(x=self.x, y=self.y)
 
 
 from enum import Enum, auto
@@ -449,8 +452,6 @@ class Bot:
             if iters % every == 0:
                 root.debug(f"FPS: {clock.get_fps()}")
             iters += 1
-            if settings.DEBUG:
-                self.nearby_send_deque.append(DrawDebug())
             clock.tick(FPS)
 
     def speak_nearby_objects(self):
@@ -461,29 +462,40 @@ class Bot:
 
                 audio_locations.append(AudioLocation(distance=tile.point()))
 
-            self.audio_system.play_quest_items(audio_locations)
-            self.previous_important_tile_locations = self.important_tile_locations[:]
+            if audio_locations:
+
+                self.audio_system.play_sound(audio_locations[0], sound_type=SoundType.QUEST_ITEM)
+                self.previous_important_tile_locations = self.important_tile_locations[:]
+            else:
+                self.audio_system.stop(sound_type=SoundType.QUEST_ITEM)
 
         if self.master_tile_location:
             master_distance_audio = AudioLocation(distance=self.master_tile_location.point())
-            self.audio_system.play_master(master_distance_audio)
+            self.audio_system.play_sound(master_distance_audio, sound_type=SoundType.MASTER_NPC)
             self.previous_master_location = self.master_tile_location
             self.master_tile_location = None
         else:
-            self.audio_system.stop_master()
+            self.audio_system.stop(sound_type=SoundType.MASTER_NPC)
 
         if self.altar_tile_location:
-            self.audio_system.play_altar(AudioLocation(distance=self.altar_tile_location.point()))
+            self.audio_system.play_sound(AudioLocation(distance=self.altar_tile_location.point()), sound_type=SoundType.ALTAR)
             self.altar_tile_location = None
         else:
-            self.audio_system.stop_altar()
+            self.audio_system.stop(SoundType.ALTAR)
 
         if self.project_item_locations:
             for tile in self.project_item_locations[:1]:
-                self.audio_system.play_project_items(AudioLocation(distance=tile.point()))
+                self.audio_system.play_sound(AudioLocation(distance=tile.point()), SoundType.PROJECT_ITEM)
             self.project_item_locations.clear()
         else:
-            self.audio_system.stop_project_item()
+            self.audio_system.stop(SoundType.PROJECT_ITEM)
+
+        if self.npc_normal_locations:
+            for tile in self.npc_normal_locations[:1]:
+                self.audio_system.play_sound(AudioLocation(distance=tile.point()), SoundType.NPC_NORMAL)
+            self.npc_normal_locations.clear()
+        else:
+            self.audio_system.stop(SoundType.NPC_NORMAL)
 
 
 class WholeWindowGrabber(multiprocessing.Process):
@@ -708,16 +720,22 @@ class NearPlayerProcessing(Thread):
 
                         try:
                             img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
-                            root.debug(f"matched: {img_info.long_name}")
 
                             asset_location = AssetGridLoc(x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE - self.parent.player_position_tile.x,
                                                           y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
                                                           short_name=img_info.short_name,
                                                           )
 
+
+                            is_player_tile = asset_location.point() == Point(0,0)
+                            if is_player_tile:
+                                continue
+                            root.debug(f"matched: {img_info.long_name}")
+
                             if img_info.long_name in self.parent.quest_sprite_long_names:
                                 self.parent.important_tile_locations.append(asset_location)
                             elif img_info.long_name in self.parent.masters:
+                                root.debug(f"matched master {img_info.long_name}")
                                 self.parent.master_tile_location = asset_location
                             elif img_info.long_name in self.parent.altars:
                                 root.debug(f"matched altar {img_info.long_name}")
@@ -726,7 +744,7 @@ class NearPlayerProcessing(Thread):
                                 root.debug(f"matched project item {img_info.long_name}")
                                 self.parent.project_item_locations.append(asset_location)
                             elif img_info.long_name in self.parent.npc_normals:
-                                root.debug(f"matched NPC noraml {img_info.long_name}")
+                                root.debug(f"matched NPC normal {img_info.long_name}")
                                 self.parent.npc_normal_locations.append(asset_location)
 
                             break
