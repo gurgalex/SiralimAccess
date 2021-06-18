@@ -174,8 +174,6 @@ def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect
     threshold = 0.99
     if max_val <= threshold:
         return
-        # # maybe default to center?
-        # tile = Bot.compute_player_position(mss_rect)
     tile = Rect.from_cv2_loc(max_loc, w=TILE_SIZE, h=TILE_SIZE)
 
     top_left_pt = Bot.top_left_tile(aligned_floor_tile=tile, client_rect=mss_rect)
@@ -428,8 +426,6 @@ class Bot:
 
             if self.mode is BotMode.UNDETERMINED:
 
-                # if self.nearby_processing_thandle.detect_if_in_castle():
-                #     self.mode = BotMode.CASTLE
                 if realm_alignment := self.nearby_processing_thandle.detect_what_realm_in():
                     if isinstance(realm_alignment, RealmAlignment):
                         self.realm = realm_alignment.realm
@@ -440,7 +436,6 @@ class Bot:
                 # self.enter_realm_scanner()
             elif self.mode is BotMode.CASTLE:
                 self.nearby_send_deque.append(ScanForItems)
-                # bot.nearby_processing_thandle.enter_castle_scanner()
 
             # label player position
             top_left = self.player_position.top_left().as_tuple()
@@ -662,8 +657,6 @@ class NearPlayerProcessing(Thread):
                 if aligned_rect := recompute_grid_offset(floor_tile=tile_frame.data_gray,
                                                          gray_frame=self.near_frame_gray,
                                                          mss_rect=self.grid_near_rect):
-                    # print(f"{realm_tile=}")
-                    # print(f"in realm: {realm_tile.realm.enum}")
                     root.debug(f"floor tile = {floor_tile.long_name}")
                     if realm := floor_tile.realm:
                         return RealmAlignment(realm=realm.enum, alignment=aligned_rect)
@@ -704,6 +697,9 @@ class NearPlayerProcessing(Thread):
         with self.parent.important_tile_locations_lock.gen_wlock():
             self.parent.important_tile_locations.clear()
 
+            # Hack: add the grid offset to the player tile to realign the grid when moving left
+            aligned_player_tile_x = round(self.parent.nearby_tile_top_left.x + self.grid_near_rect.x / TILE_SIZE)
+
             for row in range(0, self.grid_near_rect.w, TILE_SIZE):
                 for col in range(0, self.grid_near_rect.h, TILE_SIZE):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
@@ -711,32 +707,16 @@ class NearPlayerProcessing(Thread):
                     try:
                         img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
 
-                        asset_location = AssetGridLoc(x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE - self.parent.player_position_tile.x,
+                        asset_location = AssetGridLoc(x=aligned_player_tile_x + row // TILE_SIZE - self.parent.player_position_tile.x,
                                                       y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
                                                       short_name=img_info.short_name,
                                                       )
 
-
-
                         is_player_tile = asset_location.point() == Point(0,0)
                         if is_player_tile:
-                            root.info(f"Caught player NPC: {asset_location.point()}")
-                            root.info(f"""
-                                self.parent.nearby_tile_top_left.x + row // TILE_SIZE - self.parent.player_position_tile.x
-                                {self.parent.nearby_tile_top_left.x} + {row} // {TILE_SIZE} - {self.parent.player_position_tile.x}""")
                             continue
 
-                        if img_info.long_name == "NPC blood mage 1":
-                            root.info(f"should have been skipped: {asset_location.point()}")
-                            root.info(f"""
-                                self.parent.nearby_tile_top_left.x + row // TILE_SIZE - self.parent.player_position_tile.x
-                                {self.parent.nearby_tile_top_left.x} + {row} // {TILE_SIZE} - {self.parent.player_position_tile.x}""")
-
-
-
                         root.debug(f"matched: {img_info.long_name}")
-
-
                         if img_info.long_name in self.parent.quest_sprite_long_names:
                             root.debug(f"Quest item matched {img_info.long_name}")
                             self.parent.important_tile_locations.append(asset_location)
@@ -752,7 +732,6 @@ class NearPlayerProcessing(Thread):
                         elif img_info.long_name in self.parent.npc_normals:
                             root.debug(f"NPC normal matched {img_info.long_name}")
                             self.parent.npc_normal_locations.append(asset_location)
-
 
                     except KeyError as e:
                         pass
@@ -802,7 +781,7 @@ class NearPlayerProcessing(Thread):
 
         # calculate the correct alignment for grid
         if realm_alignment := self.detect_what_realm_in():
-            # print(f"nearby new aligned grid: {aligned_rect}")
+            # print(f"nearby new aligned grid: {realm_alignment.alignment=}")
             self.grid_near_rect = realm_alignment.alignment
         else:
             root.debug(f"using default nearby grid")
