@@ -12,51 +12,36 @@ class ImageInfo:
 
 from collections import UserDict
 
-class HashDecor(UserDict):
 
-    def hash_grayscale_img(self, greyscale_img: ArrayLike, img_info: ImageInfo):
-        self.data[greyscale_img.tobytes()] = ImageInfo
+def overlay_transparent(background_img, img_to_overlay_t):
+    """
+    @brief      Overlays a transparant PNG onto another image using CV2
 
-    def hash_transparent_bgra(self, img_bgra: ArrayLike, img_info: ImageInfo):
-        """Uses the transparency layer as the image mask.
-        Converts the image to grayscale and stores the bytes as a key for later matching
-        Stores the `img_info` as the value
-        """
-        alpha_channel = img_bgra[:, :, 3]
-        _, mask = cv2.threshold(alpha_channel, 254, 255, cv2.THRESH_BINARY)  # binarize mask
-        color = img_bgra[:, :, :3]
-        img_color_masked = cv2.bitwise_and(color, color, mask=mask)
+    @param      background_img    The background image
+    @param      img_to_overlay_t  The transparent image to overlay (has alpha channel)
 
-        img_gray_masked = cv2.cvtColor(img_color_masked, cv2.COLOR_BGR2GRAY)
+    @return     Background image with overlay on top
 
-        self.data[img_gray_masked.tobytes()] = img_info
+    adapted from https://gist.github.com/clungzta/b4bbb3e2aa0490b0cfcbc042184b0b4e
+    """
 
+    bg_img = background_img[:, :, :3]
 
-    def get_greyscale(self, img_gray: ArrayLike) -> ImageInfo:
-        return self.data[img_gray.tobytes()]
+    # Extract the alpha mask of the RGBA image, convert to RGB
+    b, g, r, a = cv2.split(img_to_overlay_t)
+    overlay_color = cv2.merge((b, g, r))
 
-    def get_from_transparent_rgba(self, img) -> ImageInfo:
-        alpha_channel = img[:, :, 3]
-        _, mask = cv2.threshold(alpha_channel, 254, 255, cv2.THRESH_BINARY)  # binarize mask
-        color = img[:, :, :3]
-        img = cv2.bitwise_and(color, color, mask=mask)
+    mask = a
 
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        return self.data[img.tobytes()]
+    # Black-out the area behind the overlay in the background image
+    img1_bg = cv2.bitwise_and(bg_img, bg_img, mask=cv2.bitwise_not(mask))
 
+    # Mask out the non-transparent pixels from the overlay.
+    img2_fg = cv2.bitwise_and(overlay_color, overlay_color, mask=mask)
 
-def cache_image_hashes_of_decorations() -> HashDecor:
-    hash_decor = HashDecor()
-    cv2.namedWindow('title', cv2.WINDOW_GUI_EXPANDED)
-    for img_path in Path("../assets_padded/").glob("*/*.png"):
+    # Paste the foreground onto the background
+    return cv2.add(img1_bg, img2_fg)
 
-        img = cv2.imread(img_path.as_posix(), cv2.IMREAD_UNCHANGED)
-
-
-        metadata = ImageInfo(name=img_path.stem)
-        hash_decor.hash_transparent_bgra(img, metadata)
-
-    return hash_decor
 
 class CastleDecorationDict(UserDict):
     """Stores castle decorations for exact matching
@@ -65,54 +50,44 @@ class CastleDecorationDict(UserDict):
     the pixel value in a position
     """
 
-    def __init__(self, val=None, castle_tile_gray=np.typing.ArrayLike):
-        """:param castle_tile_gray: numpy array of grayscale image of the current castle tile"""
+    def __init__(self, val=None, floor_tiles: list[np.typing.ArrayLike]=None):
+        """:param floor_tiles: numpy array of grayscale image of the current castle tile"""
         if val is None:
             val = {}
-        self.castle_tile_gray = castle_tile_gray
+        if floor_tiles is None:
+            self.floor_tiles = []
+        self.floor_tiles = floor_tiles
+        self.hasher = cv2.img_hash.PHash_create()
         super().__init__(val)
 
     def insert_transparent_bgra_image(self, img_bgra: np.typing.ArrayLike, img_info: ImageInfo):
 
-        # extra alpha channel as mask
-        alpha_channel = img_bgra[:, :, 3]
-        _, mask = cv2.threshold(alpha_channel, 254, 255, cv2.THRESH_BINARY)  # binarize mask
-        # extract bgr color channels
-        color = img_bgra[:, :, :3]
-
-        img_color_masked = cv2.bitwise_and(color, color, mask=mask)
-        img_gray_masked = cv2.cvtColor(img_color_masked, cv2.COLOR_BGR2GRAY)
-
-        # set same value pixels to 0
-        gray_mask = cv2.absdiff(img_gray_masked, self.castle_tile_gray)
-        img_after_exclusion: ArrayLike = cv2.bitwise_and(img_gray_masked, img_gray_masked, mask=gray_mask)
-
-        # do not add the floor tile itself as a hash, as that will match all completely black tiles
-        if np.all((img_after_exclusion == 0)):
+        if len(self.floor_tiles) == 0:
             return
 
-        self.data[img_after_exclusion.tobytes()] = img_info
+        for floor_tile in self.floor_tiles:
+            floor_gray = cv2.cvtColor(floor_tile, cv2.COLOR_BGR2GRAY)
+            overlayed_img = overlay_transparent(background_img=floor_tile, img_to_overlay_t=img_bgra)
+            overlayed_img_gray = cv2.cvtColor(overlayed_img, cv2.COLOR_BGR2GRAY)
+
+            # do not add the floor tile itself as a hash, as that will match all completely black tiles
+            img_is_floortile = np.array_equal(overlayed_img_gray, floor_gray)
+            if img_is_floortile:
+                print("skipping adding floortile")
+                return
+
+            img_hash = self.hasher.compute(overlayed_img_gray)
+
+            self.data[img_hash.tobytes()] = img_info
 
     def get_greyscale(self, img_gray: ArrayLike) -> ImageInfo:
         """
         :param img_gray The unaltered grayscale image that hasn't had same pixels stripped
         according to `self.castle_tile_gray`
         """
-        screenshot_diff_from_floor = cv2.absdiff(img_gray, self.castle_tile_gray)
-        img_excluded = cv2.bitwise_and(img_gray, img_gray, mask=screenshot_diff_from_floor)
-        return self.data[img_excluded.tobytes()]
+        img_hash = self.hasher.compute(img_gray)
+        return self.data[img_hash.tobytes()]
 
 
 if __name__ == "__main__":
-    hashes = cache_image_hashes_of_decorations()
-
-    test_path = "assets_padded/misc/Bastion Wisp-frame2.png"
-    metadata = ImageInfo(name=Path(test_path).stem)
-    test_img = cv2.imread(test_path, cv2.IMREAD_UNCHANGED)
-    test_img_grayscale = cv2.cvtColor(test_img, cv2.COLOR_BGR2GRAY)
-
-    hashes.hash_transparent_bgra(test_img, metadata)
-
-    res = hashes.get_from_transparent_rgba(test_img)
-    res_gray = hashes.get_greyscale(test_img_grayscale)
-    print("FINISHED")
+    pass
