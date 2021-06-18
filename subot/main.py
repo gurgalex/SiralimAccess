@@ -27,7 +27,7 @@ from subot.read_tags import Asset
 
 from numpy.typing import ArrayLike
 
-from subot.hash_image import ImageInfo, HashDecor, CastleDecorationDict
+from subot.hash_image import ImageInfo, CastleDecorationDict
 
 from dataclasses import dataclass
 
@@ -174,8 +174,6 @@ def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect
     threshold = 0.99
     if max_val <= threshold:
         return
-        # # maybe default to center?
-        # tile = Bot.compute_player_position(mss_rect)
     tile = Rect.from_cv2_loc(max_loc, w=TILE_SIZE, h=TILE_SIZE)
 
     top_left_pt = Bot.top_left_tile(aligned_floor_tile=tile, client_rect=mss_rect)
@@ -261,8 +259,6 @@ class Bot:
         self.grid_slice_gray: np.typing.ArrayLike = None
         self.grid_slice_color: np.typing.ArrayLike = None
 
-        self.output_debug_gray: np.typing.ArrayLike = None
-
         # Note: images must be read as unchanged when converting to grayscale since IM_READ_GRAYSCALE has platform specific conversion methods and difers from cv2.cv2.BGR2GRAy's implementation in cvtcolor
         # This is needed to ensure the pixels match exactly for comparision, otherwhise the grayscale differs slightly
         # https://docs.opencv.org/4.5.1/d4/da8/group__imgcodecs.html
@@ -280,7 +276,7 @@ class Bot:
 
         # hashes of sprite frames that have matching `self.castle_tile` pixels set to black.
         # This avoids false negative matches if the placed object has matching color pixels in a position
-        self.castle_item_hashes: CastleDecorationDict = CastleDecorationDict(castle_tile_gray=self.castle_tile_gray)
+        self.castle_item_hashes: CastleDecorationDict = CastleDecorationDict(floor_tiles=self.active_floor_tiles)
 
         self.important_tile_locations_lock = rwlock.RWLockFair()
         # realm object locations in screenshot
@@ -430,8 +426,6 @@ class Bot:
 
             if self.mode is BotMode.UNDETERMINED:
 
-                # if self.nearby_processing_thandle.detect_if_in_castle():
-                #     self.mode = BotMode.CASTLE
                 if realm_alignment := self.nearby_processing_thandle.detect_what_realm_in():
                     if isinstance(realm_alignment, RealmAlignment):
                         self.realm = realm_alignment.realm
@@ -442,7 +436,6 @@ class Bot:
                 # self.enter_realm_scanner()
             elif self.mode is BotMode.CASTLE:
                 self.nearby_send_deque.append(ScanForItems)
-                # bot.nearby_processing_thandle.enter_castle_scanner()
 
             # label player position
             top_left = self.player_position.top_left().as_tuple()
@@ -633,9 +626,6 @@ class NearPlayerProcessing(Thread):
         self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[:]
         self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[:]
 
-        self.output_debug_near_gray: np.typing.ArrayLike = self.near_frame_gray[:]
-
-        self.realm_hashes: HashDecor = HashDecor()
 
         self.realm: Optional[Realm] = None
         self.unique_realm_assets = list[Asset]
@@ -665,10 +655,8 @@ class NearPlayerProcessing(Thread):
             tile_frame: SpriteFrame
             for frame_num, tile_frame in enumerate(floor_tile.frames, start=1):
                 if aligned_rect := recompute_grid_offset(floor_tile=tile_frame.data_gray,
-                                                         gray_frame=self.grid_near_slice_gray,
+                                                         gray_frame=self.near_frame_gray,
                                                          mss_rect=self.grid_near_rect):
-                    # print(f"{realm_tile=}")
-                    # print(f"in realm: {realm_tile.realm.enum}")
                     root.debug(f"floor tile = {floor_tile.long_name}")
                     if realm := floor_tile.realm:
                         return RealmAlignment(realm=realm.enum, alignment=aligned_rect)
@@ -709,48 +697,44 @@ class NearPlayerProcessing(Thread):
         with self.parent.important_tile_locations_lock.gen_wlock():
             self.parent.important_tile_locations.clear()
 
+            # Hack: add the grid offset to the player tile to realign the grid when moving left
+            aligned_player_tile_x = round(self.parent.nearby_tile_top_left.x + self.grid_near_rect.x / TILE_SIZE)
+
             for row in range(0, self.grid_near_rect.w, TILE_SIZE):
                 for col in range(0, self.grid_near_rect.h, TILE_SIZE):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
 
-                    for floor_tile in self.parent.active_floor_tiles_gray:
+                    try:
+                        img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
 
-                        fg_only_gray = background_subtract.subtract_background_from_tile(tile_gray=tile_gray,floor_background_gray=floor_tile)
-                        tile_gray[:] = fg_only_gray
+                        asset_location = AssetGridLoc(x=aligned_player_tile_x + row // TILE_SIZE - self.parent.player_position_tile.x,
+                                                      y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
+                                                      short_name=img_info.short_name,
+                                                      )
 
-                        try:
-                            img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
+                        is_player_tile = asset_location.point() == Point(0,0)
+                        if is_player_tile:
+                            continue
 
-                            asset_location = AssetGridLoc(x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE - self.parent.player_position_tile.x,
-                                                          y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
-                                                          short_name=img_info.short_name,
-                                                          )
+                        root.debug(f"matched: {img_info.long_name}")
+                        if img_info.long_name in self.parent.quest_sprite_long_names:
+                            root.debug(f"Quest item matched {img_info.long_name}")
+                            self.parent.important_tile_locations.append(asset_location)
+                        elif img_info.long_name in self.parent.masters:
+                            root.debug(f"Master matched {img_info.long_name}")
+                            self.parent.master_tile_location = asset_location
+                        elif img_info.long_name in self.parent.altars:
+                            root.debug(f"Altar matched {img_info.long_name}")
+                            self.parent.altar_tile_location = asset_location
+                        elif img_info.long_name in self.parent.project_items:
+                            root.debug(f"Project Item matched {img_info.long_name}")
+                            self.parent.project_item_locations.append(asset_location)
+                        elif img_info.long_name in self.parent.npc_normals:
+                            root.debug(f"NPC normal matched {img_info.long_name}")
+                            self.parent.npc_normal_locations.append(asset_location)
 
-
-                            is_player_tile = asset_location.point() == Point(0,0)
-                            if is_player_tile:
-                                continue
-                            root.debug(f"matched: {img_info.long_name}")
-
-                            if img_info.long_name in self.parent.quest_sprite_long_names:
-                                self.parent.important_tile_locations.append(asset_location)
-                            elif img_info.long_name in self.parent.masters:
-                                root.debug(f"matched master {img_info.long_name}")
-                                self.parent.master_tile_location = asset_location
-                            elif img_info.long_name in self.parent.altars:
-                                root.debug(f"matched altar {img_info.long_name}")
-                                self.parent.altar_tile_location = asset_location
-                            elif img_info.long_name in self.parent.project_items:
-                                root.debug(f"matched project item {img_info.long_name}")
-                                self.parent.project_item_locations.append(asset_location)
-                            elif img_info.long_name in self.parent.npc_normals:
-                                root.debug(f"matched NPC normal {img_info.long_name}")
-                                self.parent.npc_normal_locations.append(asset_location)
-
-                            break
-
-                        except KeyError as e:
-                            pass
+                    except KeyError as e:
+                        pass
         self.parent.speak_nearby_objects()
 
     def enter_realm_scanner(self):
@@ -779,6 +763,9 @@ class NearPlayerProcessing(Thread):
                 self.parent.active_floor_tiles = temp
                 self.parent.active_floor_tiles_gray = temp_gray
             root.info(f"new realm entered: {self.realm.name}")
+            self.parent.castle_item_hashes = CastleDecorationDict(floor_tiles=self.parent.active_floor_tiles)
+            self.parent.cache_image_hashes_of_decorations()
+            print(f"new item hashes = {len(self.parent.castle_item_hashes)}")
 
         self.enter_castle_scanner()
 
@@ -789,12 +776,12 @@ class NearPlayerProcessing(Thread):
         img = data.frame
         self.near_frame_color = img[:, :, :3]
 
-        # grab nearby player tiles
+        # make grayscale version
         cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGRA2GRAY, dst=self.near_frame_gray)
 
         # calculate the correct alignment for grid
         if realm_alignment := self.detect_what_realm_in():
-            # print(f"nearby new aligned grid: {aligned_rect}")
+            # print(f"nearby new aligned grid: {realm_alignment.alignment=}")
             self.grid_near_rect = realm_alignment.alignment
         else:
             root.debug(f"using default nearby grid")
