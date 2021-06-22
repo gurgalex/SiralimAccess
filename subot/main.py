@@ -27,14 +27,14 @@ from subot.read_tags import Asset
 
 from numpy.typing import ArrayLike
 
-from subot.hash_image import ImageInfo, CastleDecorationDict
+from subot.hash_image import ImageInfo, RealmSpriteHasher, FloorTilesInfo, Overlay
 
 from dataclasses import dataclass
 
 import subot.background_subtract as background_subtract
 
 from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, SpriteType, AltarSprite, \
-    ProjectItemSprite, NPCSprite
+    ProjectItemSprite, NPCSprite, OverlaySprite
 from subot.models import Session
 import subot.settings as settings
 
@@ -169,12 +169,12 @@ def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect
     # We use matchTemplate since the grid shifts when the player is moving
     # (the tiles smoothly slide to the next `TILE_SIZE increment)
 
-    res = cv2.matchTemplate(gray_frame, floor_tile, cv2.TM_CCOEFF_NORMED)
+    res = cv2.matchTemplate(gray_frame, floor_tile, cv2.TM_SQDIFF)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-    threshold = 0.99
-    if max_val <= threshold:
+    threshold = 1/16
+    if min_val > threshold:
         return
-    tile = Rect.from_cv2_loc(max_loc, w=TILE_SIZE, h=TILE_SIZE)
+    tile = Rect.from_cv2_loc(min_loc, w=TILE_SIZE, h=TILE_SIZE)
 
     top_left_pt = Bot.top_left_tile(aligned_floor_tile=tile, client_rect=mss_rect)
     bottom_right_pt = Bot.bottom_right_tile(aligned_tile=tile, client_rect=mss_rect)
@@ -276,7 +276,7 @@ class Bot:
 
         # hashes of sprite frames that have matching `self.castle_tile` pixels set to black.
         # This avoids false negative matches if the placed object has matching color pixels in a position
-        self.castle_item_hashes: CastleDecorationDict = CastleDecorationDict(floor_tiles=self.active_floor_tiles)
+        self.castle_item_hashes: RealmSpriteHasher = RealmSpriteHasher(floor_tiles=self.active_floor_tiles)
 
         self.important_tile_locations_lock = rwlock.RWLockFair()
         # realm object locations in screenshot
@@ -395,7 +395,7 @@ class Bot:
                     if "ignore" in sprite_frame.filepath:
                         continue
                     img = cv2.imread(sprite_frame.filepath, cv2.IMREAD_UNCHANGED)
-                    metadata = ImageInfo(short_name=sprite.short_name, long_name=sprite.long_name)
+                    metadata = ImageInfo(short_name=sprite.short_name, long_name=sprite.long_name, filepath=sprite_frame.filepath)
 
                     # bottom right "works", just need to specialize on some images which have blank spaces
                     if img is None:
@@ -664,18 +664,6 @@ class NearPlayerProcessing(Thread):
                         root.info("in castle")
                         return CastleAlignment(alignment=aligned_rect)
 
-                    # for y_i, col in enumerate(grid_in_tiles):
-            # for x_i, row in enumerate(col):
-
-                        # if row.tobytes() == tile_frame.data_gray.tobytes():
-                        #     self.realm_tile = tile_frame
-                        #     realm_in_enum = realm_tile.realm.enum
-                        #     print(f"#2 detected being in realm: {realm_in_enum} - Used tile {tile_frame.filepath=}")
-                        #     test_path = Path("test_img.png").absolute().as_posix()
-                        #     print(f"{test_path=}")
-                        #     cv2.imwrite(test_path, row)
-                        #     return realm_in_enum
-
     def detect_if_in_castle(self) -> bool:
         # Check configured castle tile
         block_size = (TILE_SIZE, TILE_SIZE)
@@ -716,7 +704,7 @@ class NearPlayerProcessing(Thread):
                         if is_player_tile:
                             continue
 
-                        root.debug(f"matched: {img_info.long_name}")
+                        root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}")
                         if img_info.long_name in self.parent.quest_sprite_long_names:
                             root.debug(f"Quest item matched {img_info.long_name}")
                             self.parent.important_tile_locations.append(asset_location)
@@ -750,6 +738,7 @@ class NearPlayerProcessing(Thread):
             return
 
         if realm_alignment.realm != self.realm:
+            overlay = None
             self.realm = realm_alignment.realm
             with Session() as session:
                 realm = session.query(RealmLookup).filter_by(enum=realm_alignment.realm).one()
@@ -762,9 +751,16 @@ class NearPlayerProcessing(Thread):
                         temp_gray.append(frame.data_gray)
                 self.parent.active_floor_tiles = temp
                 self.parent.active_floor_tiles_gray = temp_gray
-            root.info(f"new realm entered: {self.realm.name}")
-            self.parent.castle_item_hashes = CastleDecorationDict(floor_tiles=self.parent.active_floor_tiles)
+
+                if self.realm is Realm.DEAD_SHIPS:
+                    overlay_sprite = session.query(OverlaySprite).filter_by(realm_id=realm.id).one()
+                    overlay_tile_part = overlay_sprite.frames[0].data_color[:TILE_SIZE, :TILE_SIZE, :3]
+                    overlay = Overlay(alpha=0.753, tile=overlay_tile_part)
+
+            floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
+            self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
             self.parent.cache_image_hashes_of_decorations()
+            root.info(f"new realm entered: {self.realm.name}")
             print(f"new item hashes = {len(self.parent.castle_item_hashes)}")
 
         self.enter_castle_scanner()
@@ -777,7 +773,7 @@ class NearPlayerProcessing(Thread):
         self.near_frame_color = img[:, :, :3]
 
         # make grayscale version
-        cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGRA2GRAY, dst=self.near_frame_gray)
+        cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGR2GRAY, dst=self.near_frame_gray)
 
         # calculate the correct alignment for grid
         if realm_alignment := self.detect_what_realm_in():
@@ -808,7 +804,11 @@ class NearPlayerProcessing(Thread):
                 if comm_msg.type is MessageType.SCAN_FOR_ITEMS:
                     self.enter_castle_scanner()
                 elif comm_msg.type is MessageType.CHECK_WHAT_REALM_IN:
+                    start = time.time()
                     self.enter_realm_scanner()
+                    end = time.time()
+                    latency = end-start
+                    print(f"realm scanning took {math.ceil(latency*1000)}ms")
 
                 elif comm_msg.type is MessageType.DRAW_DEBUG:
                     cv2.imshow("SU Vision - Near bbox", self.grid_near_slice_gray)

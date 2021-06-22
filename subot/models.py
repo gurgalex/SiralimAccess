@@ -1,3 +1,4 @@
+from __future__ import annotations
 import pathlib
 from dataclasses import dataclass
 from functools import cache
@@ -39,6 +40,9 @@ class SpriteType(enum.Enum):
     MASTER_NPC = 8
     # Sprite for an item of a project
     PROJ_ITEM = 9
+
+    # sprite used to overlay onto a rendered realm (rare)
+    OVERLAY = 10
 
 
 @cache
@@ -162,7 +166,7 @@ class Realm(enum.Enum):
     TEMPLE_OF_LIES = 'Temple of Lies'
     FROSTBITE_CAVERNS = 'Frostbite Caverns'
     PATH_OF_THE_DAMNED = 'Path of the Damned'
-    DEAD_SHIPS = 'Dead Ships'
+    DEAD_SHIPS = 'Where the Dead Ships Dwell'
     KINGDOM_OF_HERETICS = 'Kingdom of Heretics'
     FARAWAY_ENCLAVE = 'Faraway Enclave'
     THE_SWAMPLANDS = 'The Swamplands'
@@ -178,6 +182,65 @@ class Realm(enum.Enum):
     GREAT_PANDEMONIUM = 'Great Pandemonium'
     THE_BARRENS = 'The Barrens'
     REFUGE_OF_THE_MAGI = 'Refuge of the Magi'
+
+    _ignore_ = ['god_to_realm_mapping', 'internal_realm_name_to_god_mapping']
+    god_to_realm_mapping: dict[str, Realm] = {}
+    internal_realm_name_to_god_mapping: dict[str, str] = {}
+
+    @classmethod
+    def generic_realm_name_to_ingame_realm(cls, generic_realm_name: str) -> Realm:
+        god_name = cls.internal_realm_name_to_god_mapping[generic_realm_name]
+        return cls.god_to_realm_mapping[god_name]
+
+Realm.god_to_realm_mapping = {
+    "Aeolian": Realm.UNSULLIED_MEADOWS,
+    "Apocranox": Realm.BLOOD_GROVE,
+    "Aurum": Realm.TEMPLE_OF_LIES,
+    "Azural": Realm.FROSTBITE_CAVERNS,
+    "Erebyss": Realm.PATH_OF_THE_DAMNED,
+    "Friden": Realm.DEAD_SHIPS,
+    "Gonfurian": Realm.KINGDOM_OF_HERETICS,
+    "Lister": Realm.FARAWAY_ENCLAVE,
+    "Meraxis": Realm.THE_SWAMPLANDS,
+    "Mortem": Realm.TITAN_WOUND,
+    "Perdition": Realm.SANCTUM_UMBRA,
+    "Regalis": Realm.ARACHNID_NEST,
+    "Surathli": Realm.AZURE_DREAM,
+    "Tartarith": Realm.TORTURE_CHAMBER,
+    "Tenebris": Realm.BASTION_OF_THE_VOID,
+    "Torun": Realm.CUTTHROAT_JUNGLE,
+    "Venedon": Realm.CAUSTIC_REACTOR,
+    "Vertraag": Realm.ETERNITY_END,
+    "Vulcanar": Realm.GREAT_PANDEMONIUM,
+    "Yseros": Realm.THE_BARRENS,
+    "Zonte": Realm.REFUGE_OF_THE_MAGI,
+}
+
+Realm.internal_realm_name_to_god_mapping = {
+    "cave": "Regalis",
+    "death": "Erebyss",
+    "chaos": "Vulcanar",
+    "desert": "Yseros",
+    "dungeon": "Tartarith",
+    "haunted": "Gonfurian",
+    "grassland": "Aeolian",
+    "island": "Lister",
+    "jungle": "Torun",
+    "life": "Surathli",
+    "nature": "Meraxis",
+    "underwater": "Friden",
+    "snow": "Azural",
+    "sorcery": "Zonte",
+    "space": "Vertraag",
+
+    "apocranox": "Apocranox",
+    "aurum": "Aurum",
+    "caliban": "Caliban",
+    "mortem": "Mortem",
+    "perdition": "Perdition",
+    "tenebris": "Tenebris",
+    "venedon": "Venedon",
+}
 
 
 class RealmLookup(Base):
@@ -200,6 +263,18 @@ class AltarSprite(Sprite):
 
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.ALTAR.value
+    }
+
+class OverlaySprite(Sprite):
+    __tablename__ = 'overlay_sprite'
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), unique=True, primary_key=True)
+    realm_id = Column(Integer, ForeignKey('realm.id'), unique=True, primary_key=True)
+
+    # sprite = relationship('Sprite', uselist=False, viewonly=False)
+    realm = relationship('RealmLookup', uselist=False)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.OVERLAY.value
     }
 
 
