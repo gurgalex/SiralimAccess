@@ -59,7 +59,8 @@ def add_quest(title: str, sprites_long_name: str, quest_type: Optional[str], spe
 @click.argument("sprite-folder", required=True, type=click.Path(file_okay=False, resolve_path=True))
 @click.option("--short-name", required=False, help="Short name to use instead of the long name in TTS output")
 @click.option("--type", default=SpriteType.DECORATION.name, type=click.Choice(choices=[sprite_type.name for sprite_type in SpriteType]))
-def add_sprite(short_name: Optional[str], long_name: str, type: str, sprite_folder: str):
+@click.option("--specific-realm", type=click.Choice(choices=[realm.name for realm in Realm]))
+def add_sprite(short_name: Optional[str], long_name: str, type: str, sprite_folder: str, specific_realm: Optional[str]):
     sprite_folder = Path(sprite_folder)
     new_sprite_type: SpriteType = SpriteType[type]
     with Session() as session:
@@ -73,6 +74,12 @@ def add_sprite(short_name: Optional[str], long_name: str, type: str, sprite_fold
             sprite.short_name = long_name
         else:
             sprite.short_name = short_name
+
+        if (realm_enum := specific_realm) is not None:
+            realm = session.query(RealmLookup).filter_by(enum=Realm[realm_enum]).first()
+            if realm is None:
+                raise Exception(f"No realm was returned for {realm_enum=}")
+            sprite.realm_id = realm.id
 
         maybe_sprite_folder = sprite_folder
         if not maybe_sprite_folder.is_dir():

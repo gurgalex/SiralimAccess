@@ -1,17 +1,18 @@
+import time
 from pathlib import Path
 import cv2
 from dataclasses import dataclass
 import numpy as np
-from typing import NewType
+from typing import NewType, Optional
 from numpy.typing import ArrayLike
 
 @dataclass(frozen=True)
 class ImageInfo:
     short_name: str
     long_name: str
+    filepath: str
 
 from collections import UserDict
-
 
 def overlay_transparent(background_img, img_to_overlay_t):
     """
@@ -27,7 +28,7 @@ def overlay_transparent(background_img, img_to_overlay_t):
 
     bg_img = background_img[:, :, :3]
 
-    # Extract the alpha mask of the RGBA image, convert to RGB
+    # Extract the alpha mask of the BGRA image, convert to BGR
     b, g, r, a = cv2.split(img_to_overlay_t)
     overlay_color = cv2.merge((b, g, r))
 
@@ -42,41 +43,55 @@ def overlay_transparent(background_img, img_to_overlay_t):
     # Paste the foreground onto the background
     return cv2.add(img1_bg, img2_fg)
 
+@dataclass()
+class Overlay:
+    """Info about the tile used for blending on top of the rendered realm"""
 
-class CastleDecorationDict(UserDict):
+    # What percent of this overlay should be blended (how opaque is it)
+    alpha: float
+
+    # TILE_SIZExTILE_SIZEx3 overlay image to use for blending
+    tile: np.typing.ArrayLike
+
+
+@dataclass()
+class FloorTilesInfo:
+    floortiles: list[np.typing.ArrayLike]
+    overlay: Optional[Overlay] = None
+
+
+class RealmSpriteHasher(UserDict):
     """Stores castle decorations for exact matching
     On get and set it will set any pixels that match the castle tile to 0.
     Setting the pixels to 0 prevents false negative matches if the floor tile and screenshot share the
     the pixel value in a position
     """
 
-    def __init__(self, val=None, floor_tiles: list[np.typing.ArrayLike]=None):
+    def __init__(self, val=None, floor_tiles: Optional[FloorTilesInfo]=None):
         """:param floor_tiles: numpy array of grayscale image of the current castle tile"""
         if val is None:
             val = {}
-        if floor_tiles is None:
-            self.floor_tiles = []
-        self.floor_tiles = floor_tiles
+        self.floor_info = floor_tiles
         self.hasher = cv2.img_hash.PHash_create()
         super().__init__(val)
 
     def insert_transparent_bgra_image(self, img_bgra: np.typing.ArrayLike, img_info: ImageInfo):
 
-        if len(self.floor_tiles) == 0:
+        if not self.floor_info:
             return
 
-        for floor_tile in self.floor_tiles:
-            floor_gray = cv2.cvtColor(floor_tile, cv2.COLOR_BGR2GRAY)
-            overlayed_img = overlay_transparent(background_img=floor_tile, img_to_overlay_t=img_bgra)
-            overlayed_img_gray = cv2.cvtColor(overlayed_img, cv2.COLOR_BGR2GRAY)
+        for ct, floor_tile in enumerate(self.floor_info.floortiles):
+            pasted_img_color = overlay_transparent(background_img=floor_tile, img_to_overlay_t=img_bgra)
+            pasted_img_gray = cv2.cvtColor(pasted_img_color, cv2.COLOR_BGR2GRAY)
 
-            # do not add the floor tile itself as a hash, as that will match all completely black tiles
-            img_is_floortile = np.array_equal(overlayed_img_gray, floor_gray)
-            if img_is_floortile:
-                print("skipping adding floortile")
-                return
+            # blend overlay image on top of bg tile + fg sprite
+            if self.floor_info.overlay:
+                overlay_tile = self.floor_info.overlay.tile
+                alpha = self.floor_info.overlay.alpha
+                pasted_img_color = cv2.addWeighted(pasted_img_color, alpha, overlay_tile, 1 - alpha, 0.0)
+                pasted_img_gray = cv2.cvtColor(pasted_img_color, cv2.COLOR_BGR2GRAY)
 
-            img_hash = self.hasher.compute(overlayed_img_gray)
+            img_hash = self.hasher.compute(pasted_img_gray)
 
             self.data[img_hash.tobytes()] = img_info
 
