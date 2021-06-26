@@ -152,6 +152,7 @@ class QuestType(enum.Enum):
     renegade = "renegade"
     rebel = "rebel"
     citizen = "citizen"
+    resource_node = "resource node"
 
 
 class QuestAppearance(enum.Enum):
