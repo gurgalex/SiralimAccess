@@ -106,7 +106,7 @@ class Sprite(Base):
 
     type_id = Column(Integer, ForeignKey('sprite_type.id'))
     type = relationship('SpriteTypeLookup', backref='sprites', uselist=False)
-    frames = relationship("SpriteFrame", backref="sprite", lazy='joined', cascade='all, delete-orphan')
+    frames: list[SpriteFrame] = relationship("SpriteFrame", backref="sprite", lazy='joined', cascade='all, delete-orphan')
 
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.DECORATION.value,
@@ -152,6 +152,7 @@ class QuestType(enum.Enum):
     renegade = "renegade"
     rebel = "rebel"
     citizen = "citizen"
+    resource_node = "resource node"
 
 
 class QuestAppearance(enum.Enum):

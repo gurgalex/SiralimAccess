@@ -4,6 +4,8 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional, Callable, Type
+
 import cv2
 import re
 import numpy as np
@@ -13,7 +15,7 @@ from numpy.typing import ArrayLike
 from sqlalchemy.exc import NoResultFound
 
 from subot.models import MasterNPCSprite, SpriteFrame, Session, AltarSprite, Realm, RealmLookup, ProjectItemSprite, \
-    NPCSprite, FloorSprite, OverlaySprite
+    NPCSprite, FloorSprite, OverlaySprite, Sprite
 
 master_name_regex = re.compile(r"master_(?P<race>.*)_[\d].png")
 realm_altar_regex = re.compile(r"spr_(?:altar|god)_(?P<realm>.*)_[\d].png")
@@ -21,63 +23,55 @@ project_item_regex = re.compile(r"project_(?P<name>.*)_[\d].png")
 npc_regex = re.compile(r"npc_(?P<name>.*)_[\d].png")
 custom_floortile_regex = re.compile(r"floortiles/(?P<realm>.*)/*.png")
 overlay_sprite_regex = re.compile(r"(?P<realm>.*)_overlay_[\d].png")
+realm_floortiles_regex = re.compile(r"bg_chaos_0.png")
+
 
 MASTER_ICON_SIZE = 16
 MASTER_NPC_SIZE = 32
 
 
+def match_master(path: Path) -> Optional[re.Match]:
+    img = cv2.imread(path.as_posix())
+    height, width, _ = img.shape
+    if height == MASTER_ICON_SIZE:
+        return
+    return master_name_regex.match(path.name)
+
+
 def master_npcs(sprite_export_dir: Path, dest_dir: Path):
-    master_sprites: dict[str, list] = defaultdict(list)
+    sprites: dict[str, MasterNPCSprite] = {}
 
     for ct, master in enumerate(sprite_export_dir.glob("master_*.png")):
-        img = cv2.imread(master.as_posix())
-        height, width, _ = img.shape
-        if height == MASTER_ICON_SIZE:
-            continue
-        master_race = master_name_regex.match(master.name)
+        master_race = match_master(master)
         if not master_race:
-            raise Exception(f"Regex did not find a master for file: {master}")
-
+            continue
         master_race_filepart = (master_race.groups()[0])
         master_race_proper_name = f"{master_race_filepart.replace('_', ' ')} Master"
 
-        master_sprites[master_race_proper_name].append(master)
-
         destination_file = dest_dir.joinpath(master.name)
         shutil.copy(master, destination_file)
+
+        sprites.setdefault(master_race_proper_name, MasterNPCSprite(short_name=master_race_proper_name, long_name=master_race_proper_name))\
+            .frames.append(SpriteFrame(_filepath=destination_file.as_posix()))
+
         print(f"copied {ct} master frames")
 
-    print(f"{len(master_sprites)} Masters")
-    with Session() as session:
-        for master_name, frames in master_sprites.items():
-            sprite = MasterNPCSprite()
-            sprite.long_name = master_name
-            sprite.short_name = master_name
-
-            frame: Path
-            for frame in frames:
-                new_path = Path("extracted_assets").joinpath(frame.name)
-                sprite_frame = SpriteFrame()
-                sprite_frame.filepath = new_path.as_posix()
-                sprite.frames.append(sprite_frame)
-            session.add(sprite)
-        session.commit()
+    print(f"{len(sprites)} Masters")
+    add_or_update_sprites(sprites)
 
 
+def match_altar(path: Path) -> Optional[re.Match]:
+    return realm_altar_regex.match(path.name)
 
 
 def altars(sprite_export_dir: Path, dest_dir: Path):
-    @dataclass
-    class AltarSpriteInsertInfo:
-        file_paths: list[Path]
-        realm: Realm
 
     generic_to_ingame_avatar_mapping = Realm.internal_realm_name_to_god_mapping
 
-    altar_sprites: dict[str, AltarSpriteInsertInfo] = {}
+    altar_sprites: dict[str, AltarSprite] = {}
 
     for ct, god_realm_altar_path in enumerate(sprite_export_dir.glob("spr_*.png")):
-        altar_realm = realm_altar_regex.match(god_realm_altar_path.name)
+        altar_realm = match_altar(god_realm_altar_path)
         if not altar_realm:
             continue
 
@@ -90,54 +84,32 @@ def altars(sprite_export_dir: Path, dest_dir: Path):
             logging.warning(f"realm altar {god_name_in_game} has no realm associated with it. file={god_realm_altar_path.as_posix()}")
             continue
 
-        altar_info: AltarSpriteInsertInfo
-        if altar_info := altar_sprites.get(altar_name_in_game):
-            altar_info.file_paths.append(god_realm_altar_path)
-        else:
-            altar_info = AltarSpriteInsertInfo(realm=realm_enum, file_paths=[])
-            altar_info.file_paths.append(god_realm_altar_path)
-            altar_sprites[altar_name_in_game] = altar_info
-
         destination_file = dest_dir.joinpath(god_realm_altar_path.name)
         shutil.copy(god_realm_altar_path, destination_file)
 
+        with Session() as session:
+            realm_id = session.query(RealmLookup).filter_by(enum=realm_enum).one().id
+
+            altar_sprites.setdefault(altar_name_in_game, AltarSprite(short_name="Altar", long_name=altar_name_in_game, realm_id=realm_id))\
+                .frames.append(SpriteFrame(_filepath=destination_file.as_posix()))
+
     print(f"{len(altar_sprites)} realm altars")
-    with Session() as session:
-        existing_altar_sprites = session.query(AltarSprite).filter(AltarSprite.long_name.in_(altar_sprites.keys())).all()
-        print(f"Found {len(existing_altar_sprites)} existing realm altars = {existing_altar_sprites=}")
-        for altar_name, altar_info in altar_sprites.items():
-            try:
-                sprite = session.query(AltarSprite).filter_by(long_name=altar_name).one()
-            except NoResultFound:
-                sprite = AltarSprite()
+    add_or_update_sprites(altar_sprites)
 
-            sprite.long_name = altar_name
-            sprite.short_name = altar_name
-            sprite.realm = session.query(RealmLookup).filter_by(enum=altar_info.realm).one()
 
-            altar_info: AltarSpriteInsertInfo
-
-            sprite.frames.clear()
-            session.flush()
-            for frame_path in altar_info.file_paths:
-                new_path = Path("extracted_assets").joinpath(frame_path.name)
-                sprite_frame = SpriteFrame()
-                sprite_frame.filepath = new_path.as_posix()
-                sprite.frames.append(sprite_frame)
-            session.add(sprite)
-            session.commit()
+def match_project(path: Path) -> Optional[re.Match]:
+    return project_item_regex.match(path.name)
 
 
 def insert_project_items(export_dir: Path, dest_dir: Path):
-
     sprites: dict[str, ProjectItemSprite] = {}
 
     for ct, project_item_path in enumerate(export_dir.glob("project_*.png")):
-        sprite_frame_match = project_item_regex.match(project_item_path.name)
+        sprite_frame_match = match_project(project_item_path)
         if not sprite_frame_match:
             continue
 
-        item_name_short: str = (sprite_frame_match.groups()[0])
+        item_name_short: str = sprite_frame_match.groups()[0]
         item_name_short: str = item_name_short.replace("_", " ")
         item_name_long: str = f"Project item {item_name_short}"
 
@@ -148,73 +120,44 @@ def insert_project_items(export_dir: Path, dest_dir: Path):
             .frames.append(SpriteFrame(_filepath=destination_file.as_posix()))
 
     print(f"{len(sprites)} project items")
-    with Session() as session:
-        for item_name_long, sprite in sprites.items():
-            try:
-                project_item = session.query(ProjectItemSprite).filter_by(long_name=item_name_long).one()
-            except NoResultFound:
-                project_item = sprite
+    add_or_update_sprites(sprites)
 
-            project_item.short_name = sprite.short_name
-            project_item.long_name = sprite.long_name
 
-            project_item.frames.clear()
-            session.flush()
-
-            frame: SpriteFrame
-            for frame in sprite.frames:
-                sprite_frame = SpriteFrame()
-                sprite_frame.filepath = frame._filepath
-                project_item.frames.append(sprite_frame)
-            session.add(project_item)
-            session.commit()
+def match_npc(path: Path) -> Optional[re.Match]:
+    return npc_regex.match(path.name)
 
 
 def npc(export_dir: Path, dest_dir: Path):
-    sprite_and_frames: dict[str, list] = defaultdict(list)
+    npc_sprites: dict[str, NPCSprite] = {}
 
-    ct = 0
-    for sprite_path in export_dir.glob("npc_*.png"):
+    for ct, sprite_path in enumerate(export_dir.glob("npc_*.png")):
 
-        sprite_name = npc_regex.match(sprite_path.name)
+        sprite_name = match_npc(sprite_path)
         if not sprite_name:
             raise Exception(f"Regex did not find a match for NPC file: {sprite_path}")
-        ct += 1
         sprite_name = (sprite_name.groups()[0])
         sprite_proper_name = f"{sprite_name.replace('_', ' ')}"
 
-        sprite_and_frames[sprite_proper_name].append(sprite_path)
+        npc_sprite = NPCSprite()
+        npc_sprite.short_name = sprite_proper_name
+        npc_sprite.long_name = f"NPC {sprite_proper_name}"
 
-        destination_file = dest_dir.joinpath(sprite_path.name)
-        shutil.copy(sprite_path, destination_file)
+        destination_filepath = dest_dir.joinpath(sprite_path.name)
+        shutil.copy(sprite_path, destination_filepath)
+        npc_sprites.setdefault(sprite_proper_name, npc_sprite).frames.append(SpriteFrame(_filepath=destination_filepath.as_posix()))
+
         print(f"copied {ct} NPC frames")
 
-    print(f"{len(sprite_and_frames)} NPCs")
-    with Session() as session:
-        for short_name, frames in sprite_and_frames.items():
-            long_name = f"NPC {short_name}"
-            try:
-                sprite = session.query(NPCSprite).filter_by(long_name=long_name).one()
-            except NoResultFound:
-                sprite = NPCSprite()
+    print(f"{len(npc_sprites)} NPCs")
+    add_or_update_sprites(npc_sprites)
 
-            sprite.long_name = long_name
-            sprite.short_name = short_name
 
-            sprite.frames.clear()
-            session.flush()
-            frame: Path
-            for frame in frames:
-                new_path = Path("extracted_assets").joinpath(frame.name)
-                sprite_frame = SpriteFrame()
-                sprite_frame.filepath = new_path.as_posix()
-                sprite.frames.append(sprite_frame)
-            session.add(sprite)
-            session.commit()
+def match_realm_floortiles(path: Path) -> Optional[re.Match]:
+    return realm_floortiles_regex.match(path.name)
 
 
 def realm_floortiles(export_dir: Path, dest_dir: Path):
-    tile_size = 32
+    TILE_SIZE = 32
     floortiles_path = export_dir.joinpath("bg_chaos_0.png")
     floortiles_img = cv2.imread(floortiles_path.as_posix(), cv2.IMREAD_UNCHANGED)
 
@@ -242,18 +185,15 @@ def realm_floortiles(export_dir: Path, dest_dir: Path):
         20: Realm.DEAD_SHIPS,
     }
 
-
-
     dest_dir_floortiles = dest_dir.joinpath("floortiles")
     dest_dir_floortiles.mkdir(exist_ok=True)
 
     floor_tiles: dict[str, FloorSprite] = {}
 
-    for row_num, row in enumerate(range(0, floortiles_img.shape[0], tile_size)):
-
+    for row_num, row in enumerate(range(0, floortiles_img.shape[0], TILE_SIZE)):
         tileset: list[tuple[ArrayLike, Path]] = []
-        for col_num, column in enumerate(range(0, floortiles_img.shape[0], tile_size), start=1):
-            img = floortiles_img[row:row + tile_size, column:column + tile_size]
+        for col_num, column in enumerate(range(0, floortiles_img.shape[0], TILE_SIZE), start=1):
+            img = floortiles_img[row:row + TILE_SIZE, column:column + TILE_SIZE]
             is_blank = np.count_nonzero(img) == 0
             if is_blank:
                 continue
@@ -263,17 +203,19 @@ def realm_floortiles(export_dir: Path, dest_dir: Path):
             else:
                 tile_suffix = ""
             realm_for_tile = row_to_realm_mapping[row_num]
+
             series_dir = Path(dest_dir_floortiles).joinpath(f"{realm_for_tile.name}")
 
             destination_filepath: Path = series_dir.joinpath(f"{row_num}-{col_num}{tile_suffix}.png")
             tileset.append((img, destination_filepath))
 
             sprite_name_short = "Floor"
-            sprite_name = f"{realm_for_tile.value} Floor Tile"
-            print(f"{sprite_name=}")
+            sprite_name_long = f"{realm_for_tile.value} Floor Tile"
+            with Session() as session:
+                realm_id = session.query(RealmLookup).filter_by(enum=realm_for_tile).one().id
 
-            floor_tiles.setdefault(sprite_name, FloorSprite(short_name=sprite_name_short, long_name=sprite_name,
-                                                            realm=realm_for_tile))\
+            floor_tiles.setdefault(sprite_name_long, FloorSprite(short_name=sprite_name_short, long_name=sprite_name_long,
+                                                                 realm_id=realm_id))\
                 .frames.append(SpriteFrame(_filepath=destination_filepath.as_posix()))
 
         is_blank_tileset = not tileset
@@ -288,30 +230,43 @@ def realm_floortiles(export_dir: Path, dest_dir: Path):
 
 
     # read floor tiles
-
     print([val.long_name for val in floor_tiles.values()])
+    add_or_update_sprites(floor_tiles)
+
+
+def match_overlay(path: Path) -> Optional[re.Match]:
+    return overlay_sprite_regex.match(path.name)
+
+
+def add_or_update_sprites(sprites: dict[str, Type[Sprite]]):
     with Session() as session:
-        for item_name_long, sprite in floor_tiles.items():
+        for sprite_name, sprite_new in sprites.items():
             try:
-                floor_sprite = session.query(FloorSprite).filter_by(long_name=sprite.long_name).one()
+                sprite = session.query(sprite_new.__class__).filter_by(long_name=sprite_new.long_name).one()
+                print(f"reusing sprite {sprite_new.__class__} id={sprite.id}")
             except NoResultFound:
-                floor_sprite = sprite
+                print("noresultfuond")
+                sprite = sprite_new.__class__()
+                session.add(sprite)
+            sprite.long_name = sprite_new.long_name
+            sprite.short_name = sprite_new.short_name
+            try:
+                sprite.realm_id = sprite_new.realm_id
+            except AttributeError:
+                pass
 
-            floor_sprite.short_name = sprite.short_name
-            floor_sprite.long_name = sprite.long_name
-            floor_sprite.realm_id = session.query(RealmLookup).filter_by(enum=sprite.realm).one().id
-            print(floor_sprite.sprite_id, floor_sprite.long_name)
-
-            floor_sprite.frames.clear()
-            session.flush()
-
-            frame: SpriteFrame
-            for frame in sprite.frames:
-                sprite_frame = SpriteFrame()
-                sprite_frame.filepath = frame._filepath
-                floor_sprite.frames.append(sprite_frame)
-            session.add(floor_sprite)
             session.commit()
+
+            sprite.frames.clear()
+            session.flush()
+            session.commit()
+
+            sprite_id = sprite.id
+            for frame in sprite_new.frames:
+                new_frame = SpriteFrame(sprite_id=sprite_id, _filepath=frame._filepath)
+                session.add(new_frame)
+            session.commit()
+
 
 def add_overlay_tiles(export_dir: Path, dest_dir: Path):
 
@@ -342,41 +297,78 @@ def add_overlay_tiles(export_dir: Path, dest_dir: Path):
         shutil.copy(sprite_path, destination_file)
 
     print(f"{len(overlay_sprites)} overlays found")
-    with Session() as session:
-        for sprite_name, sprite_new in overlay_sprites.items():
-            try:
-                sprite = session.query(OverlaySprite).filter_by(long_name=sprite_name).one()
-                print(f"reusing overlay id={sprite.id}")
-            except NoResultFound:
-                print("noresultfuond")
-                sprite = sprite_new
-                session.add(sprite)
-            sprite.long_name = sprite_name
-            sprite.short_name = sprite_name
-            sprite.realm_id = sprite_new.realm_id
-            session.commit()
+    add_or_update_sprites(overlay_sprites)
 
-            sprite.frames.clear()
-            session.flush()
-            session.commit()
 
-            sprite_id = sprite.id
+sprite_crits_battle_regex = re.compile(r"spr_crits_battle_(?P<name>[\d]+).png")
+def match_battle_sprite(path: Path) -> Optional[re.Match]:
+    return sprite_crits_battle_regex.match(path.name)
 
-            for frame in sprite_new.frames:
-                new_frame = SpriteFrame(sprite_id=sprite_id, _filepath=frame._filepath)
-                session.add(new_frame)
-            session.commit()
+matchers = {
+    'master': match_master,
+    'altar': match_altar,
+    'npc': match_npc,
+    'overlay': match_overlay,
+    'project': match_project,
+    'realm_fllortiles': match_realm_floortiles,
+    'crits_battle': match_battle_sprite,
+}
+
+
+generic_sprite_regex = re.compile(r"spr_(?P<long_name>.*)_[\d]+.png")
+
+
+def generic_sprite(sprite_path: Path):
+    match = generic_sprite_regex.match(sprite_path.name)
+    if not match:
+        print(f"generic no match: {sprite_path}")
+        return
+    sprite = Sprite()
+
+    sprite.long_name = match.groups()[0]
+    sprite.short_name = sprite.long_name
+    return sprite
+
+
+def match_sprites(export_dir: Path, dest_dir: Path):
+    generic_dir = dest_dir.joinpath("generic")
+    generic_dir.mkdir(exist_ok=True)
+
+    sprites: dict[str, Sprite] = {}
+
+    ct = 0
+    sprite_path: Path
+    for sprite_path in export_dir.glob("*.png"):
+        for matcher_name, matcher in matchers.items():
+            if matcher(sprite_path):
+                break
+        else:
+            ct += 1
+            partial_sprite: Optional[Sprite] = generic_sprite(sprite_path)
+            if not partial_sprite:
+                continue
+            destination_filepath = generic_dir.joinpath(sprite_path.name)
+            shutil.copy(sprite_path, destination_filepath)
+
+            sprites.setdefault(partial_sprite.long_name, partial_sprite).frames.append(
+                SpriteFrame(_filepath=destination_filepath.as_posix())
+            )
+            if ct % 10 == 0:
+                print(f"saved {ct} generic frames")
+    add_or_update_sprites(sprites)
 
 
 if __name__ == "__main__":
     export_dir = Path("C:/Program Files (x86)/Steam/steamapps/common/Siralim Ultimate/Export_Textures_0.9.11/")
     dest_dir = Path("extracted_assets")
+    match_sprites(export_dir, dest_dir)
+    realm_floortiles(export_dir, dest_dir)
+    add_overlay_tiles(export_dir, dest_dir)
+    npc(export_dir, dest_dir)
     try:
         master_npcs(export_dir, dest_dir=dest_dir)
     except sqlalchemy.exc.IntegrityError:
         logging.info("Reimporting or updating master sprites is not implemented")
     altars(export_dir, dest_dir)
     insert_project_items(export_dir, dest_dir)
-    npc(export_dir, dest_dir)
     add_overlay_tiles(export_dir, dest_dir)
-    realm_floortiles(export_dir, dest_dir)
