@@ -153,6 +153,8 @@ class QuestType(enum.Enum):
     rebel = "rebel"
     citizen = "citizen"
     resource_node = "resource node"
+    # Defeat enemies that invade the realm by intereating with a cursed/haunted item
+    invasion = "invasion"
 
 
 class QuestAppearance(enum.Enum):
