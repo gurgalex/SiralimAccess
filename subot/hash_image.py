@@ -14,6 +14,52 @@ class ImageInfo:
 
 from collections import UserDict
 
+
+def img_float32(img):
+    return img.copy() if img.dtype != 'uint8' else (img / 255.).astype('float32')
+
+
+def over(fgimg, bgimg):
+    fgimg, bgimg = img_float32(fgimg), img_float32(bgimg)
+    (fb, fg, fr, fa), (bb, bg, br, ba) = cv2.split(fgimg), cv2.split(bgimg)
+    color_fg, color_bg = cv2.merge((fb, fg, fr)), cv2.merge((bb, bg, br))
+    alpha_fg, alpha_bg = np.expand_dims(fa, axis=-1), np.expand_dims(ba, axis=-1)
+
+    color_fg[fa == 0] = [0, 0, 0]
+    color_bg[ba == 0] = [0, 0, 0]
+
+    a = fa + ba * (1 - fa)
+    a[a == 0] = np.NaN
+    color_over = (color_fg * alpha_fg + color_bg * alpha_bg * (1 - alpha_fg)) / np.expand_dims(a, axis=-1)
+    color_over = np.clip(color_over, 0, 1)
+    color_over[a == 0] = [0, 0, 0]
+
+    result_float32 = np.append(color_over, np.expand_dims(a, axis=-1), axis=-1)
+    return (result_float32 * 255).astype('uint8')
+
+
+def overlay_with_transparency(bgimg, fgimg, xmin=0, ymin=0, trans_percent=1):
+    '''
+    bgimg: a 4 channel image, use as background
+    fgimg: a 4 channel image, use as foreground
+    xmin, ymin: a corrdinate in bgimg. from where the fgimg will be put
+    trans_percent: transparency of fgimg. [0.0,1.0]
+    '''
+    # we assume all the input image has 4 channels
+    assert (bgimg.shape[-1] == 4 and fgimg.shape[-1] == 4)
+    fgimg = fgimg.copy()
+    roi = bgimg[ymin:ymin + fgimg.shape[0], xmin:xmin + fgimg.shape[1]].copy()
+
+    b, g, r, a = cv2.split(fgimg)
+
+    fgimg = cv2.merge((b, g, r, (a * trans_percent).astype(fgimg.dtype)))
+
+    roi_over = over(fgimg, roi)
+
+    result = bgimg.copy()
+    result[ymin:ymin + fgimg.shape[0], xmin:xmin + fgimg.shape[1]] = roi_over
+    return result
+
 def overlay_transparent(background_img, img_to_overlay_t):
     """
     @brief      Overlays a transparant PNG onto another image using CV2
@@ -30,6 +76,16 @@ def overlay_transparent(background_img, img_to_overlay_t):
 
     # Extract the alpha mask of the BGRA image, convert to BGR
     b, g, r, a = cv2.split(img_to_overlay_t)
+
+    # check if alpha blending is required
+    a: ArrayLike
+    alpha_sum = np.sum(a)
+    has_partial_transparency = alpha_sum % 255 != 0
+    if has_partial_transparency:
+        print("using expensive partial transparnecy fn")
+        result = overlay_with_transparency(bgimg=background_img, fgimg=img_to_overlay_t)
+        return result[:, :, :3]
+
     overlay_color = cv2.merge((b, g, r))
 
     mask = a
@@ -42,6 +98,7 @@ def overlay_transparent(background_img, img_to_overlay_t):
 
     # Paste the foreground onto the background
     return cv2.add(img1_bg, img2_fg)
+
 
 @dataclass()
 class Overlay:
