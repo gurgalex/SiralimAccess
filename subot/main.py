@@ -34,7 +34,7 @@ from dataclasses import dataclass
 import subot.background_subtract as background_subtract
 
 from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, SpriteType, AltarSprite, \
-    ProjectItemSprite, NPCSprite, OverlaySprite
+    ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite
 from subot.models import Session
 import subot.settings as settings
 
@@ -215,9 +215,10 @@ class Bot:
             npc_name_results: list[tuple] = session.query(NPCSprite).with_entities(NPCSprite.long_name).all()
             self.npc_normals: set[str] = set(result[0] for result in npc_name_results)
 
+            master_name_results: list[tuple] = session.query(MasterNPCSprite).with_entities(MasterNPCSprite.long_name).all()
+            self.masters: set[str] = set(result[0] for result in master_name_results)
 
         print(f"number project items = {len(self.project_items)}")
-        self.masters = set()
         pygame.init()
         self.audio_system: AudioSystem = AudioSystem()
 
@@ -381,32 +382,28 @@ class Bot:
             h=TILE_SIZE * NEARBY_TILES_WH,
         )
 
-    def cache_image_hashes_of_decorations(self):
-
+    def cache_images_using_phashes(self):
         with Session() as session:
-            sprites = session.query(Sprite).all()
-            for sprite in sprites:
-                if sprite.type.name is SpriteType.MASTER_NPC:
-                    self.masters.add(sprite.long_name)
-                sprite_frame: SpriteFrame
-                for sprite_frame in sprite.frames:
-                    if "Castle Walls" in sprite_frame.filepath:
-                        continue
-                    if "ignore" in sprite_frame.filepath:
-                        continue
-                    img = cv2.imread(sprite_frame.filepath, cv2.IMREAD_UNCHANGED)
-                    metadata = ImageInfo(short_name=sprite.short_name, long_name=sprite.long_name, filepath=sprite_frame.filepath)
+            if not hasattr(self, 'realm'):
+                return RealmSpriteHasher()
+            realm_id = session.query(RealmLookup).filter_by(enum=self.realm).one().id
+            floor_ids = [floor.id for floor in session.query(FloorSprite).filter_by(realm_id=realm_id).one().frames]
 
-                    # bottom right "works", just need to specialize on some images which have blank spaces
-                    if img is None:
-                        raise ValueError(f"no image for path: {sprite_frame.filepath}")
-                    one_tile_worth_img: ArrayLike = img[-32:, :32, :]
-                    if one_tile_worth_img.shape != (32, 32, 4):
-                        print(f"not padded tile -skipping - {sprite_frame.filepath}")
-                        continue
+            realm_phashes_query = session.query(HashFrameWithFloor.phash, Sprite.short_name, Sprite.long_name)\
+                .join(SpriteFrame, SpriteFrame.id == HashFrameWithFloor.sprite_frame_id)\
+                .join(Sprite, Sprite.id == SpriteFrame.sprite_id)\
+                .filter(HashFrameWithFloor.floor_sprite_frame_id.in_(floor_ids))
 
-                    # new castle hasher
-                    self.castle_item_hashes.insert_transparent_bgra_image(one_tile_worth_img, metadata)
+            realm_phashes = realm_phashes_query.all()
+            for realm_phash, short_name, long_name in realm_phashes:
+                img_info = ImageInfo(short_name=short_name, long_name=long_name)
+                self.castle_item_hashes[realm_phash] = img_info
+
+    def cache_image_hashes_of_decorations(self):
+        start = time.time()
+        self.cache_images_using_phashes()
+        end = time.time()
+        print(f"cache with phash took {(end-start)*1000}ms")
 
     def run(self):
 
@@ -759,7 +756,11 @@ class NearPlayerProcessing(Thread):
 
             floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
             self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
+            start = time.time()
             self.parent.cache_image_hashes_of_decorations()
+            end = time.time()
+            print(f"Took {math.ceil((end-start)*1000)}ms to retrieve {len(self.parent.castle_item_hashes)} phashes")
+            print(f"similar hashes = {self.parent.castle_item_hashes.similar_hashes}")
             root.info(f"new realm entered: {self.realm.name}")
             print(f"new item hashes = {len(self.parent.castle_item_hashes)}")
 

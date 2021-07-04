@@ -7,7 +7,7 @@ from cv2 import cv2
 from numpy.typing import ArrayLike
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
-from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Table, Computed
+from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Table, Computed, UniqueConstraint
 import sqlalchemy as db
 import enum
 
@@ -63,6 +63,10 @@ class SpriteFrame(Base):
     meta_extra = Column(String, nullable=True)
     _filepath = Column('filepath', String, nullable=False, unique=True)
 
+    #relationships
+    sprite: Sprite = relationship("Sprite", lazy='joined', innerjoin=True, viewonly=True)
+
+
     @property
     def filepath(self) -> str:
         return IMAGE_PATH.joinpath(self._filepath).as_posix()
@@ -106,7 +110,7 @@ class Sprite(Base):
 
     type_id = Column(Integer, ForeignKey('sprite_type.id'))
     type = relationship('SpriteTypeLookup', backref='sprites', uselist=False)
-    frames: list[SpriteFrame] = relationship("SpriteFrame", backref="sprite", lazy='joined', cascade='all, delete-orphan')
+    frames: list[SpriteFrame] = relationship("SpriteFrame", lazy='joined', cascade='all, delete-orphan')
 
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.DECORATION.value,
@@ -164,27 +168,27 @@ class QuestAppearance(enum.Enum):
 
 
 class Realm(enum.Enum):
-    UNSULLIED_MEADOWS = 'Unsullied Meadows'
-    BLOOD_GROVE = 'Blood Grove'
-    TEMPLE_OF_LIES = 'Temple of Lies'
-    FROSTBITE_CAVERNS = 'Frostbite Caverns'
-    PATH_OF_THE_DAMNED = 'Path of the Damned'
-    DEAD_SHIPS = 'Where the Dead Ships Dwell'
-    KINGDOM_OF_HERETICS = 'Kingdom of Heretics'
-    FARAWAY_ENCLAVE = 'Faraway Enclave'
-    THE_SWAMPLANDS = 'The Swamplands'
-    TITAN_WOUND = "Titan's Wound"
-    SANCTUM_UMBRA = 'Sanctum Umbra'
     ARACHNID_NEST = 'Arachnid Nest'
     AZURE_DREAM = 'Azure Dream'
-    TORTURE_CHAMBER = 'Torture Chamber'
     BASTION_OF_THE_VOID = 'Bastion of the Void'
-    CUTTHROAT_JUNGLE = 'Cutthroat Jungle'
     CAUSTIC_REACTOR = 'Caustic Reactor'
+    CUTTHROAT_JUNGLE = 'Cutthroat Jungle'
+    BLOOD_GROVE = 'Blood Grove'
+    DEAD_SHIPS = 'Where the Dead Ships Dwell'
     ETERNITY_END = "Eternity's End"
+    FARAWAY_ENCLAVE = 'Faraway Enclave'
+    FROSTBITE_CAVERNS = 'Frostbite Caverns'
     GREAT_PANDEMONIUM = 'Great Pandemonium'
-    THE_BARRENS = 'The Barrens'
+    KINGDOM_OF_HERETICS = 'Kingdom of Heretics'
+    PATH_OF_THE_DAMNED = 'Path of the Damned'
     REFUGE_OF_THE_MAGI = 'Refuge of the Magi'
+    SANCTUM_UMBRA = 'Sanctum Umbra'
+    TEMPLE_OF_LIES = 'Temple of Lies'
+    THE_BARRENS = 'The Barrens'
+    THE_SWAMPLANDS = 'The Swamplands'
+    TITAN_WOUND = "Titan's Wound"
+    TORTURE_CHAMBER = 'Torture Chamber'
+    UNSULLIED_MEADOWS = 'Unsullied Meadows'
 
     _ignore_ = ['god_to_realm_mapping', 'internal_realm_name_to_god_mapping']
     god_to_realm_mapping: dict[str, Realm] = {}
@@ -429,6 +433,23 @@ class CreatureSprite(Sprite):
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.CREATURE.value
     }
+
+
+class HashFrameWithFloor(Base):
+    """Perceptual hashes using phash algorithm for all sprite frame + floortile combinations"""
+
+    __tablename__ = "sprite_frame_hash"
+    id = Column(Integer, primary_key=True, nullable=False)
+    sprite_frame_id = Column(Integer, ForeignKey('sprite_frame.id'), nullable=False)
+    floor_sprite_frame_id = Column(Integer, ForeignKey('sprite_frame.id'), nullable=False)
+    phash = Column(Integer, nullable=False)
+
+    UniqueConstraint(floor_sprite_frame_id, phash, name='uix_phash_across_floor_tile')
+
+    sprite = relationship('Sprite',
+                          primaryjoin=sprite_frame_id==SpriteFrame.id,
+                          secondary=SpriteFrame.__table__,
+                          secondaryjoin=SpriteFrame.sprite_id == Sprite.id, uselist=False, viewonly=True, innerjoin=True)
 
 
 

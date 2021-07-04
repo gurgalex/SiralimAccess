@@ -36,3 +36,10 @@ Sprites can be grouped into these categories with the following filename pattern
 
 todo: Performance - On every realm change. take every decoration and overlay it on top of the realm tiles. Store result for checking against exactly. Avoids background subtract.
 Also possibly fixes false negative matches due to same pixel grayscale values.
+
+
+# Database location
+
+The latest database can be downloaded [here](https://1drv.ms/u/s!AhOhn_hBfDUdb9vIQtgBzVQ8kcc?e=LbK3Cs)
+
+It must be placed at `<project_root>/assets.db`

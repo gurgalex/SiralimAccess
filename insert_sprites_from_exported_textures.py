@@ -2,7 +2,7 @@ import logging
 import shutil
 import sys
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Callable, Type
 
@@ -14,8 +14,9 @@ import sqlalchemy
 from numpy.typing import ArrayLike
 from sqlalchemy.exc import NoResultFound
 
+from subot.hash_image import Overlay, FloorTilesInfo, compute_phash
 from subot.models import MasterNPCSprite, SpriteFrame, Session, AltarSprite, Realm, RealmLookup, ProjectItemSprite, \
-    NPCSprite, FloorSprite, OverlaySprite, Sprite
+    NPCSprite, FloorSprite, OverlaySprite, Sprite, HashFrameWithFloor
 
 master_name_regex = re.compile(r"master_(?P<race>.*)_[\d].png")
 realm_altar_regex = re.compile(r"spr_(?:altar|god)_(?P<realm>.*)_[\d].png")
@@ -24,7 +25,14 @@ npc_regex = re.compile(r"npc_(?P<name>.*)_[\d].png")
 custom_floortile_regex = re.compile(r"floortiles/(?P<realm>.*)/*.png")
 overlay_sprite_regex = re.compile(r"(?P<realm>.*)_overlay_[\d].png")
 realm_floortiles_regex = re.compile(r"bg_chaos_0.png")
+generic_sprite_regex = re.compile(r"(?:spr_)?(?P<long_name>.*)_[\d]+.png")
 
+
+# excluded from adding
+sprite_crits_battle_regex = re.compile(r"spr_crits_battle_(?P<name>[\d]+).png")
+icons_regex = re.compile(r"icons.*_[\d]+.png")
+animation_regex = re.compile(r"anim_.*.png")
+spell_regex = re.compile(r"spe_.*.png")
 
 MASTER_ICON_SIZE = 16
 MASTER_NPC_SIZE = 32
@@ -300,9 +308,22 @@ def add_overlay_tiles(export_dir: Path, dest_dir: Path):
     add_or_update_sprites(overlay_sprites)
 
 
-sprite_crits_battle_regex = re.compile(r"spr_crits_battle_(?P<name>[\d]+).png")
+
 def match_battle_sprite(path: Path) -> Optional[re.Match]:
     return sprite_crits_battle_regex.match(path.name)
+
+
+def match_icon(path: Path) -> Optional[re.Match]:
+    return re.match(icons_regex, path.name)
+
+
+def match_attack_animation(path: Path) -> Optional[re.Match]:
+    return re.match(animation_regex, path.name)
+
+
+def match_spell_animation(path: Path) -> Optional[re.Match]:
+    return re.match(spell_regex, path.name)
+
 
 matchers = {
     'master': match_master,
@@ -312,10 +333,11 @@ matchers = {
     'project': match_project,
     'realm_fllortiles': match_realm_floortiles,
     'crits_battle': match_battle_sprite,
+
+    'attack_animation': match_attack_animation,
+    'spell_animation': match_spell_animation,
+    'icon': match_icon,
 }
-
-
-generic_sprite_regex = re.compile(r"spr_(?P<long_name>.*)_[\d]+.png")
 
 
 def generic_sprite(sprite_path: Path):
@@ -323,11 +345,20 @@ def generic_sprite(sprite_path: Path):
     if not match:
         print(f"generic no match: {sprite_path}")
         return
+
+    img = cv2.imread(sprite_path.as_posix())
+    height, width, _ = img.shape
+    if height == MASTER_ICON_SIZE or width == MASTER_ICON_SIZE:
+        return
+
+
     sprite = Sprite()
 
     sprite.long_name = match.groups()[0]
     sprite.short_name = sprite.long_name
     return sprite
+
+
 
 
 def match_sprites(export_dir: Path, dest_dir: Path):
@@ -358,10 +389,87 @@ def match_sprites(export_dir: Path, dest_dir: Path):
     add_or_update_sprites(sprites)
 
 
+def hash_items():
+    @dataclass(frozen=True)
+    class PHashReuse:
+        phash: int
+        floor_frame_id: int
+        sprite_canonical_name: Path = field(hash=False, compare=False)
+
+    with Session() as session:
+        existing_phashes: dict[PHashReuse, PHashReuse] = {}
+
+        bulk_hash_entries = []
+
+        ct = 1
+        similar_ct = 0
+        floortiles = session.query(FloorSprite).filter(FloorSprite.realm_id.isnot(None)).all()
+
+        query_result = session.query(SpriteFrame).all()
+        print("got sprite frame results")
+        for floortile in floortiles:
+            overlay = None
+
+            if floortile.realm.enum is Realm.DEAD_SHIPS:
+                overlay_sprite = session.query(OverlaySprite).filter_by(realm_id=floortile.realm.id).one()
+                overlay_tile_part = overlay_sprite.frames[0].data_color[:32, :32, :3]
+                overlay = Overlay(alpha=0.753, tile=overlay_tile_part)
+
+            for floor_frame in floortile.frames:
+                floor_frame_id = floor_frame.id
+                floor_frame_data_color = floor_frame.data_color
+
+                for sprite_frame in query_result:
+                    hash_entry = HashFrameWithFloor()
+                    hash_entry.floor_sprite_frame_id = floor_frame_id
+                    hash_entry.sprite_frame_id = sprite_frame.id
+
+                    sprite_frame_data_color = sprite_frame.data_color
+                    one_tile_worth_img: ArrayLike = sprite_frame_data_color[-32:, :32, :]
+                    if one_tile_worth_img.shape != (32, 32, 4):
+                        print(f"not padded tile -skipping - {sprite_frame.filepath}")
+                        continue
+
+
+                    hash_entry.phash = compute_phash(floor_frame_data_color, one_tile_worth_img, overlay)
+                    if not sprite_frame.sprite:
+                        continue
+                    new_hash = PHashReuse(phash=hash_entry.phash, floor_frame_id=hash_entry.floor_sprite_frame_id, sprite_canonical_name=sprite_frame.sprite.long_name)
+                    if existing_hash := existing_phashes.get(new_hash):
+                        similar_ct += 1
+                        print(f"similar hash detected. old={existing_hash=} new {new_hash=}")
+                        continue
+                    existing_phashes[new_hash] = new_hash
+                    bulk_hash_entries.append(hash_entry)
+
+                    if ct % 5000 == 0:
+                        print(f"{ct} hash entries saved")
+                        session.add_all(bulk_hash_entries)
+                        session.commit()
+                        bulk_hash_entries.clear()
+
+                    ct += 1
+            print(f"total hashes = {ct}", f"similar hashes={similar_ct}, similar% = {(similar_ct/ct)*100}%")
+        session.add_all(bulk_hash_entries)
+        session.commit()
+        bulk_hash_entries.clear()
+
+
+def drop_existing_phashes():
+    # clear all previous hash entries
+    with Session() as session:
+        rows_deleted = session.query(HashFrameWithFloor).delete()
+        print(f"cleared tabled, deleted {rows_deleted} rows")
+        session.commit()
+
+
 if __name__ == "__main__":
-    export_dir = Path("C:/Program Files (x86)/Steam/steamapps/common/Siralim Ultimate/Export_Textures_0.9.11/")
+    export_dir = Path("C:/Program Files (x86)/Steam/steamapps/common/Siralim Ultimate/Export_Textures_0.10.11/")
     dest_dir = Path("extracted_assets")
-    match_sprites(export_dir, dest_dir)
+
+    # drop hashes
+    drop_existing_phashes()
+
     realm_floortiles(export_dir, dest_dir)
     add_overlay_tiles(export_dir, dest_dir)
     npc(export_dir, dest_dir)
@@ -372,3 +480,6 @@ if __name__ == "__main__":
     altars(export_dir, dest_dir)
     insert_project_items(export_dir, dest_dir)
     add_overlay_tiles(export_dir, dest_dir)
+
+    match_sprites(export_dir, dest_dir)
+    hash_items()
