@@ -1,6 +1,7 @@
 import time
 from pathlib import Path
 import cv2
+from collections import UserDict
 from dataclasses import dataclass
 import numpy as np
 from typing import NewType, Optional
@@ -10,9 +11,6 @@ from numpy.typing import ArrayLike
 class ImageInfo:
     short_name: str
     long_name: str
-    filepath: str
-
-from collections import UserDict
 
 
 def img_float32(img):
@@ -117,6 +115,29 @@ class FloorTilesInfo:
     overlay: Optional[Overlay] = None
 
 
+hasher = cv2.img_hash.PHash_create()
+
+
+def compute_phash(floor_tile: np.typing.ArrayLike, img_bgra, overlay: Optional[Overlay]) -> int:
+    if img_bgra.shape != (32, 32, 4):
+        raise ValueError(f"image to hash is not one tile worth (32,32,4) !={img_bgra.shape=}")
+
+    pasted_img_color = overlay_transparent(background_img=floor_tile, img_to_overlay_t=img_bgra)
+    pasted_img_gray = cv2.cvtColor(pasted_img_color, cv2.COLOR_BGR2GRAY)
+
+    # blend overlay image on top of bg tile + fg sprite
+    if overlay:
+        overlay_tile = overlay.tile
+        alpha = overlay.alpha
+        pasted_img_color = cv2.addWeighted(pasted_img_color, alpha, overlay_tile, 1 - alpha, 0.0)
+        pasted_img_gray = cv2.cvtColor(pasted_img_color, cv2.COLOR_BGR2GRAY)
+
+    img_hash = hasher.compute(pasted_img_gray)
+
+    # convert to int
+    return int.from_bytes(img_hash, byteorder='big', signed=True)
+
+
 class RealmSpriteHasher(UserDict):
     """Stores castle decorations for exact matching
     On get and set it will set any pixels that match the castle tile to 0.
@@ -129,36 +150,31 @@ class RealmSpriteHasher(UserDict):
         if val is None:
             val = {}
         self.floor_info = floor_tiles
-        self.hasher = cv2.img_hash.PHash_create()
+        self.similar_hashes = 0
+        # self.hasher = cv2.img_hash.PHash_create()
         super().__init__(val)
 
-    def insert_transparent_bgra_image(self, img_bgra: np.typing.ArrayLike, img_info: ImageInfo):
-
+    def insert_transparent_bgra_image(self, img_bgra: np.typing.ArrayLike, img_info: ImageInfo) -> Optional[list[int]]:
         if not self.floor_info:
             return
 
+        generated_hashes = []
         for ct, floor_tile in enumerate(self.floor_info.floortiles):
-            pasted_img_color = overlay_transparent(background_img=floor_tile, img_to_overlay_t=img_bgra)
-            pasted_img_gray = cv2.cvtColor(pasted_img_color, cv2.COLOR_BGR2GRAY)
-
-            # blend overlay image on top of bg tile + fg sprite
-            if self.floor_info.overlay:
-                overlay_tile = self.floor_info.overlay.tile
-                alpha = self.floor_info.overlay.alpha
-                pasted_img_color = cv2.addWeighted(pasted_img_color, alpha, overlay_tile, 1 - alpha, 0.0)
-                pasted_img_gray = cv2.cvtColor(pasted_img_color, cv2.COLOR_BGR2GRAY)
-
-            img_hash = self.hasher.compute(pasted_img_gray)
-
-            self.data[img_hash.tobytes()] = img_info
+            computed_hash = compute_phash(floor_tile, img_bgra, self.floor_info.overlay)
+            if computed_hash in self.data:
+                self.similar_hashes += 1
+            generated_hashes.append(computed_hash)
+            self.data[computed_hash] = img_info
+        return generated_hashes
 
     def get_greyscale(self, img_gray: ArrayLike) -> ImageInfo:
         """
         :param img_gray The unaltered grayscale image that hasn't had same pixels stripped
         according to `self.castle_tile_gray`
         """
-        img_hash = self.hasher.compute(img_gray)
-        return self.data[img_hash.tobytes()]
+        img_hash = hasher.compute(img_gray)
+        hash_int = int.from_bytes(img_hash, byteorder='big', signed=True)
+        return self.data[hash_int]
 
 
 if __name__ == "__main__":
