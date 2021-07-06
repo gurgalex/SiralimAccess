@@ -389,6 +389,16 @@ def match_sprites(export_dir: Path, dest_dir: Path):
     add_or_update_sprites(sprites)
 
 
+def should_skip_hashing(filepath: str) -> bool:
+    if "/Rhea" in filepath:
+        return False
+
+    if "assets_padded" in filepath:
+        return True
+
+    return False
+
+
 def hash_items():
     @dataclass(frozen=True)
     class PHashReuse:
@@ -405,21 +415,26 @@ def hash_items():
         similar_ct = 0
         floortiles = session.query(FloorSprite).filter(FloorSprite.realm_id.isnot(None)).all()
 
+        standard_castle_tile = session.query(FloorSprite).filter_by(long_name="floor_standard1").one()
+        floortiles.append(standard_castle_tile)
+
         query_result = session.query(SpriteFrame).all()
-        print("got sprite frame results")
         for floortile in floortiles:
             overlay = None
-
-            if floortile.realm.enum is Realm.DEAD_SHIPS:
-                overlay_sprite = session.query(OverlaySprite).filter_by(realm_id=floortile.realm.id).one()
-                overlay_tile_part = overlay_sprite.frames[0].data_color[:32, :32, :3]
-                overlay = Overlay(alpha=0.753, tile=overlay_tile_part)
+            if floortile.realm:
+                if floortile.realm.enum is Realm.DEAD_SHIPS:
+                    overlay_sprite = session.query(OverlaySprite).filter_by(realm_id=floortile.realm.id).one()
+                    overlay_tile_part = overlay_sprite.frames[0].data_color[:32, :32, :3]
+                    overlay = Overlay(alpha=0.753, tile=overlay_tile_part)
 
             for floor_frame in floortile.frames:
                 floor_frame_id = floor_frame.id
                 floor_frame_data_color = floor_frame.data_color
 
                 for sprite_frame in query_result:
+                    if should_skip_hashing(sprite_frame.filepath):
+                        print(f"assets_padded skipping = {sprite_frame.filepath}")
+                        continue
                     hash_entry = HashFrameWithFloor()
                     hash_entry.floor_sprite_frame_id = floor_frame_id
                     hash_entry.sprite_frame_id = sprite_frame.id

@@ -269,7 +269,7 @@ class Bot:
         self.active_floor_tiles_gray: list[np.typing.ArrayLike] = []
 
 
-        self.castle_tile: np.typing.ArrayLike = cv2.imread("../assets_padded/floortiles/Standard Floor Tile-frame1.png",
+        self.castle_tile: np.typing.ArrayLike = cv2.imread("../extracted_assets/generic/floor_standard1_0.png",
                                                            cv2.IMREAD_COLOR)
 
         self.castle_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.castle_tile, cv2.COLOR_BGR2GRAY)
@@ -384,10 +384,20 @@ class Bot:
 
     def cache_images_using_phashes(self):
         with Session() as session:
-            if not hasattr(self, 'realm'):
-                return RealmSpriteHasher()
-            realm_id = session.query(RealmLookup).filter_by(enum=self.realm).one().id
-            floor_ids = [floor.id for floor in session.query(FloorSprite).filter_by(realm_id=realm_id).one().frames]
+
+            floor_ids = []
+            if self.mode is BotMode.REALM:
+                if not hasattr(self, 'realm'):
+                    print("no realm attrib")
+                    return RealmSpriteHasher()
+                realm_id = session.query(RealmLookup).filter_by(enum=self.realm).one().id
+                for floor in session.query(FloorSprite).filter_by(realm_id=realm_id).all():
+                    for floor_tile in floor.frames:
+                        floor_ids.append(floor_tile.id)
+            else:
+                for floor in session.query(FloorSprite).filter_by(long_name="floor_standard1").all():
+                    for floor_tile in floor.frames:
+                        floor_ids.append(floor_tile.id)
 
             realm_phashes_query = session.query(HashFrameWithFloor.phash, Sprite.short_name, Sprite.long_name)\
                 .join(SpriteFrame, SpriteFrame.id == HashFrameWithFloor.sprite_frame_id)\
@@ -407,12 +417,13 @@ class Bot:
 
     def run(self):
 
-        print(f"known quests")
-        frames_asset: list[Asset]
-        with Session() as session:
-            quest: Quest
-            for quest in session.query(Quest).all():
-                print(quest.title, [sprite.long_name for sprite in quest.sprites])
+        if settings.DEBUG:
+            print(f"known quests")
+            frames_asset: list[Asset]
+            with Session() as session:
+                quest: Quest
+                for quest in session.query(Quest).all():
+                    print(quest.title, [sprite.long_name for sprite in quest.sprites])
 
         iters = 0
         every = 10
@@ -532,6 +543,17 @@ class WholeWindowAnalyzer(Thread):
             for sprite_long_name in sprite_long_names:
                 self.out_quests_sprites_queue.put(sprite_long_name, timeout=1)
 
+    def update_quests(self, new_quests: list[Quest]):
+        if len(new_quests) == 0:
+            return
+        if set(new_quests) == self.parent_ro.quest_sprite_long_names:
+            return
+
+        self.parent_ro.quest_sprite_long_names.clear()
+        for quest in new_quests:
+            for sprite in quest.sprites:
+                self.parent_ro.quest_sprite_long_names.add(sprite.long_name)
+
     def run(self):
 
         while True:
@@ -562,10 +584,10 @@ class WholeWindowAnalyzer(Thread):
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             root.info(f"quests = {[quest.title for quest in quests]}")
-            root.info(f"quest items = {[sprite.short_name for quest in quests for sprite in quest.sprites]}")
-            for quest in quests:
-                for sprite in quest.sprites:
-                    self.parent_ro.quest_sprite_long_names.add(sprite.long_name)
+            root.info(f"quest items = {[sprite.long_name for quest in quests for sprite in quest.sprites]}")
+
+            self.update_quests(quests)
+            print(f"quests_len = {len(self.parent_ro.quest_sprite_long_names)}")
 
 
 class NearbyFrameGrabber(multiprocessing.Process):
@@ -623,7 +645,6 @@ class NearPlayerProcessing(Thread):
         self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[:]
         self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[:]
 
-
         self.realm: Optional[Realm] = None
         self.unique_realm_assets = list[Asset]
 
@@ -644,16 +665,13 @@ class NearPlayerProcessing(Thread):
         with Session() as session:
             floor_tiles = session.query(FloorSprite).options(joinedload('realm')).all()
 
-        block_size = (TILE_SIZE, TILE_SIZE)
-        grid_in_tiles = view_as_blocks(self.grid_near_slice_gray, block_size)
-
         floor_tile: FloorSprite
         for floor_tile in floor_tiles:
             tile_frame: SpriteFrame
             for frame_num, tile_frame in enumerate(floor_tile.frames, start=1):
                 if aligned_rect := recompute_grid_offset(floor_tile=tile_frame.data_gray,
                                                          gray_frame=self.near_frame_gray,
-                                                         mss_rect=self.grid_near_rect):
+                                                         mss_rect=self.parent.nearby_rect_mss):
                     root.debug(f"floor tile = {floor_tile.long_name}")
                     if realm := floor_tile.realm:
                         return RealmAlignment(realm=realm.enum, alignment=aligned_rect)
@@ -677,8 +695,6 @@ class NearPlayerProcessing(Thread):
     def enter_castle_scanner(self):
         """Scans for decorations and quests in the castle"""
 
-        # block_size = (TILE_SIZE, TILE_SIZE)
-        # grid_in_tiles = view_as_blocks(self.grid_slice_gray, block_size)
         with self.parent.important_tile_locations_lock.gen_wlock():
             self.parent.important_tile_locations.clear()
 
@@ -724,45 +740,63 @@ class NearPlayerProcessing(Thread):
 
     def enter_realm_scanner(self):
         realm_alignment = self.detect_what_realm_in()
-        if isinstance(realm_alignment, CastleAlignment):
-            self.parent.active_floor_tiles = [self.parent.castle_tile]
-            self.parent.active_floor_tiles_gray = [self.parent.castle_tile_gray]
-            self.enter_castle_scanner()
-            return
-
         if not realm_alignment:
             self.enter_castle_scanner()
             return
 
-        if realm_alignment.realm != self.realm:
-            overlay = None
-            self.realm = realm_alignment.realm
-            with Session() as session:
-                realm = session.query(RealmLookup).filter_by(enum=realm_alignment.realm).one()
-                realm_tiles = session.query(FloorSprite).filter_by(realm_id=realm.id).all()
-                temp = []
-                temp_gray = []
-                for realm_tile in realm_tiles:
-                    for frame in realm_tile.frames:
-                        temp.append(frame.data_color)
-                        temp_gray.append(frame.data_gray)
-                self.parent.active_floor_tiles = temp
-                self.parent.active_floor_tiles_gray = temp_gray
 
-                if self.realm is Realm.DEAD_SHIPS:
-                    overlay_sprite = session.query(OverlaySprite).filter_by(realm_id=realm.id).one()
-                    overlay_tile_part = overlay_sprite.frames[0].data_color[:TILE_SIZE, :TILE_SIZE, :3]
-                    overlay = Overlay(alpha=0.753, tile=overlay_tile_part)
+        if isinstance(realm_alignment, CastleAlignment):
+            self.parent.active_floor_tiles = [self.parent.castle_tile]
+            self.parent.active_floor_tiles_gray = [self.parent.castle_tile_gray]
+            self.parent.mode = BotMode.CASTLE
 
-            floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
+
+            floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=None)
             self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
             start = time.time()
             self.parent.cache_image_hashes_of_decorations()
             end = time.time()
             print(f"Took {math.ceil((end-start)*1000)}ms to retrieve {len(self.parent.castle_item_hashes)} phashes")
-            print(f"similar hashes = {self.parent.castle_item_hashes.similar_hashes}")
-            root.info(f"new realm entered: {self.realm.name}")
+
+            root.info(f"castle entered")
+            root.info(f"new realm alignment = {realm_alignment=}")
             print(f"new item hashes = {len(self.parent.castle_item_hashes)}")
+
+            self.enter_castle_scanner()
+            return
+        elif isinstance(realm_alignment, RealmAlignment):
+            self.parent.mode = BotMode.REALM
+            if realm_alignment.realm != self.realm:
+                overlay = None
+                self.realm = realm_alignment.realm
+                self.parent.realm = realm_alignment.realm
+                with Session() as session:
+                    realm = session.query(RealmLookup).filter_by(enum=realm_alignment.realm).one()
+                    realm_tiles = session.query(FloorSprite).filter_by(realm_id=realm.id).all()
+                    temp = []
+                    temp_gray = []
+                    for realm_tile in realm_tiles:
+                        for frame in realm_tile.frames:
+                            temp.append(frame.data_color)
+                            temp_gray.append(frame.data_gray)
+                    self.parent.active_floor_tiles = temp
+                    self.parent.active_floor_tiles_gray = temp_gray
+
+                    if self.realm is Realm.DEAD_SHIPS:
+                        overlay_sprite = session.query(OverlaySprite).filter_by(realm_id=realm.id).one()
+                        overlay_tile_part = overlay_sprite.frames[0].data_color[:TILE_SIZE, :TILE_SIZE, :3]
+                        overlay = Overlay(alpha=0.753, tile=overlay_tile_part)
+
+                floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
+                self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
+                start = time.time()
+                self.parent.cache_image_hashes_of_decorations()
+                end = time.time()
+                print(f"Took {math.ceil((end-start)*1000)}ms to retrieve {len(self.parent.castle_item_hashes)} phashes")
+
+                root.info(f"new realm entered: {self.realm.name}")
+                root.info(f"new realm alignment = {realm_alignment=}")
+                print(f"new item hashes = {len(self.parent.castle_item_hashes)}")
 
         self.enter_castle_scanner()
 
