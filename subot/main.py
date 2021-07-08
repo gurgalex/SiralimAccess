@@ -174,7 +174,7 @@ def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect
 
     res = cv2.matchTemplate(gray_frame, floor_tile, cv2.TM_SQDIFF)
     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-    threshold = 1/16
+    threshold = 1 / 16
     if min_val > threshold:
         return
     tile = Rect.from_cv2_loc(min_loc, w=TILE_SIZE, h=TILE_SIZE)
@@ -207,6 +207,9 @@ listener.start()
 
 class Bot:
     def __init__(self):
+        self.teleportation_shrine_names: set[str] = {'bigroomchanger', 'teleshrine_inactive'}
+        self.teleportation_shrine_location: Optional[AssetGridLoc] = None
+
         self.npc_normal_locations: list[AssetGridLoc] = []
         self.project_item_locations: list[AssetGridLoc] = []
         with Session() as session:
@@ -509,6 +512,12 @@ class Bot:
         else:
             self.audio_system.stop(SoundType.NPC_NORMAL)
 
+        if shrine_location := self.teleportation_shrine_location:
+            self.audio_system.play_sound(AudioLocation(distance=shrine_location.point()), SoundType.TELEPORTATION_SHRINE)
+            self.teleportation_shrine_location = None
+        else:
+            self.audio_system.stop(SoundType.TELEPORTATION_SHRINE)
+
 
 class WholeWindowGrabber(multiprocessing.Process):
     def __init__(self, out_quests: Queue, outgoing_color_frame_queue: multiprocessing.Queue, screenshot_area: dict,
@@ -741,9 +750,13 @@ class NearPlayerProcessing(Thread):
                             continue
                         if not self.exclude_from_debug(img_info.long_name):
                             root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}")
+
                         if img_info.long_name in self.parent.quest_sprite_long_names:
                             root.debug(f"Quest item matched {img_info.long_name}")
                             self.parent.important_tile_locations.append(asset_location)
+                        elif img_info.long_name in self.parent.teleportation_shrine_names:
+                            root.debug(f"Teleportation Shrine matched {img_info.long_name}")
+                            self.parent.teleportation_shrine_location = asset_location
                         elif img_info.long_name in self.parent.masters:
                             root.debug(f"Master matched {img_info.long_name}")
                             self.parent.master_tile_location = asset_location

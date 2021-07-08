@@ -37,6 +37,7 @@ class SoundType(enum.Enum):
     NPC_NORMAL = auto()
     ALTAR = auto()
     PROJECT_ITEM = auto()
+    TELEPORTATION_SHRINE = auto()
 
 
 @dataclass
@@ -105,6 +106,14 @@ class AudioSystem:
                 )
             ),
 
+            SoundType.TELEPORTATION_SHRINE: SoundMapping(
+                channel=pygame.mixer.Channel(6),
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath('teleportation-shrine/low.ogg').as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath('teleportation-shrine/normal.ogg').as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath('teleportation-shrine/high.ogg').as_posix()),
+                )
+            )
         }
 
         # Windows TTS speaker
