@@ -266,7 +266,7 @@ class AltarSprite(Sprite):
     realm_id = Column(Integer, ForeignKey('realm.id'), unique=True, primary_key=True)
 
     sprite = relationship('Sprite', uselist=False, viewonly=True)
-    realm = relationship('RealmLookup', uselist=False)
+    realm = relationship('RealmLookup', uselist=False, back_populates='god_altar_sprite')
 
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.ALTAR.value
@@ -454,7 +454,7 @@ class HashFrameWithFloor(Base):
 
 
 debug = False
-engine = create_engine(DATABASE_CONFIG.uri, echo=debug)
+engine = create_engine(DATABASE_CONFIG.uri, echo=debug, connect_args={'timeout': 2})
 Session = sessionmaker(engine)
 
 if __name__ == "__main__":

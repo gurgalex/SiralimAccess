@@ -1,6 +1,7 @@
 import enum
 from dataclasses import dataclass
 from enum import auto
+from pathlib import Path
 from typing import Optional
 
 import pygame
@@ -51,6 +52,10 @@ class SoundMapping:
     sounds: SoundIndicator
 
 
+AUDIO_DIR = (Path.cwd() / __file__).parent.parent.joinpath("resources").joinpath('audio')
+
+print(f"audio dir = {AUDIO_DIR.as_posix()}")
+
 class AudioSystem:
     def __init__(self):
 
@@ -58,45 +63,45 @@ class AudioSystem:
             SoundType.ALTAR: SoundMapping(
                 channel=pygame.mixer.Channel(2),
                 sounds=SoundIndicator(
-                    low=pygame.mixer.Sound("../audio/altar-angel-low.ogg"),
-                    normal=pygame.mixer.Sound("../audio/altar-angel-normal.ogg"),
-                    high=pygame.mixer.Sound("../audio/altar-angel-high.ogg"),
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("altar-angel-low.ogg").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("altar-angel-normal.ogg").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("altar-angel-high.ogg").as_posix()),
                 )
             ),
 
             SoundType.MASTER_NPC: SoundMapping(
                 channel=pygame.mixer.Channel(5),
                 sounds=SoundIndicator(
-                    low=pygame.mixer.Sound("../audio/horse_sound_cc0-low.wav"),
-                    normal=pygame.mixer.Sound("../audio/horse_sound_cc0.wav"),
-                    high=pygame.mixer.Sound("../audio/horse_sound_cc0-high.wav"),
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("horse_sound_cc0-low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("horse_sound_cc0.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("horse_sound_cc0-high.wav").as_posix()),
                 )
             ),
 
             SoundType.NPC_NORMAL: SoundMapping(
                 channel=pygame.mixer.Channel(4),
                 sounds=SoundIndicator(
-                    low=pygame.mixer.Sound("../audio/npc-low.ogg"),
-                    normal=pygame.mixer.Sound("../audio/npc-normal.ogg"),
-                    high=pygame.mixer.Sound("../audio/npc-high.ogg"),
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("npc-low.ogg").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("npc-normal.ogg").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("npc-high.ogg").as_posix()),
                 )
             ),
 
             SoundType.PROJECT_ITEM: SoundMapping(
                 channel=pygame.mixer.Channel(3),
                 sounds=SoundIndicator(
-                    low=pygame.mixer.Sound("../audio/project-item-low.ogg"),
-                    normal=pygame.mixer.Sound("../audio/project-item-normal.ogg"),
-                    high=pygame.mixer.Sound("../audio/project-item-high.ogg"),
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("project-item-low.ogg").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("project-item-normal.ogg").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("project-item-high.ogg").as_posix()),
                 )
             ),
 
             SoundType.QUEST_ITEM: SoundMapping(
                 channel=pygame.mixer.Channel(0),
                 sounds=SoundIndicator(
-                    low=pygame.mixer.Sound("../audio/tone-low.wav"),
-                    normal=pygame.mixer.Sound("../audio/tone-normal.wav"),
-                    high=pygame.mixer.Sound("../audio/tone-high.wav"),
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-high.wav").as_posix()),
                 )
             ),
 

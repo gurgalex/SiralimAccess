@@ -1,3 +1,5 @@
+import sentry_sdk
+
 import enum
 import logging
 import multiprocessing
@@ -17,9 +19,8 @@ import win32gui
 import pytesseract
 import math
 import time
-from skimage.util import view_as_blocks
+# from skimage.util import view_as_blocks
 from sqlalchemy.orm import joinedload, Load
-from sqlalchemy.orm.strategy_options import load_only
 
 from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.messageTypes import NewFrame, MessageImpl, MessageType, ScanForItems, DrawDebug, CheckWhatRealmIn
@@ -41,6 +42,8 @@ import subot.settings as settings
 from readerwriterlock import rwlock
 
 from subot.utils import Point
+
+
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
 
@@ -180,6 +183,7 @@ def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect
     bottom_right_pt = Bot.bottom_right_tile(aligned_tile=tile, client_rect=mss_rect)
     return Bot.compute_grid_rect(top_left_tile=top_left_pt, bottom_right_tile=bottom_right_pt)
 
+
 root = logging.getLogger()
 
 que = queue.Queue(-1)  # no limit on size
@@ -209,16 +213,17 @@ class Bot:
             altar_names_results: list[tuple] = session.query(AltarSprite).with_entities(AltarSprite.long_name).all()
             self.altars: set[str] = set(result[0] for result in altar_names_results)
 
-            npc_name_results: list[tuple] = session.query(ProjectItemSprite).with_entities(ProjectItemSprite.long_name).all()
+            npc_name_results: list[tuple] = session.query(ProjectItemSprite).with_entities(
+                ProjectItemSprite.long_name).all()
             self.project_items: set[str] = set(result[0] for result in npc_name_results)
 
             npc_name_results: list[tuple] = session.query(NPCSprite).with_entities(NPCSprite.long_name).all()
             self.npc_normals: set[str] = set(result[0] for result in npc_name_results)
 
-            master_name_results: list[tuple] = session.query(MasterNPCSprite).with_entities(MasterNPCSprite.long_name).all()
+            master_name_results: list[tuple] = session.query(MasterNPCSprite).with_entities(
+                MasterNPCSprite.long_name).all()
             self.masters: set[str] = set(result[0] for result in master_name_results)
 
-        print(f"number project items = {len(self.project_items)}")
         pygame.init()
         self.audio_system: AudioSystem = AudioSystem()
 
@@ -268,9 +273,9 @@ class Bot:
         self.active_floor_tiles: list[np.typing.ArrayLike] = []
         self.active_floor_tiles_gray: list[np.typing.ArrayLike] = []
 
-
-        self.castle_tile: np.typing.ArrayLike = cv2.imread("../extracted_assets/generic/floor_standard1_0.png",
-                                                           cv2.IMREAD_COLOR)
+        self.castle_tile: np.typing.ArrayLike = cv2.imread(
+            (Path.cwd() / __file__).parent.parent.joinpath('resources').joinpath("extracted_assets/generic/floor_standard1_0.png").as_posix(),
+            cv2.IMREAD_COLOR)
 
         self.castle_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.castle_tile, cv2.COLOR_BGR2GRAY)
         self.realm_tile: Asset = None
@@ -355,7 +360,7 @@ class Bot:
         bottom_right_pt = Point(
             x=aligned_tile.x + ((client_rect.w - aligned_tile.x) // TILE_SIZE) * TILE_SIZE - TILE_SIZE,
             y=aligned_tile.y + ((client_rect.h - aligned_tile.y) // TILE_SIZE) * TILE_SIZE - TILE_SIZE
-            )
+        )
         return bottom_right_pt
 
     @staticmethod
@@ -399,9 +404,9 @@ class Bot:
                     for floor_tile in floor.frames:
                         floor_ids.append(floor_tile.id)
 
-            realm_phashes_query = session.query(HashFrameWithFloor.phash, Sprite.short_name, Sprite.long_name)\
-                .join(SpriteFrame, SpriteFrame.id == HashFrameWithFloor.sprite_frame_id)\
-                .join(Sprite, Sprite.id == SpriteFrame.sprite_id)\
+            realm_phashes_query = session.query(HashFrameWithFloor.phash, Sprite.short_name, Sprite.long_name) \
+                .join(SpriteFrame, SpriteFrame.id == HashFrameWithFloor.sprite_frame_id) \
+                .join(Sprite, Sprite.id == SpriteFrame.sprite_id) \
                 .filter(HashFrameWithFloor.floor_sprite_frame_id.in_(floor_ids))
 
             realm_phashes = realm_phashes_query.all()
@@ -413,7 +418,7 @@ class Bot:
         start = time.time()
         self.cache_images_using_phashes()
         end = time.time()
-        print(f"cache with phash took {(end-start)*1000}ms")
+        print(f"cache with phash took {(end - start) * 1000}ms")
 
     def run(self):
 
@@ -443,7 +448,13 @@ class Bot:
                 self.nearby_send_deque.append(CheckWhatRealmIn)
                 # self.enter_realm_scanner()
             elif self.mode is BotMode.CASTLE:
-                self.nearby_send_deque.append(ScanForItems)
+                self.nearby_send_deque.append(CheckWhatRealmIn)
+
+            # if settings.DEBUG:
+            #     cv2.imshow("SU Vision - Near bbox", self.nearby_processing_thandle.grid_near_slice_gray)
+            #     if cv2.waitKey(1) & 0xFF == ord("q"):
+            #         cv2.destroyAllWindows()
+            #         break
 
             # label player position
             top_left = self.player_position.top_left().as_tuple()
@@ -460,7 +471,6 @@ class Bot:
         with self.important_tile_locations_lock.gen_rlock():
 
             for tile in self.important_tile_locations[:1]:
-
                 audio_locations.append(AudioLocation(distance=tile.point()))
 
             if audio_locations:
@@ -479,7 +489,8 @@ class Bot:
             self.audio_system.stop(sound_type=SoundType.MASTER_NPC)
 
         if self.altar_tile_location:
-            self.audio_system.play_sound(AudioLocation(distance=self.altar_tile_location.point()), sound_type=SoundType.ALTAR)
+            self.audio_system.play_sound(AudioLocation(distance=self.altar_tile_location.point()),
+                                         sound_type=SoundType.ALTAR)
             self.altar_tile_location = None
         else:
             self.audio_system.stop(SoundType.ALTAR)
@@ -523,7 +534,8 @@ class WholeWindowGrabber(multiprocessing.Process):
 
 
 class WholeWindowAnalyzer(Thread):
-    def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, **kwargs) -> None:
+    def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot,
+                 **kwargs) -> None:
         super().__init__(**kwargs)
         self.parent_ro: Bot = parent
         self.incoming_frame_queue: Queue = incoming_frame_queue
@@ -568,8 +580,9 @@ class WholeWindowAnalyzer(Thread):
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
 
-            if aligned_rect := recompute_grid_offset(floor_tile=self.parent_ro.castle_tile_gray, gray_frame=self.gray_frame,
-                                                   mss_rect=self.parent_ro.su_client_rect):
+            if aligned_rect := recompute_grid_offset(floor_tile=self.parent_ro.castle_tile_gray,
+                                                     gray_frame=self.gray_frame,
+                                                     mss_rect=self.parent_ro.su_client_rect):
                 self.grid_rect = aligned_rect
             else:
                 self.grid_rect = Bot.default_grid_rect(self.parent_ro.su_client_rect)
@@ -581,13 +594,12 @@ class WholeWindowAnalyzer(Thread):
                                                          self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
                                                          self.grid_rect.x:self.grid_rect.x + self.grid_rect.w]
 
-
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             root.info(f"quests = {[quest.title for quest in quests]}")
             root.info(f"quest items = {[sprite.long_name for quest in quests for sprite in quest.sprites]}")
 
             self.update_quests(quests)
-            print(f"quests_len = {len(self.parent_ro.quest_sprite_long_names)}")
+            root.debug(f"quests_len = {len(self.parent_ro.quest_sprite_long_names)}")
 
 
 class NearbyFrameGrabber(multiprocessing.Process):
@@ -613,6 +625,7 @@ class NearbyFrameGrabber(multiprocessing.Process):
                     self.color_nearby_queue.put(NewFrame(nearby_shot_np), timeout=10)
                 except queue.Full:
                     continue
+
 
 @dataclass
 class RealmAlignment(object):
@@ -659,7 +672,7 @@ class NearPlayerProcessing(Thread):
         # fast: if still in same realm
         for last_tile in self.parent.active_floor_tiles_gray:
             if aligned_rect := recompute_grid_offset(floor_tile=last_tile, gray_frame=self.near_frame_gray,
-                                     mss_rect=self.parent.nearby_rect_mss):
+                                                     mss_rect=self.parent.nearby_rect_mss):
                 return RealmAlignment(realm=self.realm, alignment=aligned_rect)
 
         with Session() as session:
@@ -679,18 +692,26 @@ class NearPlayerProcessing(Thread):
                         root.info("in castle")
                         return CastleAlignment(alignment=aligned_rect)
 
-    def detect_if_in_castle(self) -> bool:
-        # Check configured castle tile
-        block_size = (TILE_SIZE, TILE_SIZE)
-        grid_in_tiles = view_as_blocks(self.grid_near_slice_gray, block_size)
-        castle_tile = self.parent.castle_tile_gray
+    # def detect_if_in_castle(self) -> bool:
+    #     # Check configured castle tile
+    #     block_size = (TILE_SIZE, TILE_SIZE)
+    #     grid_in_tiles = view_as_blocks(self.grid_near_slice_gray, block_size)
+    #     castle_tile = self.parent.castle_tile_gray
+    #
+    #     for y_i, col in enumerate(grid_in_tiles):
+    #         for x_i, row in enumerate(col):
+    #             if row.tobytes() == castle_tile.tobytes():
+    #                 print("We are in the castle")
+    #                 return True
+    #     return False
 
-        for y_i, col in enumerate(grid_in_tiles):
-            for x_i, row in enumerate(col):
-                if row.tobytes() == castle_tile.tobytes():
-                    print("We are in the castle")
-                    return True
-        return False
+    def exclude_from_debug(self, s: str):
+        if s == "Blood Grove Floor Tile":
+            return True
+        elif s == "bck_FOW_Tile":
+            return True
+        else:
+            return False
 
     def enter_castle_scanner(self):
         """Scans for decorations and quests in the castle"""
@@ -704,20 +725,22 @@ class NearPlayerProcessing(Thread):
             for row in range(0, self.grid_near_rect.w, TILE_SIZE):
                 for col in range(0, self.grid_near_rect.h, TILE_SIZE):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
+                    tile_color = self.grid_near_slice_color[col:col + TILE_SIZE, row:row + TILE_SIZE]
 
                     try:
                         img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
 
-                        asset_location = AssetGridLoc(x=aligned_player_tile_x + row // TILE_SIZE - self.parent.player_position_tile.x,
-                                                      y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
-                                                      short_name=img_info.short_name,
-                                                      )
+                        asset_location = AssetGridLoc(
+                            x=aligned_player_tile_x + row // TILE_SIZE - self.parent.player_position_tile.x,
+                            y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
+                            short_name=img_info.short_name,
+                            )
 
-                        is_player_tile = asset_location.point() == Point(0,0)
+                        is_player_tile = asset_location.point() == Point(0, 0)
                         if is_player_tile:
                             continue
-
-                        root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}")
+                        if not self.exclude_from_debug(img_info.long_name):
+                            root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}")
                         if img_info.long_name in self.parent.quest_sprite_long_names:
                             root.debug(f"Quest item matched {img_info.long_name}")
                             self.parent.important_tile_locations.append(asset_location)
@@ -744,19 +767,17 @@ class NearPlayerProcessing(Thread):
             self.enter_castle_scanner()
             return
 
-
         if isinstance(realm_alignment, CastleAlignment):
             self.parent.active_floor_tiles = [self.parent.castle_tile]
             self.parent.active_floor_tiles_gray = [self.parent.castle_tile_gray]
             self.parent.mode = BotMode.CASTLE
-
 
             floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=None)
             self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
             start = time.time()
             self.parent.cache_image_hashes_of_decorations()
             end = time.time()
-            print(f"Took {math.ceil((end-start)*1000)}ms to retrieve {len(self.parent.castle_item_hashes)} phashes")
+            print(f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.parent.castle_item_hashes)} phashes")
 
             root.info(f"castle entered")
             root.info(f"new realm alignment = {realm_alignment=}")
@@ -792,7 +813,8 @@ class NearPlayerProcessing(Thread):
                 start = time.time()
                 self.parent.cache_image_hashes_of_decorations()
                 end = time.time()
-                print(f"Took {math.ceil((end-start)*1000)}ms to retrieve {len(self.parent.castle_item_hashes)} phashes")
+                print(
+                    f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.parent.castle_item_hashes)} phashes")
 
                 root.info(f"new realm entered: {self.realm.name}")
                 root.info(f"new realm alignment = {realm_alignment=}")
@@ -815,7 +837,7 @@ class NearPlayerProcessing(Thread):
             # print(f"nearby new aligned grid: {realm_alignment.alignment=}")
             self.grid_near_rect = realm_alignment.alignment
         else:
-            root.debug(f"using default nearby grid")
+            root.info(f"using default nearby grid")
             self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
 
         self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[
@@ -842,23 +864,30 @@ class NearPlayerProcessing(Thread):
                     start = time.time()
                     self.enter_realm_scanner()
                     end = time.time()
-                    latency = end-start
-                    print(f"realm scanning took {math.ceil(latency*1000)}ms")
+                    latency = end - start
+                    root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
 
                 elif comm_msg.type is MessageType.DRAW_DEBUG:
-                    cv2.imshow("SU Vision - Near bbox", self.grid_near_slice_gray)
-                    if cv2.waitKey(1) & 0xFF == ord("q"):
-                        cv2.destroyAllWindows()
-                        break
+                    pass
+                    # cv2.imshow("SU Vision - Near bbox", self.grid_near_slice_gray)
+                    # if cv2.waitKey(1) & 0xFF == ord("q"):
+                    #     cv2.destroyAllWindows()
+                    #     break
             except IndexError:
                 continue
 
 
-if __name__ == "__main__":
-
+def start_bot():
     bot = Bot()
-    bot.cache_image_hashes_of_decorations()
     print(f"{bot.su_client_rect=}")
-    print(f"hashed {len(bot.castle_item_hashes)} images")
     print(f"game has {len(bot.masters)} masters")
     bot.run()
+
+
+if __name__ == "__main__":
+    sentry_sdk.init(
+        "https://90ff6a25ab444640becc5ab6a9e35d56@o914707.ingest.sentry.io/5855592",
+        traces_sample_rate=1.0
+    )
+
+    start_bot()
