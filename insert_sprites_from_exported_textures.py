@@ -393,6 +393,12 @@ def should_skip_hashing(filepath: str) -> bool:
     if "/Rhea" in filepath:
         return False
 
+    # skip obelisk life and hash obelisk_life_cleansed and corrupted instead
+    elif "spr_obelisk_life_0.png" in filepath:
+        return True
+    elif "spr_obelisk_life_1.png" in filepath:
+        return True
+
     if "assets_padded" in filepath:
         return True
 
