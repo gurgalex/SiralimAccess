@@ -1,3 +1,7 @@
+import sys
+import signal
+import threading
+
 import sentry_sdk
 
 import enum
@@ -19,11 +23,11 @@ import win32gui
 import pytesseract
 import math
 import time
-# from skimage.util import view_as_blocks
-from sqlalchemy.orm import joinedload, Load
+from sqlalchemy.orm import joinedload
 
 from subot.audio import AudioSystem, AudioLocation, SoundType
-from subot.messageTypes import NewFrame, MessageImpl, MessageType, ScanForItems, DrawDebug, CheckWhatRealmIn
+from subot.datatypes import Rect
+from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg, Shutdown
 from subot.read_tags import Asset
 
 from numpy.typing import ArrayLike
@@ -32,9 +36,7 @@ from subot.hash_image import ImageInfo, RealmSpriteHasher, FloorTilesInfo, Overl
 
 from dataclasses import dataclass
 
-import subot.background_subtract as background_subtract
-
-from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, SpriteType, AltarSprite, \
+from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, AltarSprite, \
     ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite
 from subot.models import Session
 import subot.settings as settings
@@ -42,8 +44,13 @@ import subot.settings as settings
 from readerwriterlock import rwlock
 
 from subot.utils import Point
+import traceback
 
-
+def before_send(event, hint):
+    event["extra"]["exception"] = ["".join(
+        traceback.format_exception(*hint["exc_info"])
+    )]
+    return event
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
 
@@ -69,33 +76,21 @@ class TemplateMeta:
     mask: np.typing.ArrayLike
 
 
-@dataclass(frozen=True)
-class Rect:
-    x: int
-    y: int
-    w: int
-    h: int
+class GameNotOpenException(Exception):
+    pass
 
-    def top_left(self) -> Point:
-        return Point(x=self.x, y=self.y)
-
-    def bottom_right(self) -> Point:
-        return Point(x=self.x + self.w, y=self.y + self.h)
-
-    @classmethod
-    def from_cv2_loc(cls, cv2_loc: tuple, w: int, h: int):
-        return cls(x=cv2_loc[0], y=cv2_loc[1], w=w, h=h)
-
+class GameFullscreenException(Exception):
+    pass
 
 def get_su_client_rect() -> Rect:
     """Returns Rect class of the Siralim Ultimate window. Coordinates are without title bar and borders
-    :raises Exception if the game is not open
+    :raises GameNotOpenException if the game is not open
     """
     su_hwnd = win32gui.FindWindow(None, "Siralim Ultimate")
     su_is_open = su_hwnd > 0
     if not su_is_open:
-        raise Exception("Siralim Ultimate is not open")
-    print(f"{su_hwnd=}")
+        raise GameNotOpenException("Siralim Ultimate is not open")
+    root.debug(f"{su_hwnd=}")
     rect = win32gui.GetWindowRect(su_hwnd)
 
     clientRect = win32gui.GetClientRect(su_hwnd)
@@ -103,7 +98,13 @@ def get_su_client_rect() -> Rect:
     titleOffset = ((rect[3] - rect[1]) - clientRect[3]) - windowOffset
     newRect = (rect[0] + windowOffset, rect[1] + titleOffset, rect[2] - windowOffset, rect[3] - windowOffset)
 
-    return Rect(x=newRect[0], y=newRect[1], w=newRect[2] - newRect[0], h=newRect[3] - newRect[1])
+
+    window_rect = Rect(x=newRect[0], y=newRect[1], w=newRect[2] - newRect[0], h=newRect[3] - newRect[1])
+    if window_rect.w == 0 or window_rect.h == 0:
+        raise GameFullscreenException("game is fullscreen")
+
+    return window_rect
+
 
 
 DOWNSCALE_FACTOR = 4
@@ -207,6 +208,9 @@ listener.start()
 
 class Bot:
     def __init__(self):
+        signal.signal(signal.SIGINT, self.stop)
+        self.timer = None
+        self.tx_nearby_process_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
         self.teleportation_shrine_names: set[str] = {'bigroomchanger', 'teleshrine_inactive'}
         self.teleportation_shrine_location: Optional[AssetGridLoc] = None
 
@@ -232,14 +236,33 @@ class Bot:
 
         self.color_frame_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=1)
         self.out_quests: multiprocessing.Queue = multiprocessing.Queue()
-        self.color_nearby_queue = multiprocessing.Queue(maxsize=1)
+        self.rx_color_nearby_queue = multiprocessing.Queue(maxsize=1)
 
-        self.nearby_send_deque = deque(maxlen=1)
+        # queues for communicaitng with WindowGrabber and NearbyGrabber
+        self.rx_queue = multiprocessing.Queue(maxsize=100)
+        self.tx_window_queue = multiprocessing.Queue(maxsize=100)
+
+
+        self.nearby_send_deque = deque(maxlen=10)
         self.quest_sprite_long_names: set[str] = set()
 
         self.mode: BotMode = BotMode.UNDETERMINED
-        # Used to only analyze the SU window
-        self.su_client_rect = get_su_client_rect()
+
+        # Used to analyze the SU window
+        try:
+            self.su_client_rect = get_su_client_rect()
+        except GameNotOpenException:
+            self.audio_system.speak("Siralim Access will not work unless Siralim Ultimate is open")
+
+            self.audio_system.speak("Shutting down")
+            sys.exit(1)
+
+        except GameFullscreenException:
+            self.audio_system.speak("Siralim Ultimate cannot be fullscreen")
+
+            self.audio_system.speak("Shutting down")
+            sys.exit(1)
+
 
         """player tile position in grid"""
         self.player_position: Rect = Bot.compute_player_position(self.su_client_rect)
@@ -252,8 +275,7 @@ class Bot:
         print(f"{self.su_client_rect=}")
         print(f"{self.nearby_rect_mss=}")
 
-        self.mon_full_window: dict = {"top": self.su_client_rect.y, "left": self.su_client_rect.x,
-                                      "width": self.su_client_rect.w, "height": self.su_client_rect.h}
+        self.mon_full_window: dict = self.su_client_rect.to_mss_dict()
         self.nearby_mon: dict = {"top": self.su_client_rect.y + self.nearby_rect_mss.y,
                                  "left": self.su_client_rect.x + self.nearby_rect_mss.x,
                                  "width": self.nearby_rect_mss.w, "height": self.nearby_rect_mss.h}
@@ -301,21 +323,26 @@ class Bot:
         self.previous_important_tile_locations: list[AssetGridLoc] = []
         self.previous_master_location: Optional[AssetGridLoc] = None
 
+        self.stop_event = threading.Event()
         self.nearby_process = NearbyFrameGrabber(name=NearbyFrameGrabber.__name__,
-                                                 nearby_area=self.nearby_mon, nearby_queue=self.color_nearby_queue)
+                                                 nearby_area=self.nearby_mon, nearby_queue=self.rx_color_nearby_queue,
+                                                 rx_parent=self.tx_nearby_process_queue)
         print(f"{self.nearby_process=}")
         self.nearby_process.start()
 
         self.nearby_processing_thandle = NearPlayerProcessing(name=NearPlayerProcessing.__name__,
-                                                              nearby_frame_queue=self.color_nearby_queue,
+                                                              nearby_frame_queue=self.rx_color_nearby_queue,
                                                               nearby_comm_deque=self.nearby_send_deque,
-                                                              parent=self)
+                                                              parent=self, stop_event=self.stop_event,
+                                                              )
         self.nearby_processing_thandle.start()
 
         self.window_framegrabber_phandle = WholeWindowGrabber(name=WholeWindowGrabber.__name__,
                                                               outgoing_color_frame_queue=self.color_frame_queue,
                                                               out_quests=self.out_quests,
-                                                              screenshot_area=self.mon_full_window)
+                                                              screenshot_area=self.mon_full_window,
+                                                              rx_queue=self.tx_window_queue
+                                                              )
         print(f"{self.window_framegrabber_phandle=}")
         self.window_framegrabber_phandle.start()
 
@@ -325,8 +352,26 @@ class Bot:
                                                         su_client_rect=Rect(x=0, y=0, w=self.mon_full_window["width"],
                                                                             h=self.mon_full_window["height"]),
                                                         parent=self,
+                                                        stop_event=self.stop_event,
                                                         )
         self.whole_window_thandle.start()
+
+    def stop(self, signum, frame):
+        root.info("main: bot should stop")
+        self.audio_system.speak("bot manual shutdown started")
+        self.window_framegrabber_phandle.terminate()
+        self.nearby_process.terminate()
+        self.stop_event.set()
+        root.info("trying to shutdown nearby thandle")
+        self.whole_window_thandle.join(5)
+        root.info("trying to shutdown whole window thandle")
+        self.nearby_processing_thandle.join(5)
+        root.info("both should be shut down")
+
+        sys.exit(1)
+
+
+
 
     @staticmethod
     def default_grid_rect(mss_rect: Rect) -> Rect:
@@ -435,10 +480,26 @@ class Bot:
 
         iters = 0
         every = 10
-        FPS = 75
+        FPS = 60
         clock = pygame.time.Clock()
 
+        self.timer = time.time()
         while True:
+
+            if (time.time() - self.timer) > 1:
+                self.timer = time.time()
+                new_su_client_rect = get_su_client_rect()
+                if new_su_client_rect != self.su_client_rect:
+                    print(f"SU window changed. new={new_su_client_rect}, old={self.su_client_rect}")
+                    self.su_client_rect = new_su_client_rect
+                    self.mon_full_window = new_su_client_rect.to_mss_dict()
+                    self.nearby_mon: dict = {"top": self.su_client_rect.y + self.nearby_rect_mss.y,
+                                             "left": self.su_client_rect.x + self.nearby_rect_mss.x,
+                                             "width": self.nearby_rect_mss.w, "height": self.nearby_rect_mss.h}
+
+                    self.tx_window_queue.put(WindowDim(mss_dict=self.mon_full_window))
+                    self.tx_nearby_process_queue.put(WindowDim(mss_dict=self.nearby_mon))
+
 
             if self.mode is BotMode.UNDETERMINED:
 
@@ -521,38 +582,57 @@ class Bot:
 
 class WholeWindowGrabber(multiprocessing.Process):
     def __init__(self, out_quests: Queue, outgoing_color_frame_queue: multiprocessing.Queue, screenshot_area: dict,
+                 rx_queue: multiprocessing.Queue,
                  **kwargs):
         super().__init__(**kwargs)
         self.color_frame_queue = outgoing_color_frame_queue
         self.out_quests: Queue = out_quests
         self.screenshot_area: dict = screenshot_area
+        self.rx_parent_queue = rx_queue
 
     def run(self):
+        try:
+            should_stop = False
 
-        should_stop = False
+            with mss.mss() as sct:
+                while not should_stop:
+                    # check for incoming messages
+                    try:
+                        msg = self.rx_parent_queue.get_nowait()
+                        print("windowgrabber queue len = ", self.rx_parent_queue.qsize())
+                        if msg.type == ConfigMsg.WINDOW_DIM:
+                            msg: WindowDim
+                            print(f"got windowgrabber newmsg = {msg=}")
+                            self.screenshot_area = msg.mss_dict
 
-        with mss.mss() as sct:
-            while not should_stop:
-                time.sleep(1)
-                try:
-                    # Performance: copying overhead is not an issue for needing a frame at 1-2 FPS
-                    frame_np: ArrayLike = np.asarray(sct.grab(self.screenshot_area))
-                    self.color_frame_queue.put_nowait(frame_np)
-                except queue.Full:
-                    continue
+                    except queue.Empty:
+                        pass
+
+                    time.sleep(1)
+                    try:
+                        # Performance: copying overhead is not an issue for needing a frame at 1-2 FPS
+                        frame_np: ArrayLike = np.asarray(sct.grab(self.screenshot_area))
+                        if frame_np.shape == (0, 0, 4):
+                            print("no frame data")
+                            continue
+                        self.color_frame_queue.put_nowait(frame_np)
+                    except queue.Full:
+                        continue
+        except KeyboardInterrupt:
+            self.color_frame_queue.put(None, timeout=10)
 
 
 class WholeWindowAnalyzer(Thread):
-    def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot,
-                 **kwargs) -> None:
+    def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, **kwargs) -> None:
         super().__init__(**kwargs)
-        self.parent_ro: Bot = parent
+        self.parent: Bot = parent
         self.incoming_frame_queue: Queue = incoming_frame_queue
         self.out_quests_sprites_queue: Queue = out_quests_queue
-        self.su_client_rect = su_client_rect
+        self.stop_event = stop_event
+        # self.su_client_rect = su_client_rect
 
-        self.frame: np.typing.ArrayLike = np.zeros(shape=(self.su_client_rect.h, self.su_client_rect.w), dtype="uint8")
-        self.gray_frame: np.typing.ArrayLike = np.zeros(shape=(self.su_client_rect.h, self.su_client_rect.w),
+        self.frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w), dtype="uint8")
+        self.gray_frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
                                                         dtype="uint8")
 
     def discover_quests(self):
@@ -567,19 +647,21 @@ class WholeWindowAnalyzer(Thread):
     def update_quests(self, new_quests: list[Quest]):
         if len(new_quests) == 0:
             return
-        if set(new_quests) == self.parent_ro.quest_sprite_long_names:
+        if set(new_quests) == self.parent.quest_sprite_long_names:
             return
 
-        self.parent_ro.quest_sprite_long_names.clear()
+        self.parent.quest_sprite_long_names.clear()
         for quest in new_quests:
             for sprite in quest.sprites:
-                self.parent_ro.quest_sprite_long_names.add(sprite.long_name)
+                self.parent.quest_sprite_long_names.add(sprite.long_name)
 
     def run(self):
 
-        while True:
+        while not self.stop_event.is_set():
             try:
                 msg = self.incoming_frame_queue.get(timeout=10)
+                if msg is None:
+                    break
                 shot = msg
             except queue.Empty:
                 raise Exception("No new full frame for 10 seconds")
@@ -589,12 +671,12 @@ class WholeWindowAnalyzer(Thread):
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
 
-            if aligned_rect := recompute_grid_offset(floor_tile=self.parent_ro.castle_tile_gray,
+            if aligned_rect := recompute_grid_offset(floor_tile=self.parent.castle_tile_gray,
                                                      gray_frame=self.gray_frame,
-                                                     mss_rect=self.parent_ro.su_client_rect):
+                                                     mss_rect=self.parent.su_client_rect):
                 self.grid_rect = aligned_rect
             else:
-                self.grid_rect = Bot.default_grid_rect(self.parent_ro.su_client_rect)
+                self.grid_rect = Bot.default_grid_rect(self.parent.su_client_rect)
 
             self.grid_slice_gray: np.typing.ArrayLike = self.gray_frame[
                                                         self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
@@ -608,14 +690,20 @@ class WholeWindowAnalyzer(Thread):
             root.info(f"quest items = {[sprite.long_name for quest in quests for sprite in quest.sprites]}")
 
             self.update_quests(quests)
-            root.debug(f"quests_len = {len(self.parent_ro.quest_sprite_long_names)}")
+            root.debug(f"quests_len = {len(self.parent.quest_sprite_long_names)}")
+            # cv2.imshow("SU Vision - Whole Window", self.frame)
+            # if cv2.waitKey(1) & 0xFF == ord("q"):
+            #     cv2.destroyAllWindows()
+            #     break
+        root.info("WindowAnalyzer thread shutting down")
 
 
 class NearbyFrameGrabber(multiprocessing.Process):
-    def __init__(self, nearby_queue: multiprocessing.Queue, nearby_area: dict = None, **kwargs):
+    def __init__(self, nearby_queue: multiprocessing.Queue, rx_parent: multiprocessing.Queue, nearby_area: dict = None ,**kwargs):
         super().__init__(**kwargs)
         self.color_nearby_queue: multiprocessing.Queue = nearby_queue
         self.nearby_area = nearby_area
+        self.rx_parent = rx_parent
 
     def run(self):
         """Screenshots the area defined as nearby the player. no more than 8x8 tiles (256pxx256px)
@@ -623,17 +711,34 @@ class NearbyFrameGrabber(multiprocessing.Process):
         :param nearby_rect dict used in mss.grab. keys `top`, `left`, `width`, `height`
         """
 
-        should_stop = False
+        try:
+            should_stop = False
 
-        with mss.mss() as sct:
-            while not should_stop:
-                # Performance: Unsure if 1MB copying at 60FPS is fine
-                # Note: Possibly use shared memory if performance is an issue
-                try:
-                    nearby_shot_np: ArrayLike = np.asarray(sct.grab(self.nearby_area))
-                    self.color_nearby_queue.put(NewFrame(nearby_shot_np), timeout=10)
-                except queue.Full:
+            with mss.mss() as sct:
+                while not should_stop:
+                    # Performance: Unsure if 1MB copying at 60FPS is fine
+                    # Note: Possibly use shared memory if performance is an issue
+                    try:
+                        nearby_shot_np: ArrayLike = np.asarray(sct.grab(self.nearby_area))
+                        if nearby_shot_np.shape == (0, 0, 4):
+                            print("no nearby frame data")
+                        self.color_nearby_queue.put(NewFrame(nearby_shot_np), timeout=10)
+                    except queue.Full:
+                        root.debug("color nearby queue full")
+                        pass
+
+                    try:
+                        msg = self.rx_parent.get_nowait()
+                        if msg.type == ConfigMsg.WINDOW_DIM:
+                            msg: WindowDim
+                            print(f"updated nearbyframeGrabber rect. new={msg.mss_dict} old={self.nearby_area}")
+                            self.nearby_area = msg.mss_dict
+                    except queue.Empty:
+                        pass
                     continue
+        except KeyboardInterrupt:
+            self.color_nearby_queue.put(None)
+
 
 
 @dataclass
@@ -649,7 +754,7 @@ class CastleAlignment:
 
 
 class NearPlayerProcessing(Thread):
-    def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: deque, parent: Bot, **kwargs):
+    def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: deque, parent: Bot, stop_event: threading.Event, **kwargs):
         super().__init__(**kwargs)
         self.parent = parent
         # used for multiprocess communication
@@ -657,6 +762,7 @@ class NearPlayerProcessing(Thread):
 
         # Used for across thread communication
         self.nearby_comm_deque: deque = nearby_comm_deque
+        self.stop_event = stop_event
 
         self.near_frame_color: np.typing.ArrayLike = np.zeros(
             (NEARBY_TILES_WH * TILE_SIZE, NEARBY_TILES_WH * TILE_SIZE, 3), dtype='uint8')
@@ -850,7 +956,7 @@ class NearPlayerProcessing(Thread):
             # print(f"nearby new aligned grid: {realm_alignment.alignment=}")
             self.grid_near_rect = realm_alignment.alignment
         else:
-            root.info(f"using default nearby grid")
+            root.debug(f"using default nearby grid")
             self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
 
         self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[
@@ -861,10 +967,11 @@ class NearPlayerProcessing(Thread):
                                                           self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
 
     def run(self):
-        stop = False
 
-        while not stop:
+        while not self.stop_event.is_set():
             msg: MessageImpl = self.nearby_queue.get(timeout=15)
+            if msg is None:
+                return
             if msg.type is MessageType.NEW_FRAME:
                 self.handle_new_frame(msg)
             try:
@@ -888,19 +995,20 @@ class NearPlayerProcessing(Thread):
                     #     break
             except IndexError:
                 continue
+        root.info(f"{self.name} is shutting down")
 
 
 def start_bot():
     bot = Bot()
-    print(f"{bot.su_client_rect=}")
-    print(f"game has {len(bot.masters)} masters")
+    print(f"su_window dim = {bot.su_client_rect=}")
     bot.run()
 
 
 if __name__ == "__main__":
     sentry_sdk.init(
         "https://90ff6a25ab444640becc5ab6a9e35d56@o914707.ingest.sentry.io/5855592",
-        traces_sample_rate=1.0
+        traces_sample_rate=1.0,
+        before_send=before_send,
     )
 
     start_bot()

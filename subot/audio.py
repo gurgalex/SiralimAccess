@@ -144,3 +144,6 @@ class AudioSystem:
 
     def stop(self, sound_type: SoundType):
         self.sound_mappings[sound_type].channel.stop()
+
+    def speak(self, text):
+        self.Speaker.Speak(text)

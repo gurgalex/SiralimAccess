@@ -3,6 +3,7 @@ from enum import Enum, auto
 import numpy as np
 from typing import Union
 
+from subot.datatypes import Rect
 
 
 class MessageType(Enum):
@@ -10,6 +11,8 @@ class MessageType(Enum):
     SCAN_FOR_ITEMS = auto()
     CHECK_WHAT_REALM_IN = auto()
     DRAW_DEBUG = auto()
+    WINDOW_DIM = auto()
+    SHUTDOWN = auto()
 
 @dataclass()
 class CheckWhatRealmIn:
@@ -31,3 +34,18 @@ class NewFrame:
 
 
 MessageImpl = Union[NewFrame, ScanForItems]
+
+
+@dataclass()
+class Shutdown:
+    type: MessageType = MessageType.SHUTDOWN
+
+class ConfigMsg(Enum):
+    WINDOW_DIM = auto()
+    SHUTDOWN = auto()
+
+
+@dataclass()
+class WindowDim:
+    mss_dict: dict
+    type: ConfigMsg = ConfigMsg.WINDOW_DIM
