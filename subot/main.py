@@ -488,7 +488,20 @@ class Bot:
 
             if (time.time() - self.timer) > 1:
                 self.timer = time.time()
-                new_su_client_rect = get_su_client_rect()
+                try:
+                    new_su_client_rect = get_su_client_rect()
+                except GameNotOpenException:
+                    self.audio_system.speak("Siralim Ultimate is no longer open")
+
+                    self.audio_system.speak("Shutting down")
+                    sys.exit(1)
+
+                except GameFullscreenException:
+                    self.audio_system.speak("Siralim Ultimate cannot be fullscreen")
+
+                    self.audio_system.speak("Shutting down")
+                    sys.exit(1)
+
                 if new_su_client_rect != self.su_client_rect:
                     print(f"SU window changed. new={new_su_client_rect}, old={self.su_client_rect}")
                     self.su_client_rect = new_su_client_rect
