@@ -7,7 +7,7 @@ from cv2 import cv2
 from numpy.typing import ArrayLike
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
-from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Table, Computed, UniqueConstraint
+from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Table, Computed, UniqueConstraint, Boolean
 import sqlalchemy as db
 import enum
 
@@ -159,6 +159,11 @@ class QuestType(enum.Enum):
     resource_node = "resource node"
     # Defeat enemies that invade the realm by intereating with a cursed/haunted item
     invasion = "invasion"
+    # stationary creatures must be found
+    creature = "creature"
+
+    # one of the chest in the realm is cursed
+    cursed_chest = "cursed chest"
 
 
 class QuestAppearance(enum.Enum):
@@ -358,6 +363,9 @@ class Quest(Base):
 
     # What realm the quest is tied to. Null if non-specific
     specific_realm_id = Column('specific_realm', Integer, ForeignKey('realm.id'), nullable=True)
+
+    supported = Column(Boolean, nullable=False, default=True)
+    description = Column(String, nullable=True)
 
     sprites = relationship('Sprite', secondary="quest_sprite", uselist=True, lazy='joined', doc="returns 0 or more sprites associated with a realm quest")
     specific_realm = relationship('RealmLookup', uselist=False)

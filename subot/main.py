@@ -37,7 +37,7 @@ from subot.hash_image import ImageInfo, RealmSpriteHasher, FloorTilesInfo, Overl
 from dataclasses import dataclass
 
 from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, AltarSprite, \
-    ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite
+    ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite, QuestType
 from subot.models import Session
 import subot.settings as settings
 
@@ -208,7 +208,8 @@ listener.start()
 
 class Bot:
     def __init__(self):
-        signal.signal(signal.SIGINT, self.stop)
+        self.current_quests: set[int] = set()
+        signal.signal(signal.SIGINT, self.stop_signal)
         self.timer = None
         self.tx_nearby_process_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
         self.teleportation_shrine_names: set[str] = {'bigroomchanger', 'teleshrine_inactive'}
@@ -468,15 +469,18 @@ class Bot:
         end = time.time()
         print(f"cache with phash took {(end - start) * 1000}ms")
 
+    def print_realm_quests(self):
+        print(f"known quests")
+        frames_asset: list[Asset]
+        with Session() as session:
+            quest: Quest
+            for quest in session.query(Quest).all():
+                print(quest.title, [sprite.long_name for sprite in quest.sprites])
+
     def run(self):
 
         if settings.DEBUG:
-            print(f"known quests")
-            frames_asset: list[Asset]
-            with Session() as session:
-                quest: Quest
-                for quest in session.query(Quest).all():
-                    print(quest.title, [sprite.long_name for sprite in quest.sprites])
+            self.print_realm_quests()
 
         iters = 0
         every = 10
@@ -513,7 +517,6 @@ class Bot:
                     self.tx_window_queue.put(WindowDim(mss_dict=self.mon_full_window))
                     self.tx_nearby_process_queue.put(WindowDim(mss_dict=self.nearby_mon))
 
-
             if self.mode is BotMode.UNDETERMINED:
 
                 if realm_alignment := self.nearby_processing_thandle.detect_what_realm_in():
@@ -523,7 +526,6 @@ class Bot:
 
             elif self.mode is BotMode.REALM:
                 self.nearby_send_deque.append(CheckWhatRealmIn)
-                # self.enter_realm_scanner()
             elif self.mode is BotMode.CASTLE:
                 self.nearby_send_deque.append(CheckWhatRealmIn)
 
@@ -660,13 +662,28 @@ class WholeWindowAnalyzer(Thread):
     def update_quests(self, new_quests: list[Quest]):
         if len(new_quests) == 0:
             return
-        if set(new_quests) == self.parent.quest_sprite_long_names:
+
+        new_quest_ids = set()
+        for quest in new_quests:
+            new_quest_ids.add(quest.id)
+
+        if new_quest_ids == self.parent.current_quests:
             return
 
         self.parent.quest_sprite_long_names.clear()
         for quest in new_quests:
-            for sprite in quest.sprites:
-                self.parent.quest_sprite_long_names.add(sprite.long_name)
+            if quest.quest_type == QuestType.rescue:
+                with Session() as session:
+                    self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(NPCSprite).all())
+            else:
+                for sprite in quest.sprites:
+                    self.parent.quest_sprite_long_names.add(sprite.long_name)
+
+            if not quest.supported:
+                self.parent.audio_system.speak(f"Unsupported quest: {quest.title}")
+
+        self.parent.current_quests = new_quest_ids
+
 
     def run(self):
 
@@ -820,18 +837,6 @@ class NearPlayerProcessing(Thread):
                         root.info("in castle")
                         return CastleAlignment(alignment=aligned_rect)
 
-    # def detect_if_in_castle(self) -> bool:
-    #     # Check configured castle tile
-    #     block_size = (TILE_SIZE, TILE_SIZE)
-    #     grid_in_tiles = view_as_blocks(self.grid_near_slice_gray, block_size)
-    #     castle_tile = self.parent.castle_tile_gray
-    #
-    #     for y_i, col in enumerate(grid_in_tiles):
-    #         for x_i, row in enumerate(col):
-    #             if row.tobytes() == castle_tile.tobytes():
-    #                 print("We are in the castle")
-    #                 return True
-    #     return False
 
     def exclude_from_debug(self, s: str):
         if s == "Blood Grove Floor Tile":
@@ -853,7 +858,6 @@ class NearPlayerProcessing(Thread):
             for row in range(0, self.grid_near_rect.w, TILE_SIZE):
                 for col in range(0, self.grid_near_rect.h, TILE_SIZE):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
-                    tile_color = self.grid_near_slice_color[col:col + TILE_SIZE, row:row + TILE_SIZE]
 
                     try:
                         img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
