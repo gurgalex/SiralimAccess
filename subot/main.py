@@ -1002,6 +1002,7 @@ class NearPlayerProcessing(Thread):
                 floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
                 self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
                 start = time.time()
+                self.hang_activity_sender.notify_activity(HangAnnotation({"data": "get new phashes"}))
                 self.parent.cache_image_hashes_of_decorations()
                 end = time.time()
                 print(
@@ -1039,7 +1040,7 @@ class NearPlayerProcessing(Thread):
                                                           self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
 
     def run(self):
-        self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=3.0)
+        self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=10.0)
 
         while not self.stop_event.is_set():
             try:
