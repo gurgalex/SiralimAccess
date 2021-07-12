@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import NoReturn
 
 import cv2
 import numpy as np
@@ -22,3 +23,7 @@ class Point:
 
     def as_tuple(self):
         return self.x, self.y
+
+
+def assert_never(x: NoReturn) -> NoReturn:
+    raise AssertionError("Unhandled type: {}".format(type(x).__name__))

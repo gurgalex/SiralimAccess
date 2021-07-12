@@ -13,7 +13,8 @@ from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
 from pathlib import Path
 from threading import Thread
-from typing import Optional, Union
+from typing import Optional, Union, Any
+from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert
 
 import cv2
 import numpy as np
@@ -208,6 +209,13 @@ listener.start()
 
 class Bot:
     def __init__(self):
+        # queue to monitor for incoming hang alert
+        self.hang_alert_queue = multiprocessing.Queue()
+        self.hang_control_send = multiprocessing.Queue()
+        self.hang_monitor_controller = HangMonitorWorker(daemon=True,
+                                                         hang_notify_queue=self.hang_alert_queue, control_port=self.hang_control_send)
+        self.hang_monitor_controller.start()
+
         self.current_quests: set[int] = set()
         signal.signal(signal.SIGINT, self.stop_signal)
         self.timer = None
@@ -327,7 +335,8 @@ class Bot:
         self.stop_event = threading.Event()
         self.nearby_process = NearbyFrameGrabber(name=NearbyFrameGrabber.__name__,
                                                  nearby_area=self.nearby_mon, nearby_queue=self.rx_color_nearby_queue,
-                                                 rx_parent=self.tx_nearby_process_queue)
+                                                 rx_parent=self.tx_nearby_process_queue,
+                                                 hang_notifier=self.hang_alert_queue)
         print(f"{self.nearby_process=}")
         self.nearby_process.start()
 
@@ -336,6 +345,7 @@ class Bot:
                                                               nearby_frame_queue=self.rx_color_nearby_queue,
                                                               nearby_comm_deque=self.nearby_send_deque,
                                                               parent=self, stop_event=self.stop_event,
+                                                              hang_monitor=self.hang_monitor_controller,
                                                               )
         self.nearby_processing_thandle.start()
 
@@ -343,7 +353,8 @@ class Bot:
                                                               outgoing_color_frame_queue=self.color_frame_queue,
                                                               out_quests=self.out_quests,
                                                               screenshot_area=self.mon_full_window,
-                                                              rx_queue=self.tx_window_queue
+                                                              rx_queue=self.tx_window_queue,
+                                                              hang_notifier=self.hang_alert_queue,
                                                               )
         print(f"{self.window_framegrabber_phandle=}")
         self.window_framegrabber_phandle.start()
@@ -355,6 +366,7 @@ class Bot:
                                                                             h=self.mon_full_window["height"]),
                                                         parent=self,
                                                         stop_event=self.stop_event,
+                                                        hang_monitor=self.hang_monitor_controller,
                                                         daemon=True
                                                         )
         self.whole_window_thandle.start()
@@ -609,15 +621,23 @@ class Bot:
 
 class WholeWindowGrabber(multiprocessing.Process):
     def __init__(self, out_quests: Queue, outgoing_color_frame_queue: multiprocessing.Queue, screenshot_area: dict,
-                 rx_queue: multiprocessing.Queue,
+                 rx_queue: multiprocessing.Queue, hang_notifier: queue.Queue[HangMonitorAlert],
                  **kwargs):
         super().__init__(**kwargs)
         self.color_frame_queue = outgoing_color_frame_queue
         self.out_quests: Queue = out_quests
         self.screenshot_area: dict = screenshot_area
         self.rx_parent_queue = rx_queue
+        self.hang_monitor: Optional[HangMonitorWorker] = None
+        self.hang_notifier = hang_notifier
+        self.hang_control: Optional[queue.Queue] = None
+        self.activity_notify: Optional[HangMonitorChan] = None
 
     def run(self):
+        self.hang_control = queue.Queue()
+        self.hang_monitor = HangMonitorWorker(self.hang_notifier, control_port=self.hang_control)
+        self.activity_notify = self.hang_monitor.register_component(threading.current_thread(), 3.0)
+
         try:
             should_stop = False
 
@@ -626,10 +646,9 @@ class WholeWindowGrabber(multiprocessing.Process):
                     # check for incoming messages
                     try:
                         msg = self.rx_parent_queue.get_nowait()
-                        print("windowgrabber queue len = ", self.rx_parent_queue.qsize())
                         if msg.type == ConfigMsg.WINDOW_DIM:
                             msg: WindowDim
-                            print(f"got windowgrabber newmsg = {msg=}")
+                            root.info(f"got windowgrabber newmsg = {msg=}")
                             self.screenshot_area = msg.mss_dict
 
                     except queue.Empty:
@@ -637,6 +656,8 @@ class WholeWindowGrabber(multiprocessing.Process):
 
                     time.sleep(1)
                     try:
+                        self.activity_notify.notify_activity(HangAnnotation({"data": ""}))
+
                         # Performance: copying overhead is not an issue for needing a frame at 1-2 FPS
                         frame_np: ArrayLike = np.asarray(sct.grab(self.screenshot_area))
                         if frame_np.shape == (0, 0, 4):
@@ -650,12 +671,14 @@ class WholeWindowGrabber(multiprocessing.Process):
 
 
 class WholeWindowAnalyzer(Thread):
-    def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, **kwargs) -> None:
+    def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker ,**kwargs) -> None:
         super().__init__(**kwargs)
         self.parent: Bot = parent
         self.incoming_frame_queue: Queue = incoming_frame_queue
         self.out_quests_sprites_queue: Queue = out_quests_queue
         self.stop_event = stop_event
+        self._hang_monitor = hang_monitor
+        self.hang_activity_sender: Optional[HangMonitorChan] = None
         # self.su_client_rect = su_client_rect
 
         self.frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w), dtype="uint8")
@@ -692,16 +715,16 @@ class WholeWindowAnalyzer(Thread):
                     self.parent.quest_sprite_long_names.add(sprite.long_name)
 
             if not quest.supported:
-                self.parent.audio_system.speak(f"Unsupported quest: {quest.title}")
+                self.parent.audio_system.speak_nonblocking(f"Unsupported quest: {quest.title}")
 
         self.parent.current_quests = new_quest_ids
 
-
     def run(self):
-
+        self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
         while not self.stop_event.is_set():
             try:
-                msg = self.incoming_frame_queue.get(timeout=10)
+                msg = self.incoming_frame_queue.get(timeout=5)
+                self.hang_activity_sender.notify_activity(HangAnnotation(data={"data": "window analyze"}))
                 if msg is None:
                     break
                 shot = msg
@@ -742,17 +765,28 @@ class WholeWindowAnalyzer(Thread):
 
 
 class NearbyFrameGrabber(multiprocessing.Process):
-    def __init__(self, nearby_queue: multiprocessing.Queue, rx_parent: multiprocessing.Queue, nearby_area: dict = None ,**kwargs):
+    def __init__(self, nearby_queue: multiprocessing.Queue, rx_parent: multiprocessing.Queue,
+                 hang_notifier: queue.Queue[HangMonitorAlert],
+                 nearby_area: dict = None,
+                 **kwargs):
         super().__init__(**kwargs)
         self.color_nearby_queue: multiprocessing.Queue = nearby_queue
         self.nearby_area = nearby_area
         self.rx_parent = rx_parent
+        self.hang_monitor: Optional[HangMonitorWorker] = None
+        self.hang_notifier = hang_notifier
+        self.hang_control: Optional[queue.Queue] = None
+        self.activity_notify: Optional[HangMonitorChan] = None
 
     def run(self):
         """Screenshots the area defined as nearby the player. no more than 8x8 tiles (256pxx256px)
         :param color_nearby_queue Queue used to send recent nearby screenshot to processing code
         :param nearby_rect dict used in mss.grab. keys `top`, `left`, `width`, `height`
         """
+        self.hang_control = queue.Queue()
+        self.hang_monitor = HangMonitorWorker(self.hang_notifier, control_port=self.hang_control)
+        self.activity_notify = self.hang_monitor.register_component(threading.current_thread(), 3.0)
+
 
         try:
             should_stop = False
@@ -797,8 +831,11 @@ class CastleAlignment:
 
 
 class NearPlayerProcessing(Thread):
-    def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: deque, parent: Bot, stop_event: threading.Event, **kwargs):
+    def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: deque, parent: Bot, stop_event: threading.Event,hang_monitor: HangMonitorWorker, **kwargs):
         super().__init__(**kwargs)
+        self._hang_monitor: HangMonitorWorker = hang_monitor
+        self.hang_activity_sender: Optional[HangMonitorChan] = None
+
         self.parent = parent
         # used for multiprocess communication
         self.nearby_queue = nearby_frame_queue
@@ -997,9 +1034,15 @@ class NearPlayerProcessing(Thread):
                                                           self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
 
     def run(self):
+        self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=3.0)
 
         while not self.stop_event.is_set():
-            msg: MessageImpl = self.nearby_queue.get(timeout=15)
+            try:
+                msg: MessageImpl = self.nearby_queue.get(timeout=5)
+            except queue.Empty:
+                return
+
+            self.hang_activity_sender.notify_activity(HangAnnotation({"event": "near_frame_processing"}))
             if msg is None:
                 return
             if msg.type is MessageType.NEW_FRAME:
