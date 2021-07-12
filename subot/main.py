@@ -14,6 +14,8 @@ from multiprocessing import Queue
 from pathlib import Path
 from threading import Thread
 from typing import Optional, Union, Any
+
+from subot import models
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert
 
 import cv2
@@ -974,6 +976,9 @@ class NearPlayerProcessing(Thread):
         elif isinstance(realm_alignment, RealmAlignment):
             self.parent.mode = BotMode.REALM
             if realm_alignment.realm != self.realm:
+                new_realm = realm_alignment.realm
+                if new_realm in models.UNSUPPORTED_REALMS:
+                    self.parent.audio_system.speak_nonblocking(f"Realm unsupported. {new_realm.value}")
                 overlay = None
                 self.realm = realm_alignment.realm
                 self.parent.realm = realm_alignment.realm
@@ -997,6 +1002,7 @@ class NearPlayerProcessing(Thread):
                 floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
                 self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
                 start = time.time()
+                self.hang_activity_sender.notify_activity(HangAnnotation({"data": "get new phashes"}))
                 self.parent.cache_image_hashes_of_decorations()
                 end = time.time()
                 print(
@@ -1034,7 +1040,7 @@ class NearPlayerProcessing(Thread):
                                                           self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
 
     def run(self):
-        self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=3.0)
+        self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=10.0)
 
         while not self.stop_event.is_set():
             try:

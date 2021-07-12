@@ -254,6 +254,8 @@ Realm.internal_realm_name_to_god_mapping = {
     "venedon": "Venedon",
 }
 
+UNSUPPORTED_REALMS = {Realm.CAUSTIC_REACTOR, Realm.KINGDOM_OF_HERETICS, Realm.TORTURE_CHAMBER}
+
 
 class RealmLookup(Base):
     __tablename__ = 'realm'
