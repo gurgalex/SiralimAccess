@@ -14,6 +14,8 @@ from multiprocessing import Queue
 from pathlib import Path
 from threading import Thread
 from typing import Optional, Union, Any
+
+from subot import models
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert
 
 import cv2
@@ -974,6 +976,9 @@ class NearPlayerProcessing(Thread):
         elif isinstance(realm_alignment, RealmAlignment):
             self.parent.mode = BotMode.REALM
             if realm_alignment.realm != self.realm:
+                new_realm = realm_alignment.realm
+                if new_realm in models.UNSUPPORTED_REALMS:
+                    self.parent.audio_system.speak_nonblocking(f"Realm unsupported. {new_realm.value}")
                 overlay = None
                 self.realm = realm_alignment.realm
                 self.parent.realm = realm_alignment.realm
