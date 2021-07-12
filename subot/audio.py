@@ -145,5 +145,8 @@ class AudioSystem:
     def stop(self, sound_type: SoundType):
         self.sound_mappings[sound_type].channel.stop()
 
-    def speak(self, text):
+    def speak_blocking(self, text):
         self.Speaker.Speak(text)
+
+    def speak_nonblocking(self, text):
+        self.Speaker.Speak(text, self.SVSFlag)

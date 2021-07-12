@@ -253,15 +253,15 @@ class Bot:
         try:
             self.su_client_rect = get_su_client_rect()
         except GameNotOpenException:
-            self.audio_system.speak("Siralim Access will not work unless Siralim Ultimate is open")
+            self.audio_system.speak_blocking("Siralim Access will not work unless Siralim Ultimate is open.")
 
-            self.audio_system.speak("Shutting down")
+            self.audio_system.speak_blocking("Shutting down")
             sys.exit(1)
 
         except GameFullscreenException:
-            self.audio_system.speak("Siralim Ultimate cannot be fullscreen")
+            self.audio_system.speak_blocking("Siralim Ultimate cannot be fullscreen")
 
-            self.audio_system.speak("Shutting down")
+            self.audio_system.speak_blocking("Shutting down")
             sys.exit(1)
 
 
@@ -332,6 +332,7 @@ class Bot:
         self.nearby_process.start()
 
         self.nearby_processing_thandle = NearPlayerProcessing(name=NearPlayerProcessing.__name__,
+                                                              daemon=True,
                                                               nearby_frame_queue=self.rx_color_nearby_queue,
                                                               nearby_comm_deque=self.nearby_send_deque,
                                                               parent=self, stop_event=self.stop_event,
@@ -354,21 +355,20 @@ class Bot:
                                                                             h=self.mon_full_window["height"]),
                                                         parent=self,
                                                         stop_event=self.stop_event,
+                                                        daemon=True
                                                         )
         self.whole_window_thandle.start()
 
-    def stop(self, signum, frame):
-        root.info("main: bot should stop")
-        self.audio_system.speak("bot manual shutdown started")
+    def stop(self):
         self.window_framegrabber_phandle.terminate()
         self.nearby_process.terminate()
         self.stop_event.set()
-        root.info("trying to shutdown nearby thandle")
-        self.whole_window_thandle.join(5)
-        root.info("trying to shutdown whole window thandle")
-        self.nearby_processing_thandle.join(5)
         root.info("both should be shut down")
 
+    def stop_signal(self, signum, frame):
+        root.info("main: bot should stop")
+        self.stop()
+        self.audio_system.speak_blocking("bot manual shutdown started")
         sys.exit(1)
 
 
@@ -490,21 +490,33 @@ class Bot:
         self.timer = time.time()
         while True:
 
+            # check for incoming hang messages
+
+            try:
+                msg = self.hang_alert_queue.get_nowait()
+                root.warning(f"got hang alert msg = {msg=}")
+                self.audio_system.speak_blocking("Bot has stopped responding. Shutting down")
+                self.stop()
+                sys.exit(1)
+
+            except queue.Empty:
+                pass
+
             if (time.time() - self.timer) > 1:
                 self.timer = time.time()
                 try:
                     new_su_client_rect = get_su_client_rect()
                 except GameNotOpenException:
-                    self.audio_system.speak("Siralim Ultimate is no longer open")
-
-                    self.audio_system.speak("Shutting down")
-                    sys.exit(1)
+                    self.audio_system.speak_blocking("Siralim Ultimate is no longer open")
+                    self.stop()
+                    self.audio_system.speak_blocking("Shutting down")
+                    return
 
                 except GameFullscreenException:
-                    self.audio_system.speak("Siralim Ultimate cannot be fullscreen")
-
-                    self.audio_system.speak("Shutting down")
-                    sys.exit(1)
+                    self.audio_system.speak_blocking("Siralim Ultimate cannot be fullscreen")
+                    self.stop()
+                    self.audio_system.speak_blocking("Shutting down")
+                    return
 
                 if new_su_client_rect != self.su_client_rect:
                     print(f"SU window changed. new={new_su_client_rect}, old={self.su_client_rect}")
@@ -535,10 +547,10 @@ class Bot:
             #         cv2.destroyAllWindows()
             #         break
 
-            # label player position
-            top_left = self.player_position.top_left().as_tuple()
-            bottom_right = self.player_position.bottom_right().as_tuple()
-            cv2.rectangle(self.grid_slice_gray, top_left, bottom_right, (255), 1)
+                # label player position
+                # top_left = self.player_position.top_left().as_tuple()
+                # bottom_right = self.player_position.bottom_right().as_tuple()
+                # cv2.rectangle(self.grid_slice_gray, top_left, bottom_right, (255), 1)
 
             if iters % every == 0:
                 root.debug(f"FPS: {clock.get_fps()}")
@@ -721,6 +733,7 @@ class WholeWindowAnalyzer(Thread):
 
             self.update_quests(quests)
             root.debug(f"quests_len = {len(self.parent.quest_sprite_long_names)}")
+
             # cv2.imshow("SU Vision - Whole Window", self.frame)
             # if cv2.waitKey(1) & 0xFF == ord("q"):
             #     cv2.destroyAllWindows()
@@ -1017,7 +1030,6 @@ class NearPlayerProcessing(Thread):
 
 def start_bot():
     bot = Bot()
-    print(f"su_window dim = {bot.su_client_rect=}")
     bot.run()
 
 
