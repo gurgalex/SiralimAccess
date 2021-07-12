@@ -1,5 +1,6 @@
 import pytest
-from subot.main import Bot, Rect
+from subot.main import Bot
+from subot.datatypes import Rect
 from subot.utils import Point
 
 TILE_SIZE = 32

@@ -7,7 +7,8 @@ import pytesseract
 from main import TILE_SIZE
 import numpy as np
 
-from main import Bot, Rect
+from main import Bot
+from subot.datatypes import Rect
 from background_subtract import subtract_background_color_tile
 
 
