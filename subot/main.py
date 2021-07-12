@@ -1040,6 +1040,7 @@ class NearPlayerProcessing(Thread):
             try:
                 msg: MessageImpl = self.nearby_queue.get(timeout=5)
             except queue.Empty:
+                # something has gone wrong with getting timely frames
                 return
 
             self.hang_activity_sender.notify_activity(HangAnnotation({"event": "near_frame_processing"}))
