@@ -314,7 +314,7 @@ class Bot:
             cv2.IMREAD_COLOR)
 
         self.castle_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.castle_tile, cv2.COLOR_BGR2GRAY)
-        self.realm_tile: Asset = None
+        self.realm = None
 
         # hashes of sprite frames that have matching `self.castle_tile` pixels set to black.
         # This avoids false negative matches if the placed object has matching color pixels in a position
@@ -959,6 +959,8 @@ class NearPlayerProcessing(Thread):
             self.parent.active_floor_tiles = [self.parent.castle_tile]
             self.parent.active_floor_tiles_gray = [self.parent.castle_tile_gray]
             self.parent.mode = BotMode.CASTLE
+            self.parent.realm = None
+            self.realm = None
 
             floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=None)
             self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
