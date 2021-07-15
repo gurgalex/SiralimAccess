@@ -89,7 +89,7 @@ def get_su_client_rect() -> Rect:
     """Returns Rect class of the Siralim Ultimate window. Coordinates are without title bar and borders
     :raises GameNotOpenException if the game is not open
     """
-    su_hwnd = win32gui.FindWindow(None, "Siralim Ultimate")
+    su_hwnd = win32gui.FindWindow("YYGameMakerYY", "Siralim Ultimate")
     su_is_open = su_hwnd > 0
     if not su_is_open:
         raise GameNotOpenException("Siralim Ultimate is not open")
