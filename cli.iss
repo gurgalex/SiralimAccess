@@ -30,7 +30,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: dist\Siralim Access\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\Siralim Access\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\Siralim Access\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{tmp}\tesseract-ocr-w64-setup-v5.0.0-alpha.20210506.exe"; DestDir: "{app}"; Flags: external skipifsourcedoesntexist
 
