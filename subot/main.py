@@ -498,7 +498,6 @@ class Bot:
 
         iters = 0
         every = 10
-        FPS = 60
         clock = pygame.time.Clock()
 
         self.timer = time.time()
@@ -569,7 +568,7 @@ class Bot:
             if iters % every == 0:
                 root.debug(f"FPS: {clock.get_fps()}")
             iters += 1
-            clock.tick(FPS)
+            clock.tick(settings.FPS)
 
     def speak_nearby_objects(self):
         audio_locations: list[AudioLocation] = []
@@ -789,12 +788,12 @@ class NearbyFrameGrabber(multiprocessing.Process):
         self.hang_monitor = HangMonitorWorker(self.hang_notifier, control_port=self.hang_control)
         self.activity_notify = self.hang_monitor.register_component(threading.current_thread(), 3.0)
 
-
+        TARGET_MS = 1 / settings.FPS
         try:
             should_stop = False
-
             with mss.mss() as sct:
                 while not should_stop:
+                    start = time.time()
                     # Performance: Unsure if 1MB copying at 60FPS is fine
                     # Note: Possibly use shared memory if performance is an issue
                     try:
@@ -814,9 +813,14 @@ class NearbyFrameGrabber(multiprocessing.Process):
                             self.nearby_area = msg.mss_dict
                     except queue.Empty:
                         pass
+                    end = time.time()
+                    took = end - start
+                    left = TARGET_MS - took
+                    time.sleep(max(0, left))
                     continue
         except KeyboardInterrupt:
             self.color_nearby_queue.put(None)
+
 
 
 
