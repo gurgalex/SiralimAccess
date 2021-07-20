@@ -57,13 +57,15 @@ def before_send(event, hint):
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
 
+
 # BGR colors
-blue = (255, 0, 0)
-purple = (255, 0, 255)
-green = (0, 255, 0)
-red = (0, 0, 255)
-yellow = (0, 255, 255)
-orange = (0, 215, 255)
+class Color(enum.Enum):
+    blue = (255, 0, 0)
+    purple = (255, 0, 255)
+    green = (0, 255, 0)
+    red = (0, 0, 255)
+    yellow = (0, 255, 255)
+    orange = (0, 215, 255)
 
 TILE_SIZE = 32
 NEARBY_TILES_WH: int = 13
@@ -89,7 +91,7 @@ def get_su_client_rect() -> Rect:
     """Returns Rect class of the Siralim Ultimate window. Coordinates are without title bar and borders
     :raises GameNotOpenException if the game is not open
     """
-    su_hwnd = win32gui.FindWindow(None, "Siralim Ultimate")
+    su_hwnd = win32gui.FindWindow("YYGameMakerYY", "Siralim Ultimate")
     su_is_open = su_hwnd > 0
     if not su_is_open:
         raise GameNotOpenException("Siralim Ultimate is not open")
@@ -111,8 +113,6 @@ def get_su_client_rect() -> Rect:
 
 
 DOWNSCALE_FACTOR = 4
-
-color = blue
 
 
 @dataclass
@@ -498,7 +498,6 @@ class Bot:
 
         iters = 0
         every = 10
-        FPS = 60
         clock = pygame.time.Clock()
 
         self.timer = time.time()
@@ -569,7 +568,7 @@ class Bot:
             if iters % every == 0:
                 root.debug(f"FPS: {clock.get_fps()}")
             iters += 1
-            clock.tick(FPS)
+            clock.tick(settings.FPS)
 
     def speak_nearby_objects(self):
         audio_locations: list[AudioLocation] = []
@@ -789,12 +788,12 @@ class NearbyFrameGrabber(multiprocessing.Process):
         self.hang_monitor = HangMonitorWorker(self.hang_notifier, control_port=self.hang_control)
         self.activity_notify = self.hang_monitor.register_component(threading.current_thread(), 3.0)
 
-
+        TARGET_MS = 1 / settings.FPS
         try:
             should_stop = False
-
             with mss.mss() as sct:
                 while not should_stop:
+                    start = time.time()
                     # Performance: Unsure if 1MB copying at 60FPS is fine
                     # Note: Possibly use shared memory if performance is an issue
                     try:
@@ -814,9 +813,14 @@ class NearbyFrameGrabber(multiprocessing.Process):
                             self.nearby_area = msg.mss_dict
                     except queue.Empty:
                         pass
+                    end = time.time()
+                    took = end - start
+                    left = TARGET_MS - took
+                    time.sleep(max(0, left))
                     continue
         except KeyboardInterrupt:
             self.color_nearby_queue.put(None)
+
 
 
 
@@ -898,6 +902,11 @@ class NearPlayerProcessing(Thread):
         else:
             return False
 
+    def draw_debug(self, start_point, end_point, color: Color, text: str):
+        debug_img = self.near_frame_color
+        cv2.rectangle(debug_img, start_point, end_point, color.value, 2)
+        cv2.putText(debug_img, text, start_point, cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255))
+
     def enter_castle_scanner(self):
         """Scans for decorations and quests in the castle"""
 
@@ -911,8 +920,12 @@ class NearPlayerProcessing(Thread):
                 for col in range(0, self.grid_near_rect.h, TILE_SIZE):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
 
+
                     try:
                         img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
+                        if settings.DEBUG:
+                            start_point = (row + self.grid_near_rect.x, col + self.grid_near_rect.y)
+                            end_point=(start_point[0]+TILE_SIZE, start_point[1]+TILE_SIZE)
 
                         asset_location = AssetGridLoc(
                             x=aligned_player_tile_x + row // TILE_SIZE - self.parent.player_position_tile.x,
@@ -926,22 +939,40 @@ class NearPlayerProcessing(Thread):
                         if not self.exclude_from_debug(img_info.long_name):
                             root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}")
 
+
+
                         if img_info.long_name in self.parent.quest_sprite_long_names:
+                            if settings.DEBUG:
+                                self.draw_debug(start_point, end_point, Color.red, "Quest")
                             root.debug(f"Quest item matched {img_info.long_name}")
                             self.parent.important_tile_locations.append(asset_location)
                         elif img_info.long_name in self.parent.teleportation_shrine_names:
+                            if settings.DEBUG:
+                                self.draw_debug(start_point, end_point, Color.blue, "Teleport")
+
                             root.debug(f"Teleportation Shrine matched {img_info.long_name}")
                             self.parent.teleportation_shrine_location = asset_location
                         elif img_info.long_name in self.parent.masters:
+                            if settings.DEBUG:
+                                self.draw_debug(start_point, end_point, Color.green, "Master")
+
                             root.debug(f"Master matched {img_info.long_name}")
                             self.parent.master_tile_location = asset_location
                         elif img_info.long_name in self.parent.altars:
+                            if settings.DEBUG:
+                                self.draw_debug(start_point, end_point, Color.purple, "Altar")
+
                             root.debug(f"Altar matched {img_info.long_name}")
                             self.parent.altar_tile_location = asset_location
                         elif img_info.long_name in self.parent.project_items:
+                            if settings.DEBUG:
+                                self.draw_debug(start_point, end_point, Color.yellow, "Project")
+
                             root.debug(f"Project Item matched {img_info.long_name}")
                             self.parent.project_item_locations.append(asset_location)
                         elif img_info.long_name in self.parent.npc_normals:
+                            if settings.DEBUG:
+                                self.draw_debug(start_point, end_point, Color.orange, "NPC")
                             root.debug(f"NPC normal matched {img_info.long_name}")
                             self.parent.npc_normal_locations.append(asset_location)
 
@@ -1022,6 +1053,8 @@ class NearPlayerProcessing(Thread):
     def handle_new_frame(self, data: NewFrame):
         img = data.frame
         self.near_frame_color = img[:, :, :3]
+        if settings.DEBUG:
+            self.near_frame_color = self.near_frame_color.copy()
 
         # make grayscale version
         cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGR2GRAY, dst=self.near_frame_gray)
@@ -1040,9 +1073,12 @@ class NearPlayerProcessing(Thread):
         self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[
                                                           self.grid_near_rect.y:self.grid_near_rect.y + self.grid_near_rect.h,
                                                           self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
+        # self.grid_near_slice_color = self.grid_near_slice_color.copy()
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=10.0)
+        if settings.DEBUG:
+            debug_window = cv2.namedWindow("Siralim Access", cv2.WINDOW_KEEPRATIO)
 
         while not self.stop_event.is_set():
             try:
@@ -1069,12 +1105,12 @@ class NearPlayerProcessing(Thread):
                     latency = end - start
                     root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
 
-                elif comm_msg.type is MessageType.DRAW_DEBUG:
-                    pass
-                    # cv2.imshow("SU Vision - Near bbox", self.grid_near_slice_gray)
-                    # if cv2.waitKey(1) & 0xFF == ord("q"):
-                    #     cv2.destroyAllWindows()
-                    #     break
+                # elif comm_msg.type is MessageType.DRAW_DEBUG:
+                if settings.DEBUG:
+                    cv2.imshow("Siralim Access", self.near_frame_color)
+                    if cv2.waitKey(1) & 0xFF == ord("q"):
+                        cv2.destroyAllWindows()
+                        break
             except IndexError:
                 continue
         root.info(f"{self.name} is shutting down")

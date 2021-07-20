@@ -3,7 +3,7 @@ import pathlib
 from dataclasses import dataclass
 from functools import cache
 
-from cv2 import cv2
+import cv2
 from numpy.typing import ArrayLike
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
@@ -447,14 +447,11 @@ class CreatureSprite(Sprite):
 
 class HashFrameWithFloor(Base):
     """Perceptual hashes using phash algorithm for all sprite frame + floortile combinations"""
-
     __tablename__ = "sprite_frame_hash"
-    id = Column(Integer, primary_key=True, nullable=False)
-    sprite_frame_id = Column(Integer, ForeignKey('sprite_frame.id'), nullable=False)
-    floor_sprite_frame_id = Column(Integer, ForeignKey('sprite_frame.id'), nullable=False)
-    phash = Column(Integer, nullable=False)
 
-    UniqueConstraint(floor_sprite_frame_id, phash, name='uix_phash_across_floor_tile')
+    sprite_frame_id = Column(Integer, ForeignKey('sprite_frame.id'), nullable=False)
+    floor_sprite_frame_id = Column(Integer, ForeignKey('sprite_frame.id'), nullable=False, primary_key=True)
+    phash = Column(Integer, nullable=False, primary_key=True)
 
     sprite = relationship('Sprite',
                           primaryjoin=sprite_frame_id==SpriteFrame.id,

@@ -1,0 +1,77 @@
+on:
+  push:
+    tags:
+      # https://gist.github.com/jhorsman/62eeea161a13b80e39f5249281e17c39
+      - '^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$' # Push events to semver
+
+name: Create Release
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - uses: actions/cache@v2
+        with:
+          path: ${{ env.pythonLocation }}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}
+
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade --upgrade-strategy eager -r requirements.txt
+
+      - name: Freeze and bundle with PyInstaller
+        run: |
+          pyinstaller cli.spec cli.py
+
+    - name: Building the installer
+      run: |
+        "%programfiles(x86)%\Inno Setup 6\iscc.exe" "cli.iss"
+      shell: cmd
+
+    # Todo: Add Release create
+    - name: Get version from tag
+      id: tag_name
+      run: |
+        echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
+      shell: cmd
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Get Changelog Entry
+      id: changelog_reader
+      uses: mindsers/changelog-reader-action@v2
+      with:
+        validation_depth: 10
+        version: ${{ steps.tag_name.outputs.current_version }}
+        path: ./CHANGELOG.md
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: ${{steps.changelog.output.changes}}
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Artifacts
+      uses: actions/upload-artifact@v2
+      if: ${{ github.event_name != 'pull_request' }}
+      with:
+        path: "Output/SiralimAccess.exe"
+        name: SiralimAccess-${{github.ref}}-win-x64.zip

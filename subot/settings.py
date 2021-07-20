@@ -14,3 +14,4 @@ print(f"{DATABASE_CONFIG.uri=}")
 IMAGE_PATH = Path(__file__).parent.parent.joinpath('resources')
 print(f"{IMAGE_PATH=}")
 DEBUG = False
+FPS = 20

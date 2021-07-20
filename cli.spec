@@ -19,7 +19,7 @@ a = Analysis(['cli.py'],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
-             excludes=[],
+             excludes=['tkinter', 'notebook', 'nbconvert', 'nbformat', 'markupsafe', 'jedi', 'IPython'],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher,
@@ -36,6 +36,10 @@ exe = EXE(pyz,
           strip=False,
           upx=False,
           console=True )
+
+
+a.binaries = a.binaries - TOC([('cv2\opencv_videoio_ffmpeg453_64.dll', None, None)])
+
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
