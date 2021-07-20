@@ -33,7 +33,6 @@ jobs:
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
         with:
-          validation_depth: 10
           path: ./CHANGELOG.md
       - name: Release
         uses: softprops/action-gh-release@v1
