@@ -39,38 +39,30 @@ jobs:
           "%programfiles(x86)%\Inno Setup 6\iscc.exe" "cli.iss"
         shell: cmd
 
-      # Todo: Add Release create
-      - name: Get version from tag
-        id: tag_name
-        run: |
-          echo ::set-output name=current_version::${GITHUB_REF#refs/tags/v}
-        shell: cmd
-      - name: Checkout code
-        uses: actions/checkout@v2
-
       - name: Get Changelog Entry
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
         with:
           validation_depth: 10
-          version: ${{ steps.tag_name.outputs.current_version }}
           path: ./CHANGELOG.md
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: ${{steps.changelog.output.changes}}
-          draft: false
-          prerelease: false
+     - name: Release
+       uses: softprops/action-gh-release@v1
+       if: startsWith(github.ref, 'refs/tags/')
+       with:
+         # This pulls from the "Get Changelog Entry" step above, referencing it's ID to get its outputs object.
+         # See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+         tag_name: ${{ steps.changelog_reader.outputs.version }}
+         body: ${{ steps.changelog_reader.outputs.changes }}
+         prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
+         draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
+       env:
+         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         GITHUB_REPOSITORY: gurgalex/SiralimUltimateBot
 
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v2
         if: ${{ github.event_name != 'pull_request' }}
         with:
           path: "Output/SiralimAccess.exe"
-          name: SiralimAccess-${{github.ref}}-win-x64.zip
+          name: SiralimAccess-installer-${{github.ref}}-win-x64.exe
