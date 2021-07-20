@@ -10,6 +10,24 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
+
+      - name: Branch name
+        id: branch_name
+        run: |
+          echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
+          echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
+          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+
+      - name: Branch Info
+        run: |
+          echo $SOURCE_NAME
+          echo $SOURCE_BRANCH
+          echo $SOURCE_TAG
+        env:
+          SOURCE_NAME: ${{ steps.branch_name.outputs.SOURCE_NAME }}
+          SOURCE_BRANCH: ${{ steps.branch_name.outputs.SOURCE_BRANCH }}
+          SOURCE_TAG: ${{ steps.branch_name.outputs.SOURCE_TAG }}
+
       - name: 'Set up Python ${{ matrix.python-version }}'
         uses: actions/setup-python@v2
         with:
@@ -43,5 +61,6 @@ jobs:
         uses: actions/upload-artifact@v2
         if: '${{ github.event_name != ''pull_request'' }}'
         with:
-          path: Output/SiralimAccess.exe
-          name: 'SiralimAccess-installer-${{github.ref}}-win-x64.exe'
+          name: 'SiralimAccess-installer-${{ steps.branch_name.outputs.SOURCE_TAG }}-win-x64.exe'
+          path: Output/SiralimAccess*.exe
+          if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
