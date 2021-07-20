@@ -1,8 +1,7 @@
 on:
   push:
     tags:
-      # https://gist.github.com/jhorsman/62eeea161a13b80e39f5249281e17c39
-      - '^([0-9]+)\.([0-9]+)\.([0-9]+)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+)?$' # Push events to semver
+      - 'v*' # Push events to semver
 
 name: Create Release
 
