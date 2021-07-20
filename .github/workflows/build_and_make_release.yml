@@ -29,19 +29,13 @@ jobs:
         run: |
           "%programfiles(x86)%\Inno Setup 6\iscc.exe" "cli.iss"
         shell: cmd
-      - name: Get Changelog Entry
-        id: changelog_reader
-        uses: mindsers/changelog-reader-action@v2
-        with:
-          path: ./CHANGELOG.md
       - name: Release
         uses: softprops/action-gh-release@v1
         if: 'startsWith(github.ref, ''refs/tags/'')'
         with:
-          tag_name: '${{ steps.changelog_reader.outputs.version }}'
-          body: '${{ steps.changelog_reader.outputs.changes }}'
-          prerelease: '${{ steps.changelog_reader.outputs.status == ''prereleased'' }}'
-          draft: '${{ steps.changelog_reader.outputs.status == ''unreleased'' }}'
+          body_path: ./CHANGELOG.md
+          prerelease: false
+          draft: false
         env:
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           GITHUB_REPOSITORY: gurgalex/SiralimUltimateBot
