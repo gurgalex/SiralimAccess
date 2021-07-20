@@ -11,23 +11,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Branch name
-        id: branch_name
-        run: |
-          echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
-          echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
-          echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
-
-      - name: Branch Info
-        run: |
-          echo $SOURCE_NAME
-          echo $SOURCE_BRANCH
-          echo $SOURCE_TAG
-        env:
-          SOURCE_NAME: ${{ steps.branch_name.outputs.SOURCE_NAME }}
-          SOURCE_BRANCH: ${{ steps.branch_name.outputs.SOURCE_BRANCH }}
-          SOURCE_TAG: ${{ steps.branch_name.outputs.SOURCE_TAG }}
-
       - name: 'Set up Python ${{ matrix.python-version }}'
         uses: actions/setup-python@v2
         with:
@@ -54,13 +37,9 @@ jobs:
           body_path: ./CHANGELOG.md
           prerelease: false
           draft: false
+          files: |
+            Output/SiralimAccess*.exe
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
           GITHUB_REPOSITORY: gurgalex/SiralimUltimateBot
-      - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v2
-        if: '${{ github.event_name != ''pull_request'' }}'
-        with:
-          name: 'SiralimAccess-installer-${{ steps.branch_name.outputs.SOURCE_TAG }}-win-x64.exe'
-          path: Output/SiralimAccess*.exe
-          if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
