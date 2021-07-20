@@ -1,68 +1,54 @@
-on:
+'on':
   push:
     tags:
-      - 'v*' # Push events to semver
-
+      - v*
 name: Create Release
-
 jobs:
   build:
     runs-on: windows-latest
-
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 1
-
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: 'Set up Python ${{ matrix.python-version }}'
         uses: actions/setup-python@v2
         with:
           python-version: 3.9
-
       - uses: actions/cache@v2
         with:
-          path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('requirements.txt') }}
-
-
+          path: '${{ env.pythonLocation }}'
+          key: '${{ env.pythonLocation }}-${{ hashFiles(''requirements.txt'') }}'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install --upgrade --upgrade-strategy eager -r requirements.txt
-
       - name: Freeze and bundle with PyInstaller
         run: |
           pyinstaller cli.spec cli.py
-
       - name: Building the installer
         run: |
           "%programfiles(x86)%\Inno Setup 6\iscc.exe" "cli.iss"
         shell: cmd
-
       - name: Get Changelog Entry
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
         with:
           validation_depth: 10
           path: ./CHANGELOG.md
-
-     - name: Release
-       uses: softprops/action-gh-release@v1
-       if: startsWith(github.ref, 'refs/tags/')
-       with:
-         # This pulls from the "Get Changelog Entry" step above, referencing it's ID to get its outputs object.
-         # See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-         tag_name: ${{ steps.changelog_reader.outputs.version }}
-         body: ${{ steps.changelog_reader.outputs.changes }}
-         prerelease: ${{ steps.changelog_reader.outputs.status == 'prereleased' }}
-         draft: ${{ steps.changelog_reader.outputs.status == 'unreleased' }}
-       env:
-         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-         GITHUB_REPOSITORY: gurgalex/SiralimUltimateBot
-
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: 'startsWith(github.ref, ''refs/tags/'')'
+        with:
+          tag_name: '${{ steps.changelog_reader.outputs.version }}'
+          body: '${{ steps.changelog_reader.outputs.changes }}'
+          prerelease: '${{ steps.changelog_reader.outputs.status == ''prereleased'' }}'
+          draft: '${{ steps.changelog_reader.outputs.status == ''unreleased'' }}'
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          GITHUB_REPOSITORY: gurgalex/SiralimUltimateBot
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v2
-        if: ${{ github.event_name != 'pull_request' }}
+        if: '${{ github.event_name != ''pull_request'' }}'
         with:
-          path: "Output/SiralimAccess.exe"
-          name: SiralimAccess-installer-${{github.ref}}-win-x64.exe
+          path: Output/SiralimAccess.exe
+          name: 'SiralimAccess-installer-${{github.ref}}-win-x64.exe'
