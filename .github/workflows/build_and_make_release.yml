@@ -31,7 +31,7 @@ jobs:
           "%programfiles(x86)%\Inno Setup 6\iscc.exe" "cli.iss"
         shell: cmd
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@master
         if: 'startsWith(github.ref, ''refs/tags/'')'
         with:
           body_path: ./CHANGELOG.md

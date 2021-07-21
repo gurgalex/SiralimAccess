@@ -1,8 +1,13 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import NoReturn
-
 import cv2
-import numpy as np
+
+
+def read_version() -> str:
+    with open(Path(__file__).parent.parent.joinpath("VERSION")) as f:
+        return f.read().strip()
+
 
 def extract_mask_from_rgba_img(img):
 
