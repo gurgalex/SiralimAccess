@@ -8,3 +8,4 @@ pywin32>=301
 pytesseract==0.3.8
 toml
 readerwriterlock
+click==8.0.1
