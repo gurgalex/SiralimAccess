@@ -52,22 +52,27 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [code]
+
 function IsTesseractInstalled(): Boolean;
 begin;
     Result := RegKeyExists(HKA64, 'SOFTWARE\Tesseract-OCR');
  end;
 
-[Run]
-Filename: "{app}\tesseract-ocr-w64-setup-v5.0.0-alpha.20210506.exe"; Parameters: ""; Flags: waituntilterminated; Check: not IsTesseractInstalled ; StatusMsg: "Tesseract OCR installation. Please wait..."
 
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: postinstall 
 
 
 
 [Code]
 var
   DownloadPage: TDownloadWizardPage;
+  OCRFontChoicePage: TInputOptionWizardPage;
 
+
+function CheckOCR(): Boolean;
+begin
+	Result := OCRFontChoicePage.Values[0];
+end;
+	
 function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
 begin
   if Progress = ProgressMax then
@@ -76,9 +81,27 @@ begin
 end;
 
 procedure InitializeWizard;
+var
+// ID of page to attach next page to
+    AfterID: Integer;
+
 begin
+  AfterID := wpSelectDir
+  OCRFontChoicePage := CreateInputOptionPage(AfterID, 'Install OCR font', '', '', False, False);
+  OCRFontChoicePage.Description := 'Arial Bold will be used to improve OCR results in Siralim Ultimate.' + #13#10 +
+  'Note: This font is required for realm quest detection to work.';
+  
+  OCRFontChoicePage.Add('Install OCR friendly font in Siralim Ultimate?');
+  OCRFontChoicePage.Values[0] := True;
+
+  AfterID := OCRFontChoicePage.ID;
+
   DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
+
+
 end;
+
+
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
@@ -108,15 +131,36 @@ begin
 end;
 
 
+[Run]
+Filename: "{app}\tesseract-ocr-w64-setup-v5.0.0-alpha.20210506.exe"; Parameters: ""; Flags: waituntilterminated; Check: not IsTesseractInstalled ; StatusMsg: "Tesseract OCR installation. Please wait..."
+
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: postinstall 
+
+; install font
+Filename: "{app}\{#MyAppExeName}"; Parameters: "install"; Description: "Installer for OCR font"; Check: CheckOCR 
 
 
-//function InitializeSetup(): Boolean;
+// uninstall code
 
-//begin;
-//  Result := False
-//    if IsTesseractInstalled() then
-//       MsgBox('Tesseract is installed.', mbError, MB_OK)
-//    else
-//        MsgBox('Tesseract is not installed.', mbError, MB_OK);
-//
-//end;
+[Code]
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ResultCode: Integer;
+
+begin
+  if CurUninstallStep = usAppMutexCheck then
+  begin
+    if MsgBox('Do you want to restore the original game font?', mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+    begin
+      Exec(ExpandConstant('{app}\{#MyAppExeName}'), 'restore', '', SW_SHOW, ewWaitUntilTerminated, ResultCode);
+			begin
+				Case ResultCode of
+					0: Log('Restore original font succeeeded.');
+					2: Log('Missing backup font file. Failed to restore original font file.');
+				else
+					Log('Restoring original game font failed. ErrCode: ' + IntToStr(ResultCode));
+			end;
+    end;
+end;
+  end;
+end;

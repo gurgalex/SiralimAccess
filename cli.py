@@ -36,6 +36,7 @@ def restore():
     # backup original
     if not ORIGINAL_BACKUP_FONT_FILEPATH.exists():
         print(f"Original game font backup is missing. Should have been here: {ORIGINAL_BACKUP_FONT_FILEPATH.name}")
+        sys.exit(2)
     else:
         shutil.copy(ORIGINAL_BACKUP_FONT_FILEPATH, FONT_FILE_ORIG_SIRALIM_ULTIMATE)
 

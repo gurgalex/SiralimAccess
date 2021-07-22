@@ -55,8 +55,6 @@ class SoundMapping:
 
 AUDIO_DIR = (Path.cwd() / __file__).parent.parent.joinpath("resources").joinpath('audio')
 
-print(f"audio dir = {AUDIO_DIR.as_posix()}")
-
 class AudioSystem:
     def __init__(self):
 
