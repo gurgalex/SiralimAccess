@@ -25,7 +25,7 @@ jobs:
           pip install --upgrade --upgrade-strategy eager -r requirements.txt
       - name: Freeze and bundle with PyInstaller
         run: |
-          pyinstaller cli.spec cli.py
+          python build_portable.py
       - name: Building the installer
         run: |
           "%programfiles(x86)%\Inno Setup 6\iscc.exe" "cli.iss"
