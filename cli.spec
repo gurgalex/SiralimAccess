@@ -1,6 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
+from configparser import ConfigParser
 
 
+config = ConfigParser()
+config.read('setup.cfg')
+
+program_name = config["custom"]["product_name"]
+internal_name = config["custom"]["internal_name"]
 block_cipher = None
 
 
@@ -8,6 +14,7 @@ a = Analysis(['cli.py'],
              pathex=['C:\\Users\\Alex Gurganus\\PycharmProjects\\SiralimUltimateBot'],
              binaries=[],
              datas=[
+             ('VERSION', '.'),
              ('assets.db', '.'),
              ('resources/audio', 'resources/audio'),
              ('resources/assets_padded/NPCs/Castle', 'resources/assets_padded/NPCs/Castle'),
@@ -30,12 +37,14 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='SiralimAccess',
+          name=internal_name,
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=False,
-          console=True )
+          console=True,
+          version='file_version_info.py',
+          )
 
 
 a.binaries = a.binaries - TOC([('cv2\opencv_videoio_ffmpeg453_64.dll', None, None)])
@@ -47,4 +56,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='Siralim Access')
+               name=program_name)

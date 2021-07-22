@@ -46,7 +46,7 @@ import subot.settings as settings
 
 from readerwriterlock import rwlock
 
-from subot.utils import Point
+from subot.utils import Point, read_version
 import traceback
 
 def before_send(event, hint):
@@ -1127,5 +1127,7 @@ if __name__ == "__main__":
         traces_sample_rate=1.0,
         before_send=before_send,
     )
+
+    root.info(f"Siralim Access version = {read_version()}")
 
     start_bot()
