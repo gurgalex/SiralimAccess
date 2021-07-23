@@ -134,8 +134,7 @@ end;
 [Run]
 Filename: "{app}\tesseract-ocr-w64-setup-v5.0.0-alpha.20210506.exe"; Parameters: ""; Flags: waituntilterminated; Check: not IsTesseractInstalled ; StatusMsg: "Tesseract OCR installation. Please wait..."
 
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: postinstall 
-
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: postinstall nowait
 ; install font
 Filename: "{app}\{#MyAppExeName}"; Parameters: "install"; Description: "Installer for OCR font"; Check: CheckOCR 
 
