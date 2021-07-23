@@ -1,4 +1,16 @@
-## 0.9.8 (2021-07-22)
+## 0.9.9 (2021-07-22)
+
+### Feat
+
+- increase scanning from 6 -> 8 tiles from player
+
+### Fix
+
+- no longer misdetects minimizing as being fullscreen
+- app wouldn't work if DPI scaling > 100%
+- postinstall launch of Access now closes installer
+
+## v0.9.8 (2021-07-22)
 
 ### Feat
 
