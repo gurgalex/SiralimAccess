@@ -48,6 +48,14 @@ from readerwriterlock import rwlock
 
 from subot.utils import Point, read_version
 import traceback
+from ctypes import windll
+
+user32 = windll.user32
+def set_dpi_aware():
+    # makes functions return real pixel numbers instead of scaled values
+    user32.SetProcessDPIAware()
+
+set_dpi_aware()
 
 def before_send(event, hint):
     event["extra"]["exception"] = ["".join(
