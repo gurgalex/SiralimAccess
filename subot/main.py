@@ -76,7 +76,7 @@ class Color(enum.Enum):
     orange = (0, 215, 255)
 
 TILE_SIZE = 32
-NEARBY_TILES_WH: int = 13
+NEARBY_TILES_WH: int = 8 * 2 + 1
 
 title = "SU Vision"
 
