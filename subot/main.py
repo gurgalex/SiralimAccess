@@ -95,25 +95,31 @@ class GameNotOpenException(Exception):
 class GameFullscreenException(Exception):
     pass
 
+
+def convert_to_rect(rect, clientRect) -> Rect:
+    windowOffset = math.floor(((rect[2] - rect[0]) - clientRect[2]) / 2)
+    titleOffset = ((rect[3] - rect[1]) - clientRect[3]) - windowOffset
+    newRect = (rect[0] + windowOffset, rect[1] + titleOffset, rect[2] - windowOffset, rect[3] - windowOffset)
+
+    return Rect(x=newRect[0], y=newRect[1], w=newRect[2] - newRect[0], h=newRect[3] - newRect[1])
+
+
 def get_su_client_rect() -> Rect:
     """Returns Rect class of the Siralim Ultimate window. Coordinates are without title bar and borders
     :raises GameNotOpenException if the game is not open
     """
+    full_screen_rect = (0, 0, user32.GetSystemMetrics(0), user32.GetSystemMetrics(1))
     su_hwnd = win32gui.FindWindow("YYGameMakerYY", "Siralim Ultimate")
     su_is_open = su_hwnd > 0
     if not su_is_open:
         raise GameNotOpenException("Siralim Ultimate is not open")
     root.debug(f"{su_hwnd=}")
     rect = win32gui.GetWindowRect(su_hwnd)
+    client_rect = win32gui.GetClientRect(su_hwnd)
+    window_rect = convert_to_rect(rect, client_rect)
 
-    clientRect = win32gui.GetClientRect(su_hwnd)
-    windowOffset = math.floor(((rect[2] - rect[0]) - clientRect[2]) / 2)
-    titleOffset = ((rect[3] - rect[1]) - clientRect[3]) - windowOffset
-    newRect = (rect[0] + windowOffset, rect[1] + titleOffset, rect[2] - windowOffset, rect[3] - windowOffset)
-
-
-    window_rect = Rect(x=newRect[0], y=newRect[1], w=newRect[2] - newRect[0], h=newRect[3] - newRect[1])
-    if window_rect.w == 0 or window_rect.h == 0:
+    is_fullscreen = rect == full_screen_rect
+    if is_fullscreen:
         raise GameFullscreenException("game is fullscreen")
 
     return window_rect
@@ -215,6 +221,7 @@ root.addHandler(queue_handler)
 formatter = logging.Formatter('%(threadName)s %(levelname)s %(relativeCreated)s: %(message)s')
 handler.setFormatter(formatter)
 listener.start()
+
 
 
 class Bot:
@@ -322,7 +329,6 @@ class Bot:
             cv2.IMREAD_COLOR)
 
         self.castle_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.castle_tile, cv2.COLOR_BGR2GRAY)
-        self.realm = None
 
         # hashes of sprite frames that have matching `self.castle_tile` pixels set to black.
         # This avoids false negative matches if the placed object has matching color pixels in a position
@@ -463,10 +469,10 @@ class Bot:
 
             floor_ids = []
             if self.mode is BotMode.REALM:
-                if not hasattr(self, 'realm'):
+                if not self.nearby_processing_thandle.realm:
                     print("no realm attrib")
                     return RealmSpriteHasher()
-                realm_id = session.query(RealmLookup).filter_by(enum=self.realm).one().id
+                realm_id = session.query(RealmLookup).filter_by(enum=self.nearby_processing_thandle.realm).one().id
                 for floor in session.query(FloorSprite).filter_by(realm_id=realm_id).all():
                     for floor_tile in floor.frames:
                         floor_ids.append(floor_tile.id)
@@ -522,7 +528,6 @@ class Bot:
 
             except queue.Empty:
                 pass
-
             if (time.time() - self.timer) > 1:
                 self.timer = time.time()
                 try:
@@ -551,22 +556,14 @@ class Bot:
                     self.tx_nearby_process_queue.put(WindowDim(mss_dict=self.nearby_mon))
 
             if self.mode is BotMode.UNDETERMINED:
-
-                if realm_alignment := self.nearby_processing_thandle.detect_what_realm_in():
-                    if isinstance(realm_alignment, RealmAlignment):
-                        self.realm = realm_alignment.realm
+                self.nearby_send_deque.append(CheckWhatRealmIn)
+                if self.nearby_processing_thandle.realm:
                     self.mode = BotMode.REALM
 
             elif self.mode is BotMode.REALM:
                 self.nearby_send_deque.append(CheckWhatRealmIn)
             elif self.mode is BotMode.CASTLE:
                 self.nearby_send_deque.append(CheckWhatRealmIn)
-
-            # if settings.DEBUG:
-            #     cv2.imshow("SU Vision - Near bbox", self.nearby_processing_thandle.grid_near_slice_gray)
-            #     if cv2.waitKey(1) & 0xFF == ord("q"):
-            #         cv2.destroyAllWindows()
-            #         break
 
                 # label player position
                 # top_left = self.player_position.top_left().as_tuple()
@@ -627,13 +624,18 @@ class Bot:
         else:
             self.audio_system.stop(SoundType.TELEPORTATION_SHRINE)
 
+class Minimized:
+    pass
+
+FrameType = Union[ArrayLike, Minimized]
+
 
 class WholeWindowGrabber(multiprocessing.Process):
     def __init__(self, out_quests: Queue, outgoing_color_frame_queue: multiprocessing.Queue, screenshot_area: dict,
                  rx_queue: multiprocessing.Queue, hang_notifier: queue.Queue[HangMonitorAlert],
                  **kwargs):
         super().__init__(**kwargs)
-        self.color_frame_queue = outgoing_color_frame_queue
+        self.color_frame_queue: queue.Queue[FrameType] = outgoing_color_frame_queue
         self.out_quests: Queue = out_quests
         self.screenshot_area: dict = screenshot_area
         self.rx_parent_queue = rx_queue
@@ -669,8 +671,10 @@ class WholeWindowGrabber(multiprocessing.Process):
 
                         # Performance: copying overhead is not an issue for needing a frame at 1-2 FPS
                         frame_np: ArrayLike = np.asarray(sct.grab(self.screenshot_area))
-                        if frame_np.shape == (0, 0, 4):
-                            print("no frame data")
+                        has_no_data = frame_np.shape == (0,0,4)
+                        if has_no_data:
+                            root.debug("whole window frame has no data or is minimized")
+                            self.color_frame_queue.put_nowait(Minimized())
                             continue
                         self.color_frame_queue.put_nowait(frame_np)
                     except queue.Full:
@@ -736,6 +740,8 @@ class WholeWindowAnalyzer(Thread):
                 self.hang_activity_sender.notify_activity(HangAnnotation(data={"data": "window analyze"}))
                 if msg is None:
                     break
+                if isinstance(msg, Minimized):
+                    continue
                 shot = msg
             except queue.Empty:
                 raise Exception("No new full frame for 10 seconds")
@@ -773,6 +779,7 @@ class WholeWindowAnalyzer(Thread):
         root.info("WindowAnalyzer thread shutting down")
 
 
+
 class NearbyFrameGrabber(multiprocessing.Process):
     def __init__(self, nearby_queue: multiprocessing.Queue, rx_parent: multiprocessing.Queue,
                  hang_notifier: queue.Queue[HangMonitorAlert],
@@ -808,6 +815,7 @@ class NearbyFrameGrabber(multiprocessing.Process):
                         nearby_shot_np: ArrayLike = np.asarray(sct.grab(self.nearby_area))
                         if nearby_shot_np.shape == (0, 0, 4):
                             print("no nearby frame data")
+                            self.color_nearby_queue.put(Minimized)
                         self.color_nearby_queue.put(NewFrame(nearby_shot_np), timeout=10)
                     except queue.Full:
                         root.debug("color nearby queue full")
@@ -867,11 +875,11 @@ class NearPlayerProcessing(Thread):
         self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[:]
         self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[:]
 
-        self.realm: Optional[Realm] = None
         self.unique_realm_assets = list[Asset]
 
         # The current active quests
         self.active_quests: list[Quest] = []
+        self.realm: Optional[Realm] = None
 
     def detect_what_realm_in(self) -> Optional[Union[RealmAlignment, CastleAlignment]]:
         # Scan the nearby tile area for lit tiles to determine what realm we are in currently
@@ -998,7 +1006,6 @@ class NearPlayerProcessing(Thread):
             self.parent.active_floor_tiles = [self.parent.castle_tile]
             self.parent.active_floor_tiles_gray = [self.parent.castle_tile_gray]
             self.parent.mode = BotMode.CASTLE
-            self.parent.realm = None
             self.realm = None
 
             floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=None)
@@ -1020,9 +1027,8 @@ class NearPlayerProcessing(Thread):
                 new_realm = realm_alignment.realm
                 if new_realm in models.UNSUPPORTED_REALMS:
                     self.parent.audio_system.speak_nonblocking(f"Realm unsupported. {new_realm.value}")
-                overlay = None
                 self.realm = realm_alignment.realm
-                self.parent.realm = realm_alignment.realm
+                overlay = None
                 with Session() as session:
                     realm = session.query(RealmLookup).filter_by(enum=realm_alignment.realm).one()
                     realm_tiles = session.query(FloorSprite).filter_by(realm_id=realm.id).all()
