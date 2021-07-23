@@ -40,7 +40,7 @@ from subot.hash_image import ImageInfo, RealmSpriteHasher, FloorTilesInfo, Overl
 from dataclasses import dataclass
 
 from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, AltarSprite, \
-    ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite, QuestType
+    ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite, QuestType, ResourceNodeSprite
 from subot.models import Session
 import subot.settings as settings
 
@@ -719,16 +719,18 @@ class WholeWindowAnalyzer(Thread):
             return
 
         self.parent.quest_sprite_long_names.clear()
-        for quest in new_quests:
-            if quest.quest_type == QuestType.rescue:
-                with Session() as session:
+        with Session() as session:
+            for quest in new_quests:
+                if quest.quest_type == QuestType.rescue:
                     self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(NPCSprite).all())
-            else:
-                for sprite in quest.sprites:
-                    self.parent.quest_sprite_long_names.add(sprite.long_name)
+                elif quest.quest_type == QuestType.resource_node:
+                    self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(ResourceNodeSprite))
+                else:
+                    for sprite in quest.sprites:
+                        self.parent.quest_sprite_long_names.add(sprite.long_name)
 
-            if not quest.supported:
-                self.parent.audio_system.speak_nonblocking(f"Unsupported quest: {quest.title}")
+                if not quest.supported:
+                    self.parent.audio_system.speak_nonblocking(f"Unsupported quest: {quest.title}")
 
         self.parent.current_quests = new_quest_ids
 
