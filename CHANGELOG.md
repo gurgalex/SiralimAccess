@@ -1,4 +1,11 @@
-## 0.9.9 (2021-07-22)
+## v0.9.10 (2021-07-23)
+
+### Fix
+
+- Add support for all resource nodes
+- Generic Fetch Quest is unsupported
+
+## v0.9.9 (2021-07-22)
 
 ### Feat
 
@@ -6,8 +13,8 @@
 
 ### Fix
 
-- no longer misdetects minimizing as being fullscreen
-- app wouldn't work if DPI scaling > 100%
+- No longer misdetects minimizing as being fullscreen
+- App wouldn't work if DPI scaling > 100%
 - postinstall launch of Access now closes installer
 
 ## v0.9.8 (2021-07-22)
