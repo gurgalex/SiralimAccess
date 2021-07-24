@@ -44,6 +44,7 @@ class SpriteType(enum.Enum):
     # sprite used to overlay onto a rendered realm (rare)
     OVERLAY = 10
     RESOURCE_NODE = 11
+    WALL = 12
 
 
 @cache
@@ -432,6 +433,20 @@ class WardrobeSprite(Sprite):
 
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.WARDROBE.value
+    }
+
+
+class WallSprite(Sprite):
+    __tablename__ = "wall_sprite"
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True)
+    realm_id = Column(Integer, ForeignKey('realm.id'), nullable=False, primary_key=True)
+
+
+    sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
+    realm = relationship('RealmLookup', uselist=False, viewonly=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.WALL.value
     }
 
 
