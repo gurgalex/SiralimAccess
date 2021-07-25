@@ -1,19 +1,16 @@
 from __future__ import annotations
-import pathlib
-from dataclasses import dataclass
 from functools import cache
 
 import cv2
 from numpy.typing import ArrayLike
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
-from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Table, Computed, UniqueConstraint, Boolean
+from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Boolean
 import sqlalchemy as db
 import enum
 
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
-from subot.settings import DATABASE_CONFIG, IMAGE_PATH
+from subot.settings import DATABASE_CONFIG, IMAGE_PATH, engine
 
 Base = declarative_base()
 
@@ -231,21 +228,27 @@ Realm.god_to_realm_mapping = {
 }
 
 Realm.internal_realm_name_to_god_mapping = {
+    "autumn": "Apocranox",
+    "blood": "Mortem",
     "cave": "Regalis",
     "death": "Erebyss",
     "chaos": "Vulcanar",
     "desert": "Yseros",
     "dungeon": "Tartarith",
-    "haunted": "Gonfurian",
+    "gem": "Aurum",
     "grassland": "Aeolian",
+    "haunted": "Gonfurian",
     "island": "Lister",
     "jungle": "Torun",
     "life": "Surathli",
     "nature": "Meraxis",
     "underwater": "Friden",
+    "purgatory": "Perdition",
+    "reactor": "Venedon",
     "snow": "Azural",
     "sorcery": "Zonte",
     "space": "Vertraag",
+    "void": "Tenebris",
 
     "apocranox": "Apocranox",
     "aurum": "Aurum",
@@ -489,11 +492,6 @@ class HashFrameWithFloor(Base):
                           secondary=SpriteFrame.__table__,
                           secondaryjoin=SpriteFrame.sprite_id == Sprite.id, uselist=False, viewonly=True, innerjoin=True)
 
-
-
-debug = False
-engine = create_engine(DATABASE_CONFIG.uri, echo=debug, connect_args={'timeout': 2})
-Session = sessionmaker(engine)
 
 if __name__ == "__main__":
     engine = create_engine(DATABASE_CONFIG.uri, echo=True)

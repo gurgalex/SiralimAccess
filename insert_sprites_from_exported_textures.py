@@ -15,8 +15,11 @@ from numpy.typing import ArrayLike
 from sqlalchemy.exc import NoResultFound
 
 from subot.hash_image import Overlay, FloorTilesInfo, compute_phash
-from subot.models import MasterNPCSprite, SpriteFrame, Session, AltarSprite, Realm, RealmLookup, ProjectItemSprite, \
-    NPCSprite, FloorSprite, OverlaySprite, Sprite, HashFrameWithFloor
+from subot.models import MasterNPCSprite, SpriteFrame, AltarSprite, Realm, RealmLookup, ProjectItemSprite, \
+    NPCSprite, FloorSprite, OverlaySprite, Sprite, HashFrameWithFloor, WallSprite, SpriteType
+from subot.settings import Session
+
+import subot.settings as settings
 
 master_name_regex = re.compile(r"master_(?P<race>.*)_[\d].png")
 realm_altar_regex = re.compile(r"spr_(?:altar|god)_(?P<realm>.*)_[\d].png")
@@ -25,6 +28,7 @@ npc_regex = re.compile(r"npc_(?P<name>.*)_[\d].png")
 custom_floortile_regex = re.compile(r"floortiles/(?P<realm>.*)/*.png")
 overlay_sprite_regex = re.compile(r"(?P<realm>.*)_overlay_[\d].png")
 realm_floortiles_regex = re.compile(r"bg_chaos_0.png")
+wall_regex = re.compile(r"wall_(?P<realm>.*)_0.png")
 generic_sprite_regex = re.compile(r"(?:spr_)?(?P<long_name>.*)_[\d]+.png")
 
 
@@ -33,6 +37,7 @@ sprite_crits_battle_regex = re.compile(r"spr_crits_battle_(?P<name>[\d]+).png")
 icons_regex = re.compile(r"icons.*_[\d]+.png")
 animation_regex = re.compile(r"anim_.*.png")
 spell_regex = re.compile(r"spe_.*.png")
+wall_alt_regex = re.compile(r"spr_wall_.*.png")
 
 MASTER_ICON_SIZE = 16
 MASTER_NPC_SIZE = 32
@@ -271,7 +276,9 @@ def add_or_update_sprites(sprites: dict[str, Type[Sprite]]):
 
             sprite_id = sprite.id
             for frame in sprite_new.frames:
-                new_frame = SpriteFrame(sprite_id=sprite_id, _filepath=frame._filepath)
+                new_path = Path(settings.IMAGE_PATH).joinpath(frame._filepath)
+                chopped_path = new_path.relative_to(settings.IMAGE_PATH)
+                new_frame = SpriteFrame(sprite_id=sprite_id, _filepath=chopped_path.as_posix())
                 session.add(new_frame)
             session.commit()
 
@@ -325,6 +332,14 @@ def match_spell_animation(path: Path) -> Optional[re.Match]:
     return re.match(spell_regex, path.name)
 
 
+def match_wall(path: Path) -> Optional[re.Match]:
+    return re.match(wall_regex, path.name)
+
+
+def match_alt_walls(path) -> Optional[re.Match]:
+    return re.match(wall_alt_regex, path.name)
+
+
 matchers = {
     'master': match_master,
     'altar': match_altar,
@@ -333,10 +348,13 @@ matchers = {
     'project': match_project,
     'realm_fllortiles': match_realm_floortiles,
     'crits_battle': match_battle_sprite,
+    'wall': match_wall,
 
+    #excluded
     'attack_animation': match_attack_animation,
     'spell_animation': match_spell_animation,
     'icon': match_icon,
+    'alt_walls': match_alt_walls,
 }
 
 
@@ -470,10 +488,10 @@ def hash_items():
                         bulk_hash_entries.clear()
 
                     ct += 1
-            print(f"total hashes = {ct}", f"similar hashes={similar_ct}, similar% = {(similar_ct/ct)*100}%")
         session.add_all(bulk_hash_entries)
         session.commit()
         bulk_hash_entries.clear()
+        print(f"total hashes = {ct}", f"similar hashes={similar_ct}, similar% = {(similar_ct / ct) * 100}%")
 
 
 def drop_existing_phashes():
@@ -484,15 +502,63 @@ def drop_existing_phashes():
         session.commit()
 
 
+def add_wall_sprites(export_dir: Path, dest_dir: Path):
+    TILE_SIZE = 32
+
+    dest_dir_walls = dest_dir.joinpath("wall_realm_tiles")
+    dest_dir_walls.mkdir(exist_ok=True)
+
+    wall_tiles: dict[str, WallSprite] = {}
+    for path in export_dir.glob("*"):
+        match = match_wall(path)
+        if not match:
+            continue
+
+        realm: Realm = Realm.generic_realm_name_to_ingame_realm(match.groups()[0])
+        dest_realm_wall_dir = dest_dir_walls.joinpath(realm.name)
+        dest_realm_wall_dir.mkdir(exist_ok=True)
+
+        img = cv2.imread(path.as_posix(), cv2.IMREAD_UNCHANGED)
+
+        tileset: list[tuple[ArrayLike, Path]] = []
+        ct = 1
+        for row_num, row in enumerate(range(0, img.shape[0], TILE_SIZE)):
+            for col_num, column in enumerate(range(0, img.shape[1], TILE_SIZE)):
+                slice = img[row:row + TILE_SIZE, column:column + TILE_SIZE]
+                is_blank = np.count_nonzero(slice) == 0
+                if is_blank:
+                    continue
+
+                destination_filepath: Path = dest_realm_wall_dir.joinpath(f"{ct}.png")
+                tileset.append((slice, destination_filepath))
+
+                sprite_name_short = "Wall"
+                sprite_name_long = f"{realm.value} Wall"
+                with Session() as session:
+                    realm_id = session.query(RealmLookup).filter_by(enum=realm).one().id
+
+                wall_tiles.setdefault(sprite_name_long, WallSprite(short_name=sprite_name_short, long_name=sprite_name_long,
+                                                                     realm_id=realm_id))\
+                    .frames.append(SpriteFrame(_filepath=destination_filepath.as_posix()))
+                ct += 1
+
+        for tile in tileset:
+            tile_data = tile[0]
+            tile_filepath = tile[1]
+            cv2.imwrite(tile_filepath.as_posix(), tile_data)
+
+
+    add_or_update_sprites(wall_tiles)
+
+
 if __name__ == "__main__":
     export_dir = Path("C:/Program Files (x86)/Steam/steamapps/common/Siralim Ultimate/Export_Textures_0.10.11/")
-    dest_dir = Path("extracted_assets")
+    dest_dir = settings.IMAGE_PATH.joinpath("extracted_assets")
 
     # drop hashes
     drop_existing_phashes()
 
     realm_floortiles(export_dir, dest_dir)
-    add_overlay_tiles(export_dir, dest_dir)
     npc(export_dir, dest_dir)
     try:
         master_npcs(export_dir, dest_dir=dest_dir)
@@ -501,6 +567,7 @@ if __name__ == "__main__":
     altars(export_dir, dest_dir)
     insert_project_items(export_dir, dest_dir)
     add_overlay_tiles(export_dir, dest_dir)
+    add_wall_sprites(export_dir, dest_dir)
 
     match_sprites(export_dir, dest_dir)
     hash_items()

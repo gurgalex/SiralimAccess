@@ -40,8 +40,9 @@ from subot.hash_image import ImageInfo, RealmSpriteHasher, FloorTilesInfo, Overl
 from dataclasses import dataclass
 
 from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, AltarSprite, \
-    ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite, QuestType, ResourceNodeSprite
-from subot.models import Session
+    ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite, QuestType, ResourceNodeSprite, \
+    WallSprite
+from subot.settings import Session
 import subot.settings as settings
 
 from readerwriterlock import rwlock
@@ -74,6 +75,9 @@ class Color(enum.Enum):
     red = (0, 0, 255)
     yellow = (0, 255, 255)
     orange = (0, 215, 255)
+    maroon = (0, 0, 128)
+    gray = (153, 136, 119)
+    white = (255, 255, 255)
 
 TILE_SIZE = 32
 NEARBY_TILES_WH: int = 8 * 2 + 1
@@ -256,6 +260,15 @@ class Bot:
             master_name_results: list[tuple] = session.query(MasterNPCSprite).with_entities(
                 MasterNPCSprite.long_name).all()
             self.masters: set[str] = set(result[0] for result in master_name_results)
+
+            wall_name_results: list[tuple] = session.query(WallSprite).with_entities(
+                WallSprite.long_name).all()
+            self.walls: set[str] = set(result[0] for result in wall_name_results)
+
+            floor_name_results: list[tuple] = session.query(FloorSprite).with_entities(
+                FloorSprite.long_name).all()
+            self.floors: set[str] = set(result[0] for result in floor_name_results)
+
 
         pygame.init()
         self.audio_system: AudioSystem = AudioSystem()
@@ -957,9 +970,11 @@ class NearPlayerProcessing(Thread):
                         if not self.exclude_from_debug(img_info.long_name):
                             root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}")
 
+                        if img_info.long_name == "bck_FOW_Tile":
+                            if settings.DEBUG:
+                                self.draw_debug(start_point, end_point, Color.maroon, "")
 
-
-                        if img_info.long_name in self.parent.quest_sprite_long_names:
+                        elif img_info.long_name in self.parent.quest_sprite_long_names:
                             if settings.DEBUG:
                                 self.draw_debug(start_point, end_point, Color.red, "Quest")
                             root.debug(f"Quest item matched {img_info.long_name}")
@@ -993,6 +1008,12 @@ class NearPlayerProcessing(Thread):
                                 self.draw_debug(start_point, end_point, Color.orange, "NPC")
                             root.debug(f"NPC normal matched {img_info.long_name}")
                             self.parent.npc_normal_locations.append(asset_location)
+                        elif img_info.long_name in self.parent.walls:
+                            if settings.DEBUG:
+                                self.draw_debug(start_point, end_point, Color.gray, "")
+                        elif img_info.long_name in self.parent.floors:
+                            if settings.DEBUG:
+                                self.draw_debug(start_point, end_point, Color.white, "")
 
                     except KeyError as e:
                         pass
