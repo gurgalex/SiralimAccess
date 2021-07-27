@@ -1,3 +1,4 @@
+from __future__ import annotations
 import enum
 from dataclasses import dataclass
 from enum import auto
@@ -7,6 +8,7 @@ from typing import Optional
 import pygame
 import win32com.client
 
+from subot.pathfinder.map import FoundType
 from subot.utils import Point
 
 
@@ -32,12 +34,30 @@ def volume_from_distance(distance: Point) -> tuple[Left, Right]:
 
 
 class SoundType(enum.Enum):
+    ALTAR = auto()
     QUEST_ITEM = auto()
     MASTER_NPC = auto()
     NPC_NORMAL = auto()
-    ALTAR = auto()
     PROJECT_ITEM = auto()
     TELEPORTATION_SHRINE = auto()
+
+    @classmethod
+    def from_tile_type(cls, f: FoundType) -> SoundType:
+        """raises: KeyError if no sound exists for varient of FoundType"""
+        if f is FoundType.ALTAR:
+            return SoundType.ALTAR
+        elif f is FoundType.QUEST:
+            return SoundType.QUEST_ITEM
+        elif f is FoundType.MASTER_NPC:
+            return SoundType.MASTER_NPC
+        elif f is FoundType.NPC:
+            return SoundType.NPC_NORMAL
+        elif f is FoundType.PROJ_ITEM:
+            return SoundType.PROJECT_ITEM
+        elif f is FoundType.TELEPORTATION_SHRINE:
+            return SoundType.TELEPORTATION_SHRINE
+        else:
+            raise KeyError(f)
 
 
 @dataclass
@@ -134,6 +154,7 @@ class AudioSystem:
             sound = sound_mapping.sounds.normal
 
         volume = volume_from_distance(audio_tile.distance)
+
         if channel.get_sound() != sound:
             channel.play(sound, -1)
             channel.set_volume(*volume)

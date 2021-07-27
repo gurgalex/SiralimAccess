@@ -7,13 +7,13 @@ import sentry_sdk
 import enum
 import logging
 import multiprocessing
-from collections import deque
+from collections import deque, defaultdict
 import queue
 from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
 from pathlib import Path
 from threading import Thread
-from typing import Optional, Union, Any
+from typing import Optional, Union
 
 from subot import models
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert
@@ -30,7 +30,8 @@ from sqlalchemy.orm import joinedload
 
 from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.datatypes import Rect
-from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg, Shutdown
+from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg
+from subot.pathfinder.map import FoundType, Color
 from subot.read_tags import Asset
 
 from numpy.typing import ArrayLike
@@ -68,16 +69,6 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 
 
 # BGR colors
-class Color(enum.Enum):
-    blue = (255, 0, 0)
-    purple = (255, 0, 255)
-    green = (0, 255, 0)
-    red = (0, 0, 255)
-    yellow = (0, 255, 255)
-    orange = (0, 215, 255)
-    maroon = (0, 0, 128)
-    gray = (153, 136, 119)
-    white = (255, 255, 255)
 
 TILE_SIZE = 32
 NEARBY_TILES_WH: int = 8 * 2 + 1
@@ -242,10 +233,7 @@ class Bot:
         self.timer = None
         self.tx_nearby_process_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
         self.teleportation_shrine_names: set[str] = {'bigroomchanger', 'teleshrine_inactive'}
-        self.teleportation_shrine_location: Optional[AssetGridLoc] = None
 
-        self.npc_normal_locations: list[AssetGridLoc] = []
-        self.project_item_locations: list[AssetGridLoc] = []
         with Session() as session:
             altar_names_results: list[tuple] = session.query(AltarSprite).with_entities(AltarSprite.long_name).all()
             self.altars: set[str] = set(result[0] for result in altar_names_results)
@@ -347,19 +335,9 @@ class Bot:
         # This avoids false negative matches if the placed object has matching color pixels in a position
         self.castle_item_hashes: RealmSpriteHasher = RealmSpriteHasher(floor_tiles=self.active_floor_tiles)
 
-        self.important_tile_locations_lock = rwlock.RWLockFair()
-        # realm object locations in screenshot
-        self.important_tile_locations: list[AssetGridLoc] = []
+        self.all_found_matches: dict[FoundType, list[AssetGridLoc]] = defaultdict(list)
+        self.all_found_matches_rlock = rwlock.RWLockFair()
 
-        # master location
-        self.master_tile_location: Optional[AssetGridLoc] = None
-
-        # altar location
-        self.altar_tile_location: Optional[AssetGridLoc] = None
-
-        # used to tell if the player has moved since last scanning for objects
-        self.previous_important_tile_locations: list[AssetGridLoc] = []
-        self.previous_master_location: Optional[AssetGridLoc] = None
 
         self.stop_event = threading.Event()
         self.nearby_process = NearbyFrameGrabber(name=NearbyFrameGrabber.__name__,
@@ -589,53 +567,22 @@ class Bot:
             clock.tick(settings.FPS)
 
     def speak_nearby_objects(self):
-        audio_locations: list[AudioLocation] = []
-        with self.important_tile_locations_lock.gen_rlock():
+        with self.all_found_matches_rlock.gen_wlock():
 
-            for tile in self.important_tile_locations[:1]:
-                audio_locations.append(AudioLocation(distance=tile.point()))
+            for tile_type, tiles in self.all_found_matches.items():
+                try:
+                    sound_type = SoundType.from_tile_type(tile_type)
+                except KeyError:
+                    tiles.clear()
+                    continue
 
-            if audio_locations:
+                if not tiles:
+                    self.audio_system.stop(sound_type)
+                else:
+                    audio_location = AudioLocation(distance=tiles[0].point())
+                    self.audio_system.play_sound(audio_location, sound_type)
+                tiles.clear()
 
-                self.audio_system.play_sound(audio_locations[0], sound_type=SoundType.QUEST_ITEM)
-                self.previous_important_tile_locations = self.important_tile_locations[:]
-            else:
-                self.audio_system.stop(sound_type=SoundType.QUEST_ITEM)
-
-        if self.master_tile_location:
-            master_distance_audio = AudioLocation(distance=self.master_tile_location.point())
-            self.audio_system.play_sound(master_distance_audio, sound_type=SoundType.MASTER_NPC)
-            self.previous_master_location = self.master_tile_location
-            self.master_tile_location = None
-        else:
-            self.audio_system.stop(sound_type=SoundType.MASTER_NPC)
-
-        if self.altar_tile_location:
-            self.audio_system.play_sound(AudioLocation(distance=self.altar_tile_location.point()),
-                                         sound_type=SoundType.ALTAR)
-            self.altar_tile_location = None
-        else:
-            self.audio_system.stop(SoundType.ALTAR)
-
-        if self.project_item_locations:
-            for tile in self.project_item_locations[:1]:
-                self.audio_system.play_sound(AudioLocation(distance=tile.point()), SoundType.PROJECT_ITEM)
-            self.project_item_locations.clear()
-        else:
-            self.audio_system.stop(SoundType.PROJECT_ITEM)
-
-        if self.npc_normal_locations:
-            for tile in self.npc_normal_locations[:1]:
-                self.audio_system.play_sound(AudioLocation(distance=tile.point()), SoundType.NPC_NORMAL)
-            self.npc_normal_locations.clear()
-        else:
-            self.audio_system.stop(SoundType.NPC_NORMAL)
-
-        if shrine_location := self.teleportation_shrine_location:
-            self.audio_system.play_sound(AudioLocation(distance=shrine_location.point()), SoundType.TELEPORTATION_SHRINE)
-            self.teleportation_shrine_location = None
-        else:
-            self.audio_system.stop(SoundType.TELEPORTATION_SHRINE)
 
 class Minimized:
     pass
@@ -933,16 +880,47 @@ class NearPlayerProcessing(Thread):
         else:
             return False
 
-    def draw_debug(self, start_point, end_point, color: Color, text: str):
+    def draw_debug(self, start_point, end_point, found_type: FoundType, text: str):
         debug_img = self.near_frame_color
-        cv2.rectangle(debug_img, start_point, end_point, color.value, 2)
-        cv2.putText(debug_img, text, start_point, cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255))
+        if found_type.color:
+            cv2.rectangle(debug_img, start_point, end_point, found_type.color.value, -1)
+            cv2.putText(debug_img, text, start_point, cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255))
+
+    def identify_type(self, img_info: ImageInfo) -> FoundType:
+
+        if img_info.long_name == "bck_FOW_Tile":
+            return FoundType.BLACK
+
+        elif img_info.long_name in self.parent.quest_sprite_long_names:
+            root.debug(f"Quest item matched {img_info.long_name}")
+            return FoundType.QUEST
+        elif img_info.long_name in self.parent.teleportation_shrine_names:
+            root.debug(f"Teleportation Shrine matched {img_info.long_name}")
+            return FoundType.TELEPORTATION_SHRINE
+        elif img_info.long_name in self.parent.masters:
+            root.debug(f"Master matched {img_info.long_name}")
+            return FoundType.MASTER_NPC
+        elif img_info.long_name in self.parent.altars:
+            root.debug(f"Altar matched {img_info.long_name}")
+            return FoundType.ALTAR
+        elif img_info.long_name in self.parent.project_items:
+
+            root.debug(f"Project Item matched {img_info.long_name}")
+            return FoundType.PROJ_ITEM
+        elif img_info.long_name in self.parent.npc_normals:
+            root.debug(f"NPC normal matched {img_info.long_name}")
+            return FoundType.NPC
+        elif img_info.long_name in self.parent.walls:
+            return FoundType.WALL
+        elif img_info.long_name in self.parent.floors:
+            return FoundType.FLOOR
+        else:
+            return FoundType.DECORATION
 
     def enter_castle_scanner(self):
         """Scans for decorations and quests in the castle"""
 
-        with self.parent.important_tile_locations_lock.gen_wlock():
-            self.parent.important_tile_locations.clear()
+        with self.parent.all_found_matches_rlock.gen_wlock():
 
             # Hack: add the grid offset to the player tile to realign the grid when moving left
             aligned_player_tile_x = round(self.parent.nearby_tile_top_left.x + self.grid_near_rect.x / TILE_SIZE)
@@ -951,12 +929,10 @@ class NearPlayerProcessing(Thread):
                 for col in range(0, self.grid_near_rect.h, TILE_SIZE):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
 
-
                     try:
                         img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
-                        if settings.DEBUG:
-                            start_point = (row + self.grid_near_rect.x, col + self.grid_near_rect.y)
-                            end_point=(start_point[0]+TILE_SIZE, start_point[1]+TILE_SIZE)
+                        start_point = (row + self.grid_near_rect.x, col + self.grid_near_rect.y)
+                        end_point=(start_point[0]+TILE_SIZE, start_point[1]+TILE_SIZE)
 
                         asset_location = AssetGridLoc(
                             x=aligned_player_tile_x + row // TILE_SIZE - self.parent.player_position_tile.x,
@@ -967,53 +943,13 @@ class NearPlayerProcessing(Thread):
                         is_player_tile = asset_location.point() == Point(0, 0)
                         if is_player_tile:
                             continue
+
                         if not self.exclude_from_debug(img_info.long_name):
                             root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}")
-
-                        if img_info.long_name == "bck_FOW_Tile":
-                            if settings.DEBUG:
-                                self.draw_debug(start_point, end_point, Color.maroon, "")
-
-                        elif img_info.long_name in self.parent.quest_sprite_long_names:
-                            if settings.DEBUG:
-                                self.draw_debug(start_point, end_point, Color.red, "Quest")
-                            root.debug(f"Quest item matched {img_info.long_name}")
-                            self.parent.important_tile_locations.append(asset_location)
-                        elif img_info.long_name in self.parent.teleportation_shrine_names:
-                            if settings.DEBUG:
-                                self.draw_debug(start_point, end_point, Color.blue, "Teleport")
-
-                            root.debug(f"Teleportation Shrine matched {img_info.long_name}")
-                            self.parent.teleportation_shrine_location = asset_location
-                        elif img_info.long_name in self.parent.masters:
-                            if settings.DEBUG:
-                                self.draw_debug(start_point, end_point, Color.green, "Master")
-
-                            root.debug(f"Master matched {img_info.long_name}")
-                            self.parent.master_tile_location = asset_location
-                        elif img_info.long_name in self.parent.altars:
-                            if settings.DEBUG:
-                                self.draw_debug(start_point, end_point, Color.purple, "Altar")
-
-                            root.debug(f"Altar matched {img_info.long_name}")
-                            self.parent.altar_tile_location = asset_location
-                        elif img_info.long_name in self.parent.project_items:
-                            if settings.DEBUG:
-                                self.draw_debug(start_point, end_point, Color.yellow, "Project")
-
-                            root.debug(f"Project Item matched {img_info.long_name}")
-                            self.parent.project_item_locations.append(asset_location)
-                        elif img_info.long_name in self.parent.npc_normals:
-                            if settings.DEBUG:
-                                self.draw_debug(start_point, end_point, Color.orange, "NPC")
-                            root.debug(f"NPC normal matched {img_info.long_name}")
-                            self.parent.npc_normal_locations.append(asset_location)
-                        elif img_info.long_name in self.parent.walls:
-                            if settings.DEBUG:
-                                self.draw_debug(start_point, end_point, Color.gray, "")
-                        elif img_info.long_name in self.parent.floors:
-                            if settings.DEBUG:
-                                self.draw_debug(start_point, end_point, Color.white, "")
+                        found_type = self.identify_type(img_info)
+                        if settings.DEBUG:
+                            self.draw_debug(start_point, end_point, found_type, "")
+                        self.parent.all_found_matches[found_type].append(asset_location)
 
                     except KeyError as e:
                         pass
