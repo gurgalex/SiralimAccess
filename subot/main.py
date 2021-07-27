@@ -31,7 +31,7 @@ from sqlalchemy.orm import joinedload
 from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.datatypes import Rect
 from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg
-from subot.pathfinder.map import FoundType, Color
+from subot.pathfinder.map import FoundType, Color, Map
 from subot.read_tags import Asset
 
 from numpy.typing import ArrayLike
@@ -42,7 +42,7 @@ from dataclasses import dataclass
 
 from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, AltarSprite, \
     ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite, QuestType, ResourceNodeSprite, \
-    WallSprite
+    WallSprite, SpriteTypeLookup, SpriteType
 from subot.settings import Session
 import subot.settings as settings
 
@@ -232,31 +232,8 @@ class Bot:
         signal.signal(signal.SIGINT, self.stop_signal)
         self.timer = None
         self.tx_nearby_process_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
+
         self.teleportation_shrine_names: set[str] = {'bigroomchanger', 'teleshrine_inactive'}
-
-        with Session() as session:
-            altar_names_results: list[tuple] = session.query(AltarSprite).with_entities(AltarSprite.long_name).all()
-            self.altars: set[str] = set(result[0] for result in altar_names_results)
-
-            npc_name_results: list[tuple] = session.query(ProjectItemSprite).with_entities(
-                ProjectItemSprite.long_name).all()
-            self.project_items: set[str] = set(result[0] for result in npc_name_results)
-
-            npc_name_results: list[tuple] = session.query(NPCSprite).with_entities(NPCSprite.long_name).all()
-            self.npc_normals: set[str] = set(result[0] for result in npc_name_results)
-
-            master_name_results: list[tuple] = session.query(MasterNPCSprite).with_entities(
-                MasterNPCSprite.long_name).all()
-            self.masters: set[str] = set(result[0] for result in master_name_results)
-
-            wall_name_results: list[tuple] = session.query(WallSprite).with_entities(
-                WallSprite.long_name).all()
-            self.walls: set[str] = set(result[0] for result in wall_name_results)
-
-            floor_name_results: list[tuple] = session.query(FloorSprite).with_entities(
-                FloorSprite.long_name).all()
-            self.floors: set[str] = set(result[0] for result in floor_name_results)
-
 
         pygame.init()
         self.audio_system: AudioSystem = AudioSystem()
@@ -472,14 +449,15 @@ class Bot:
                     for floor_tile in floor.frames:
                         floor_ids.append(floor_tile.id)
 
-            realm_phashes_query = session.query(HashFrameWithFloor.phash, Sprite.short_name, Sprite.long_name) \
+            realm_phashes_query = session.query(HashFrameWithFloor.phash, Sprite.short_name, Sprite.long_name, SpriteTypeLookup.name) \
                 .join(SpriteFrame, SpriteFrame.id == HashFrameWithFloor.sprite_frame_id) \
                 .join(Sprite, Sprite.id == SpriteFrame.sprite_id) \
+                .join(SpriteTypeLookup, SpriteTypeLookup.id == Sprite.type_id) \
                 .filter(HashFrameWithFloor.floor_sprite_frame_id.in_(floor_ids))
 
             realm_phashes = realm_phashes_query.all()
-            for realm_phash, short_name, long_name in realm_phashes:
-                img_info = ImageInfo(short_name=short_name, long_name=long_name)
+            for realm_phash, short_name, long_name, sprite_type in realm_phashes:
+                img_info = ImageInfo(short_name=short_name, long_name=long_name, sprite_type=sprite_type)
                 self.castle_item_hashes[realm_phash] = img_info
 
     def cache_image_hashes_of_decorations(self):
@@ -734,10 +712,6 @@ class WholeWindowAnalyzer(Thread):
             self.update_quests(quests)
             root.debug(f"quests_len = {len(self.parent.quest_sprite_long_names)}")
 
-            # cv2.imshow("SU Vision - Whole Window", self.frame)
-            # if cv2.waitKey(1) & 0xFF == ord("q"):
-            #     cv2.destroyAllWindows()
-            #     break
         root.info("WindowAnalyzer thread shutting down")
 
 
@@ -892,27 +866,21 @@ class NearPlayerProcessing(Thread):
             return FoundType.BLACK
 
         elif img_info.long_name in self.parent.quest_sprite_long_names:
-            root.debug(f"Quest item matched {img_info.long_name}")
             return FoundType.QUEST
         elif img_info.long_name in self.parent.teleportation_shrine_names:
-            root.debug(f"Teleportation Shrine matched {img_info.long_name}")
             return FoundType.TELEPORTATION_SHRINE
-        elif img_info.long_name in self.parent.masters:
-            root.debug(f"Master matched {img_info.long_name}")
-            return FoundType.MASTER_NPC
-        elif img_info.long_name in self.parent.altars:
-            root.debug(f"Altar matched {img_info.long_name}")
-            return FoundType.ALTAR
-        elif img_info.long_name in self.parent.project_items:
 
-            root.debug(f"Project Item matched {img_info.long_name}")
+        elif img_info.sprite_type is SpriteType.MASTER_NPC:
+            return FoundType.MASTER_NPC
+        elif img_info.sprite_type is SpriteType.ALTAR:
+            return FoundType.ALTAR
+        elif img_info.sprite_type is SpriteType.PROJ_ITEM:
             return FoundType.PROJ_ITEM
-        elif img_info.long_name in self.parent.npc_normals:
-            root.debug(f"NPC normal matched {img_info.long_name}")
+        elif img_info.sprite_type is SpriteType.NPC:
             return FoundType.NPC
-        elif img_info.long_name in self.parent.walls:
+        elif img_info.sprite_type is SpriteType.WALL:
             return FoundType.WALL
-        elif img_info.long_name in self.parent.floors:
+        elif img_info.sprite_type is SpriteType.FLOOR:
             return FoundType.FLOOR
         else:
             return FoundType.DECORATION
@@ -1019,9 +987,6 @@ class NearPlayerProcessing(Thread):
                 print(f"new item hashes = {len(self.parent.castle_item_hashes)}")
 
         self.enter_castle_scanner()
-
-    def realm_tile_has_matching_decoration(self) -> bool:
-        pass
 
     def handle_new_frame(self, data: NewFrame):
         img = data.frame

@@ -10,6 +10,8 @@ from enum import Enum
 
 class Color(enum.Enum):
     """BGR colors"""
+    khaki = (140,230,240)
+    black = (0, 0, 0)
     blue = (255, 0, 0)
     goldenrod = (32, 165, 218)
     gray = (153, 136, 119)
@@ -26,13 +28,13 @@ class Color(enum.Enum):
 
 
 class FoundType(Enum):
-    UNKNOWN = (0, None)
+    UNKNOWN = (0, Color.black)
     ALTAR = (5, Color.pink)
     BLACK = (99, Color.maroon)
     CHEST = (14, Color.goldenrod)
     COMMON_CHEST = (13, Color.saddlebrown)
     CREATURE = (10, None)
-    DECORATION = (50, None)
+    DECORATION = (50, Color.khaki)
     EMBLEM = (12, Color.silver)
     ENEMY = (3, None)
     FLOOR = (1, Color.white)
