@@ -1,3 +1,4 @@
+import enum
 import logging
 import shutil
 import sys
@@ -16,7 +17,7 @@ from sqlalchemy.exc import NoResultFound
 
 from subot.hash_image import Overlay, FloorTilesInfo, compute_phash
 from subot.models import MasterNPCSprite, SpriteFrame, AltarSprite, Realm, RealmLookup, ProjectItemSprite, \
-    NPCSprite, FloorSprite, OverlaySprite, Sprite, HashFrameWithFloor, WallSprite, SpriteType
+    NPCSprite, FloorSprite, OverlaySprite, Sprite, HashFrameWithFloor, WallSprite, SpriteType, ChestType, ChestSprite
 from subot.settings import Session
 
 import subot.settings as settings
@@ -29,7 +30,7 @@ custom_floortile_regex = re.compile(r"floortiles/(?P<realm>.*)/*.png")
 overlay_sprite_regex = re.compile(r"(?P<realm>.*)_overlay_[\d].png")
 realm_floortiles_regex = re.compile(r"bg_chaos_0.png")
 wall_regex = re.compile(r"wall_(?P<realm>.*)_0.png")
-generic_sprite_regex = re.compile(r"(?:spr_)?(?P<long_name>.*)_[\d]+.png")
+generic_sprite_regex = re.compile(r"(?:spr_)?(?P<long_name>.*)_(?P<frame>[\d]+).png")
 
 
 # excluded from adding
@@ -41,6 +42,67 @@ wall_alt_regex = re.compile(r"spr_wall_.*.png")
 
 MASTER_ICON_SIZE = 16
 MASTER_NPC_SIZE = 32
+
+from dataclasses import dataclass
+
+
+@dataclass
+class ChestResult:
+    chest_type: ChestType
+    long_name: str
+    realm: Optional[Realm]
+    opened: bool
+
+
+from pathlib import Path
+
+generic_chest_regex = re.compile(r"spr_chest_(?P<realm>.*)_(?P<frame>[\d]+).png")
+
+underwater_chest_regex = re.compile(r"spr_bigdebris_(?P<realm>underwater)2_(?P<frame>[\d]+).png")
+gem_large_chest_regex = re.compile(r"spr_chest_(?P<realm>gem)_heaping_(?P<frame>[\d]+).png")
+blood_large_chest_regex = re.compile(r"spr_(?P<realm>blood)_giantchest_(?P<frame>[\d]+).png")
+haunted_chest_regex = re.compile(r"chest_haunted_.*_(?P<frame>[\d]+).png")
+spawned_chest_regex = re.compile(r"chest_spawned_(?P<frame>[\d]+).png")
+
+
+def extract_realm(match: re.Match) -> Realm:
+    return Realm.generic_realm_name_to_ingame_realm(match.group('realm'))
+
+
+def match_chest(sprite_path: Path) -> Optional[ChestResult]:
+    name = sprite_path.name
+    match = generic_sprite_regex.match(name)
+    if not match:
+        return
+
+    opened = int(match.group('frame')) == 1
+    long_name = match.group('long_name')
+
+    if chest_match := underwater_chest_regex.match(name):
+        realm = extract_realm(chest_match)
+        chest_type = ChestType.LARGE
+        return ChestResult(chest_type=chest_type, realm=realm, opened=opened, long_name=long_name)
+    elif chest_match := gem_large_chest_regex.match(name):
+        realm = extract_realm(chest_match)
+        chest_type = ChestType.LARGE
+        return ChestResult(chest_type=chest_type, realm=realm, opened=opened, long_name=long_name)
+    elif chest_match := blood_large_chest_regex.match(name):
+        realm = extract_realm(chest_match)
+        chest_type = ChestType.LARGE
+        return ChestResult(chest_type=chest_type, realm=realm, opened=opened, long_name=long_name)
+    elif chest_match := haunted_chest_regex.match(name):
+        realm = None
+        chest_type = ChestType.HAUNTED
+        return ChestResult(chest_type=chest_type, realm=realm, opened=opened, long_name=long_name)
+    elif chest_match := spawned_chest_regex.match(name):
+        realm = None
+        chest_type = ChestType.SPAWNED
+        return ChestResult(chest_type=chest_type, realm=realm, opened=opened, long_name=long_name)
+
+    elif chest_match := generic_chest_regex.match(name):
+        realm = extract_realm(chest_match)
+        chest_type = ChestType.NORMAL
+        return ChestResult(chest_type=chest_type, realm=realm, opened=opened, long_name=long_name)
 
 
 def match_master(path: Path) -> Optional[re.Match]:
@@ -133,6 +195,37 @@ def insert_project_items(export_dir: Path, dest_dir: Path):
             .frames.append(SpriteFrame(_filepath=destination_file.as_posix()))
 
     print(f"{len(sprites)} project items")
+    add_or_update_sprites(sprites)
+
+
+def add_chests(export_dir: Path, dest_dir: Path):
+    sprites: dict[str, ChestSprite] = {}
+
+    for ct, sprite_path in enumerate(export_dir.glob("*.png")):
+        sprite_frame_match = match_chest(sprite_path)
+        if not sprite_frame_match:
+            continue
+        print(f"{sprite_path.name}, {sprite_frame_match}")
+
+        item_name_short: str = "Chest"
+        chest_is_opened = sprite_frame_match.opened
+        if chest_is_opened:
+            item_name_long = f"{sprite_frame_match.long_name} Open"
+        else:
+            item_name_long = f"{sprite_frame_match.long_name} Closed"
+
+        destination_file = dest_dir.joinpath(sprite_path.name)
+        shutil.copy(sprite_path, destination_file)
+
+        realm_id = None
+        with Session() as session:
+            if realm := sprite_frame_match.realm:
+                realm_id = session.query(RealmLookup).filter_by(enum=realm).one().id
+
+        sprites.setdefault(item_name_long, ChestSprite(short_name=item_name_short, long_name=item_name_long, chest_type_id=sprite_frame_match.chest_type.value, realm_id=realm_id, opened=chest_is_opened))\
+            .frames.append(SpriteFrame(_filepath=destination_file.as_posix()))
+
+    print(f"{len(sprites)} Chest items")
     add_or_update_sprites(sprites)
 
 
@@ -267,6 +360,14 @@ def add_or_update_sprites(sprites: dict[str, Type[Sprite]]):
                 sprite.realm_id = sprite_new.realm_id
             except AttributeError:
                 pass
+            try:
+                sprite.chest_type_id = sprite_new.chest_type_id
+            except AttributeError:
+                pass
+            try:
+                sprite.opened = sprite_new.opened
+            except AttributeError:
+                pass
 
             session.commit()
 
@@ -343,6 +444,7 @@ def match_alt_walls(path) -> Optional[re.Match]:
 matchers = {
     'master': match_master,
     'altar': match_altar,
+    'chest': match_chest,
     'npc': match_npc,
     'overlay': match_overlay,
     'project': match_project,
@@ -423,7 +525,7 @@ def should_skip_hashing(filepath: str) -> bool:
     return False
 
 
-def hash_items():
+def hash_items(sprite_type: Optional[SpriteType]=None):
     @dataclass(frozen=True)
     class PHashReuse:
         phash: int
@@ -442,7 +544,11 @@ def hash_items():
         standard_castle_tile = session.query(FloorSprite).filter_by(long_name="floor_standard1").one()
         floortiles.append(standard_castle_tile)
 
-        query_result = session.query(SpriteFrame).all()
+        if not sprite_type:
+            query_result = session.query(SpriteFrame).all()
+        else:
+            query_result = session.query(SpriteFrame).join(Sprite).filter_by(type_id=sprite_type.value).all()
+
         for floortile in floortiles:
             overlay = None
             if floortile.realm:
@@ -491,15 +597,28 @@ def hash_items():
         session.add_all(bulk_hash_entries)
         session.commit()
         bulk_hash_entries.clear()
-        print(f"total hashes = {ct}", f"similar hashes={similar_ct}, similar% = {(similar_ct / ct) * 100}%")
+        print(f"total hashes = {ct},similar hashes={similar_ct}, similar% = {(similar_ct / ct) * 100}%")
 
 
-def drop_existing_phashes():
+def drop_existing_phashes(sprite_type: Optional[SpriteType]=None):
     # clear all previous hash entries
     with Session() as session:
-        rows_deleted = session.query(HashFrameWithFloor).delete()
-        print(f"cleared tabled, deleted {rows_deleted} rows")
-        session.commit()
+        if sprite_type:
+            frame_ids = session.query(SpriteFrame.id).filter(Sprite.type_id == sprite_type.value)\
+                .join(Sprite, Sprite.id == SpriteFrame.sprite_id)\
+                .all()
+            frame_ids = [frame_id[0] for frame_id in frame_ids]
+            rows_deleted = session.query(HashFrameWithFloor)\
+                .filter(HashFrameWithFloor.sprite_frame_id.in_(frame_ids))\
+                .delete()
+            session.commit()
+            print(f"cleared {sprite_type.name} type from phash table, deleted {rows_deleted} rows")
+        else:
+            print("Shouldn't delete everything")
+            sys.exit(2)
+            rows_deleted = session.query(HashFrameWithFloor).delete()
+            session.commit()
+            print(f"cleared tabled, deleted {rows_deleted} rows")
 
 
 def add_wall_sprites(export_dir: Path, dest_dir: Path):
@@ -555,7 +674,6 @@ if __name__ == "__main__":
     export_dir = Path("C:/Program Files (x86)/Steam/steamapps/common/Siralim Ultimate/Export_Textures_0.10.11/")
     dest_dir = settings.IMAGE_PATH.joinpath("extracted_assets")
 
-    # drop hashes
     drop_existing_phashes()
 
     realm_floortiles(export_dir, dest_dir)
@@ -568,6 +686,7 @@ if __name__ == "__main__":
     insert_project_items(export_dir, dest_dir)
     add_overlay_tiles(export_dir, dest_dir)
     add_wall_sprites(export_dir, dest_dir)
+    add_chests(export_dir, dest_dir)
 
     match_sprites(export_dir, dest_dir)
     hash_items()

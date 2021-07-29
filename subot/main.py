@@ -882,6 +882,8 @@ class NearPlayerProcessing(Thread):
             return FoundType.WALL
         elif img_info.sprite_type is SpriteType.FLOOR:
             return FoundType.FLOOR
+        elif img_info.sprite_type is SpriteType.CHEST:
+            return FoundType.CHEST
         else:
             return FoundType.DECORATION
 
