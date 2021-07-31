@@ -31,7 +31,7 @@ from sqlalchemy.orm import joinedload
 from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.datatypes import Rect
 from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg
-from subot.pathfinder.map import FoundType, Color, Map
+from subot.pathfinder.map import TileType, Color, Map
 from subot.read_tags import Asset
 
 from numpy.typing import ArrayLike
@@ -42,7 +42,7 @@ from dataclasses import dataclass
 
 from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, AltarSprite, \
     ProjectItemSprite, NPCSprite, OverlaySprite, HashFrameWithFloor, MasterNPCSprite, QuestType, ResourceNodeSprite, \
-    WallSprite, SpriteTypeLookup, SpriteType
+    WallSprite, SpriteTypeLookup, SpriteType, ChestSprite
 from subot.settings import Session
 import subot.settings as settings
 
@@ -312,7 +312,7 @@ class Bot:
         # This avoids false negative matches if the placed object has matching color pixels in a position
         self.castle_item_hashes: RealmSpriteHasher = RealmSpriteHasher(floor_tiles=self.active_floor_tiles)
 
-        self.all_found_matches: dict[FoundType, list[AssetGridLoc]] = defaultdict(list)
+        self.all_found_matches: dict[TileType, list[AssetGridLoc]] = defaultdict(list)
         self.all_found_matches_rlock = rwlock.RWLockFair()
 
 
@@ -662,7 +662,9 @@ class WholeWindowAnalyzer(Thread):
                 if quest.quest_type == QuestType.rescue:
                     self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(NPCSprite).all())
                 elif quest.quest_type == QuestType.resource_node:
-                    self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(ResourceNodeSprite))
+                    self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(ResourceNodeSprite).all())
+                elif quest.quest_type == QuestType.cursed_chest:
+                    self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(ChestSprite).filter(ChestSprite.realm_id.is_not(None)).all())
                 else:
                     for sprite in quest.sprites:
                         self.parent.quest_sprite_long_names.add(sprite.long_name)
@@ -846,46 +848,52 @@ class NearPlayerProcessing(Thread):
                         return CastleAlignment(alignment=aligned_rect)
 
 
-    def exclude_from_debug(self, s: str):
-        if s == "Blood Grove Floor Tile":
+    def exclude_from_debug(self, img_info: ImageInfo):
+        s = img_info.long_name
+        if img_info.sprite_type is SpriteType.FLOOR:
+            return True
+        elif img_info.sprite_type is SpriteType.WALL:
             return True
         elif s == "bck_FOW_Tile":
             return True
         else:
             return False
 
-    def draw_debug(self, start_point, end_point, found_type: FoundType, text: str):
+    def draw_debug(self, start_point, end_point, tile_type: TileType, text: str):
         debug_img = self.near_frame_color
-        if found_type.color:
-            cv2.rectangle(debug_img, start_point, end_point, found_type.color.value, -1)
+        if tile_type.color:
+            cv2.rectangle(debug_img, start_point, end_point, tile_type.color.value, -1)
             cv2.putText(debug_img, text, start_point, cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255))
 
-    def identify_type(self, img_info: ImageInfo) -> FoundType:
+    def identify_type(self, img_info: ImageInfo, asset_location: AssetGridLoc) -> TileType:
+        is_player_tile = asset_location.point() == Point(0, 0)
+        if is_player_tile:
+            return TileType.PLAYER
 
         if img_info.long_name == "bck_FOW_Tile":
-            return FoundType.BLACK
+            return TileType.BLACK
 
         elif img_info.long_name in self.parent.quest_sprite_long_names:
-            return FoundType.QUEST
+            return TileType.QUEST
         elif img_info.long_name in self.parent.teleportation_shrine_names:
-            return FoundType.TELEPORTATION_SHRINE
+            return TileType.TELEPORTATION_SHRINE
 
         elif img_info.sprite_type is SpriteType.MASTER_NPC:
-            return FoundType.MASTER_NPC
+            return TileType.MASTER_NPC
         elif img_info.sprite_type is SpriteType.ALTAR:
-            return FoundType.ALTAR
+            return TileType.ALTAR
         elif img_info.sprite_type is SpriteType.PROJ_ITEM:
-            return FoundType.PROJ_ITEM
+            return TileType.PROJECT_ITEM
         elif img_info.sprite_type is SpriteType.NPC:
-            return FoundType.NPC
+            return TileType.NPC
         elif img_info.sprite_type is SpriteType.WALL:
-            return FoundType.WALL
+            return TileType.WALL
         elif img_info.sprite_type is SpriteType.FLOOR:
-            return FoundType.FLOOR
+            return TileType.FLOOR
         elif img_info.sprite_type is SpriteType.CHEST:
-            return FoundType.CHEST
+            return TileType.CHEST
         else:
-            return FoundType.DECORATION
+            return TileType.DECORATION
 
     def enter_castle_scanner(self):
         """Scans for decorations and quests in the castle"""
@@ -910,18 +918,13 @@ class NearPlayerProcessing(Thread):
                             short_name=img_info.short_name,
                             )
 
-                        is_player_tile = asset_location.point() == Point(0, 0)
-                        if is_player_tile:
-                            continue
-
-                        if not self.exclude_from_debug(img_info.long_name):
-                            root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}")
-                        found_type = self.identify_type(img_info)
+                        tile_type = self.identify_type(img_info, asset_location)
+                        if not self.exclude_from_debug(img_info):
+                            root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}, {tile_type}")
                         if settings.DEBUG:
-                            self.draw_debug(start_point, end_point, found_type, "")
-                        self.parent.all_found_matches[found_type].append(asset_location)
-
-                    except KeyError as e:
+                            self.draw_debug(start_point, end_point, tile_type, "")
+                        self.parent.all_found_matches[tile_type].append(asset_location)
+                    except KeyError:
                         pass
         self.parent.speak_nearby_objects()
 

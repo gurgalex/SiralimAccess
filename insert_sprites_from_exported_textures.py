@@ -222,8 +222,12 @@ def add_chests(export_dir: Path, dest_dir: Path):
             if realm := sprite_frame_match.realm:
                 realm_id = session.query(RealmLookup).filter_by(enum=realm).one().id
 
-        sprites.setdefault(item_name_long, ChestSprite(short_name=item_name_short, long_name=item_name_long, chest_type_id=sprite_frame_match.chest_type.value, realm_id=realm_id, opened=chest_is_opened))\
-            .frames.append(SpriteFrame(_filepath=destination_file.as_posix()))
+        if not chest_is_opened:
+            sprites.setdefault(item_name_long, ChestSprite(short_name=item_name_short, long_name=item_name_long, chest_type_id=sprite_frame_match.chest_type.value, realm_id=realm_id, opened=chest_is_opened))\
+                .frames.append(SpriteFrame(_filepath=destination_file.as_posix()))
+        else:
+            sprites.setdefault(item_name_long, Sprite(short_name=item_name_long, long_name=item_name_long, type_id=SpriteType.DECORATION.value))\
+                .frames.append(SpriteFrame(_filepath=destination_file.as_posix()))
 
     print(f"{len(sprites)} Chest items")
     add_or_update_sprites(sprites)

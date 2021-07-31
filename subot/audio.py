@@ -8,7 +8,7 @@ from typing import Optional
 import pygame
 import win32com.client
 
-from subot.pathfinder.map import FoundType
+from subot.pathfinder.map import TileType
 from subot.utils import Point
 
 
@@ -35,6 +35,7 @@ def volume_from_distance(distance: Point) -> tuple[Left, Right]:
 
 class SoundType(enum.Enum):
     ALTAR = auto()
+    CHEST = auto()
     QUEST_ITEM = auto()
     MASTER_NPC = auto()
     NPC_NORMAL = auto()
@@ -42,19 +43,21 @@ class SoundType(enum.Enum):
     TELEPORTATION_SHRINE = auto()
 
     @classmethod
-    def from_tile_type(cls, f: FoundType) -> SoundType:
+    def from_tile_type(cls, f: TileType) -> SoundType:
         """raises: KeyError if no sound exists for varient of FoundType"""
-        if f is FoundType.ALTAR:
+        if f is TileType.ALTAR:
             return SoundType.ALTAR
-        elif f is FoundType.QUEST:
+        elif f is TileType.CHEST:
+            return SoundType.CHEST
+        elif f is TileType.QUEST:
             return SoundType.QUEST_ITEM
-        elif f is FoundType.MASTER_NPC:
+        elif f is TileType.MASTER_NPC:
             return SoundType.MASTER_NPC
-        elif f is FoundType.NPC:
+        elif f is TileType.NPC:
             return SoundType.NPC_NORMAL
-        elif f is FoundType.PROJ_ITEM:
+        elif f is TileType.PROJECT_ITEM:
             return SoundType.PROJECT_ITEM
-        elif f is FoundType.TELEPORTATION_SHRINE:
+        elif f is TileType.TELEPORTATION_SHRINE:
             return SoundType.TELEPORTATION_SHRINE
         else:
             raise KeyError(f)
@@ -131,7 +134,15 @@ class AudioSystem:
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath('teleportation-shrine/normal.ogg').as_posix()),
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath('teleportation-shrine/high.ogg').as_posix()),
                 )
-            )
+            ),
+            SoundType.CHEST: SoundMapping(
+                channel=pygame.mixer.Channel(7),
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("snd_ChestOpening/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("snd_ChestOpening/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("snd_ChestOpening/high.wav").as_posix()),
+                )
+            ),
         }
 
         # Windows TTS speaker
