@@ -148,7 +148,6 @@ class AssetGridLoc:
     """Tile coordinate relative to player + game asset name on map"""
     x: int
     y: int
-    short_name: str
 
     def point(self) -> Point:
         return Point(x=self.x, y=self.y)
@@ -284,11 +283,10 @@ class Bot:
                                  "left": self.su_client_rect.x + self.nearby_rect_mss.x,
                                  "width": self.nearby_rect_mss.w, "height": self.nearby_rect_mss.h}
 
-        root.info(f"{self.player_position_tile=}")
-        root.info(f"{self.player_position=}")
+        root.debug(f"{self.player_position_tile=}")
+        root.debug(f"{self.player_position=}")
 
-        print(f"{self.player_position_tile=}")
-        print(f"{self.nearby_tile_top_left=}")
+        root.debug(f"{self.nearby_tile_top_left=}")
 
         self.grid_rect: Optional[Rect] = None
         self.grid_slice_gray: np.typing.ArrayLike = None
@@ -310,7 +308,7 @@ class Bot:
 
         # hashes of sprite frames that have matching `self.castle_tile` pixels set to black.
         # This avoids false negative matches if the placed object has matching color pixels in a position
-        self.castle_item_hashes: RealmSpriteHasher = RealmSpriteHasher(floor_tiles=self.active_floor_tiles)
+        self.item_hashes: RealmSpriteHasher = RealmSpriteHasher(floor_tiles=self.active_floor_tiles)
 
         self.all_found_matches: dict[TileType, list[AssetGridLoc]] = defaultdict(list)
         self.all_found_matches_rlock = rwlock.RWLockFair()
@@ -321,7 +319,7 @@ class Bot:
                                                  nearby_area=self.nearby_mon, nearby_queue=self.rx_color_nearby_queue,
                                                  rx_parent=self.tx_nearby_process_queue,
                                                  hang_notifier=self.hang_alert_queue)
-        print(f"{self.nearby_process=}")
+        root.debug(f"{self.nearby_process=}")
         self.nearby_process.start()
 
         self.nearby_processing_thandle = NearPlayerProcessing(name=NearPlayerProcessing.__name__,
@@ -458,13 +456,13 @@ class Bot:
             realm_phashes = realm_phashes_query.all()
             for realm_phash, short_name, long_name, sprite_type in realm_phashes:
                 img_info = ImageInfo(short_name=short_name, long_name=long_name, sprite_type=sprite_type)
-                self.castle_item_hashes[realm_phash] = img_info
+                self.item_hashes[realm_phash] = img_info
 
     def cache_image_hashes_of_decorations(self):
         start = time.time()
         self.cache_images_using_phashes()
         end = time.time()
-        print(f"cache with phash took {(end - start) * 1000}ms")
+        root.info(f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.item_hashes)} phashes")
 
     def print_realm_quests(self):
         print(f"known quests")
@@ -708,8 +706,10 @@ class WholeWindowAnalyzer(Thread):
                                                          self.grid_rect.x:self.grid_rect.x + self.grid_rect.w]
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
-            root.info(f"quests = {[quest.title for quest in quests]}")
-            root.info(f"quest items = {[sprite.long_name for quest in quests for sprite in quest.sprites]}")
+            current_quests = [quest.title for quest in quests]
+            quest_items = [sprite.long_name for quest in quests for sprite in quest.sprites]
+            root.info(f"quests = {current_quests}")
+            root.info(f"quest items = {quest_items}")
 
             self.update_quests(quests)
             root.debug(f"quests_len = {len(self.parent.quest_sprite_long_names)}")
@@ -793,6 +793,8 @@ class CastleAlignment:
 class NearPlayerProcessing(Thread):
     def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: deque, parent: Bot, stop_event: threading.Event,hang_monitor: HangMonitorWorker, **kwargs):
         super().__init__(**kwargs)
+
+        self.map = Map(arr=np.zeros((NEARBY_TILES_WH, NEARBY_TILES_WH), dtype='object'))
         self._hang_monitor: HangMonitorWorker = hang_monitor
         self.hang_activity_sender: Optional[HangMonitorChan] = None
 
@@ -820,6 +822,7 @@ class NearPlayerProcessing(Thread):
         self.realm: Optional[Realm] = None
 
     def detect_what_realm_in(self) -> Optional[Union[RealmAlignment, CastleAlignment]]:
+
         # Scan the nearby tile area for lit tiles to determine what realm we are in currently
         # This area was chosen since the player + 6 creatures are at most this long
         # At least 1 tile will not be dimmed by the fog of war
@@ -898,6 +901,7 @@ class NearPlayerProcessing(Thread):
     def enter_castle_scanner(self):
         """Scans for decorations and quests in the castle"""
 
+        self.map.clear()
         with self.parent.all_found_matches_rlock.gen_wlock():
 
             # Hack: add the grid offset to the player tile to realign the grid when moving left
@@ -908,15 +912,14 @@ class NearPlayerProcessing(Thread):
                     tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
 
                     try:
-                        img_info = self.parent.castle_item_hashes.get_greyscale(tile_gray[:32, :32])
-                        start_point = (row + self.grid_near_rect.x, col + self.grid_near_rect.y)
-                        end_point=(start_point[0]+TILE_SIZE, start_point[1]+TILE_SIZE)
-
                         asset_location = AssetGridLoc(
                             x=aligned_player_tile_x + row // TILE_SIZE - self.parent.player_position_tile.x,
                             y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
-                            short_name=img_info.short_name,
                             )
+                        img_info = self.parent.item_hashes.get_greyscale(tile_gray[:32, :32])
+                        start_point = (row + self.grid_near_rect.x, col + self.grid_near_rect.y)
+                        end_point=(start_point[0]+TILE_SIZE, start_point[1]+TILE_SIZE)
+
 
                         tile_type = self.identify_type(img_info, asset_location)
                         if not self.exclude_from_debug(img_info):
@@ -924,8 +927,22 @@ class NearPlayerProcessing(Thread):
                         if settings.DEBUG:
                             self.draw_debug(start_point, end_point, tile_type, "")
                         self.parent.all_found_matches[tile_type].append(asset_location)
+                        # slow for some reason setting
+                        self.map.set(asset_location.point(), tile_type)
+                        # self.map.map[col//TILE_SIZE, row//TILE_SIZE] = tile_type
+                        # self.map.img[col//TILE_SIZE, row//TILE_SIZE] = tile_type.color.value
+
                     except KeyError:
-                        pass
+                        self.map.set(asset_location.point(), TileType.UNKNOWN)
+        start = time.time()
+        self.map.find_reachable_blocks()
+        try:
+            for point in self.map.adj_list[TileType.BLACK].keys():
+                self.parent.all_found_matches[TileType.REACHABLE_BLACK].append(AssetGridLoc(x=point.x, y=point.y))
+        except KeyError:
+            pass
+        end = time.time()
+        root.debug(f"reachable took {(end-start)*1000}ms to complete")
         self.parent.speak_nearby_objects()
 
     def enter_realm_scanner(self):
@@ -941,15 +958,14 @@ class NearPlayerProcessing(Thread):
             self.realm = None
 
             floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=None)
-            self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
+            self.parent.item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
             start = time.time()
             self.parent.cache_image_hashes_of_decorations()
             end = time.time()
-            print(f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.parent.castle_item_hashes)} phashes")
+            root.info(f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.parent.item_hashes)} phashes")
 
             root.info(f"castle entered")
             root.info(f"new realm alignment = {realm_alignment=}")
-            print(f"new item hashes = {len(self.parent.castle_item_hashes)}")
 
             self.enter_castle_scanner()
             return
@@ -979,17 +995,17 @@ class NearPlayerProcessing(Thread):
                         overlay = Overlay(alpha=0.753, tile=overlay_tile_part)
 
                 floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
-                self.parent.castle_item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
+                self.parent.item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
                 start = time.time()
                 self.hang_activity_sender.notify_activity(HangAnnotation({"data": "get new phashes"}))
                 self.parent.cache_image_hashes_of_decorations()
                 end = time.time()
                 print(
-                    f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.parent.castle_item_hashes)} phashes")
+                    f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.parent.item_hashes)} phashes")
 
                 root.info(f"new realm entered: {self.realm.name}")
                 root.info(f"new realm alignment = {realm_alignment=}")
-                print(f"new item hashes = {len(self.parent.castle_item_hashes)}")
+                print(f"new item hashes = {len(self.parent.item_hashes)}")
 
         self.enter_castle_scanner()
 
@@ -1048,9 +1064,8 @@ class NearPlayerProcessing(Thread):
                     latency = end - start
                     root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
 
-                # elif comm_msg.type is MessageType.DRAW_DEBUG:
                 if settings.DEBUG:
-                    cv2.imshow("Siralim Access", self.near_frame_color)
+                    cv2.imshow("Siralim Access", self.map.img)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         cv2.destroyAllWindows()
                         break
