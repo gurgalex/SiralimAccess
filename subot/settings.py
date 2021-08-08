@@ -17,4 +17,5 @@ Session = sessionmaker(engine)
 IMAGE_PATH = Path(__file__).parent.parent.joinpath('resources')
 
 DEBUG = False
+VIEWER = False
 FPS = 20

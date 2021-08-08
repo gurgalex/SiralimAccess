@@ -21,25 +21,14 @@ Left = float
 Right = float
 
 
-def volume_from_distance(distance: Point) -> tuple[Left, Right]:
-    if distance.x > 0:
-        return Left(0), \
-               Right(1 / (distance.x + 1 + abs(distance.y)))
-    elif distance.x < 0:
-        return Left(1 / (abs(abs(distance.x) + abs(distance.y)) + 1)), \
-               Right(0)
-    else:
-        return Left(1 / (abs(distance.y) + 1)), \
-               Right(1 / (abs(distance.y) + 1))
-
-
 class SoundType(enum.Enum):
     ALTAR = auto()
     CHEST = auto()
-    QUEST_ITEM = auto()
     MASTER_NPC = auto()
     NPC_NORMAL = auto()
     PROJECT_ITEM = auto()
+    QUEST_ITEM = auto()
+    REACHABLE_BLACK = auto()
     TELEPORTATION_SHRINE = auto()
 
     @classmethod
@@ -80,6 +69,7 @@ AUDIO_DIR = (Path.cwd() / __file__).parent.parent.joinpath("resources").joinpath
 
 class AudioSystem:
     def __init__(self):
+        pygame.mixer.set_num_channels(16)
 
         self.sound_mappings: dict[SoundType, SoundMapping] = {
             SoundType.ALTAR: SoundMapping(
@@ -143,6 +133,15 @@ class AudioSystem:
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("snd_ChestOpening/high.wav").as_posix()),
                 )
             ),
+            SoundType.REACHABLE_BLACK: SoundMapping(
+                channel=pygame.mixer.Channel(8),
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-high.wav").as_posix()),
+                )
+            ),
+
         }
 
         # Windows TTS speaker

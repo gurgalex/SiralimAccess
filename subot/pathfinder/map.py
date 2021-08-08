@@ -11,6 +11,7 @@ import numpy as np
 
 from enum import Enum
 from recordclass import dataobject, asdict, astuple
+from dataclasses import dataclass
 
 
 class Color(enum.Enum):
@@ -30,6 +31,8 @@ class Color(enum.Enum):
     red = (0, 0, 255)
     saddlebrown = (19, 69, 139)
     silver = (192, 192, 192)
+    tan = (140, 180, 210)
+    teal = (128, 128, 0)
     white = (255, 255, 255)
     yellow = (0, 255, 255)
     unfilled = (80, 80, 80)
@@ -65,6 +68,8 @@ class TileType(Enum):
     # gold box
     TRAIT_MATERIAL_BOX = (23, None)
     UNFILLED = (24, Color.unfilled)
+    PASSAGEWAY_EXIT = (25, Color.teal)
+    DEAD_END = (26, Color.tan)
 
     def __init__(self, num, color: Color):
         self.num = num
@@ -97,7 +102,7 @@ class AsciiConverter:
         "W": TileType.WALL,
         "R": TileType.REACHABLE_BLACK,
     }
-    tile_type_to_char = {v: k for k,v in char_to_tile_type.items()}
+    tile_type_to_char = {v: k for k, v in char_to_tile_type.items()}
 
     @classmethod
     def from_tile_type(cls, tile_type: TileType) -> str:
@@ -108,23 +113,71 @@ class AsciiConverter:
         return cls.char_to_tile_type[char]
 
 
+@dataclass(frozen=True, eq=True)
+class WallSet2:
+    north: bool = False
+    northeast: bool = False
+    east: bool = False
+    southeast: bool = False
+    south: bool = False
+    southwest: bool = False
+    west: bool = False
+    northwest: bool = False
+
+    def is_corridor(self) -> bool:
+        return self in corridors
+
+    def is_dead_end(self) -> bool:
+        return self in dead_ends
+
+corridors: set[WallSet2] = set()
+corridors.add(WallSet2(northeast=True, northwest=True, southeast=True, southwest=True))
+corridors.add(WallSet2(northeast=True, northwest=True, southeast=True, southwest=True, north=True))
+corridors.add(WallSet2(northeast=True, northwest=True, southeast=True, southwest=True, east=True))
+corridors.add(WallSet2(northeast=True, northwest=True, southeast=True, southwest=True, south=True))
+corridors.add(WallSet2(northeast=True, northwest=True, southeast=True, southwest=True, west=True))
+
+dead_ends: set[WallSet2] = set()
+dead_ends.add(WallSet2(northeast=True, northwest=True, southeast=True, southwest=True, north=True, south=True, east=True, west=False))
+dead_ends.add(WallSet2(northeast=True, northwest=True, southeast=True, southwest=True, north=True, south=True, east=False, west=True))
+dead_ends.add(WallSet2(northeast=True, northwest=True, southeast=True, southwest=True, north=True, south=False, east=True, west=True))
+dead_ends.add(WallSet2(northeast=True, northwest=True, southeast=True, southwest=True, north=False, south=True, east=True, west=True))
+
+dead_ends.add(WallSet2(north=True, northeast=True, east=True, southeast=True, south=True))
+dead_ends.add(WallSet2(north=True, northwest=True, west=True, southwest=True, south=True))
+
+dead_ends.add(WallSet2(north=True, east=True, southeast=True, northwest=True, south=True))
+dead_ends.add(WallSet2(east=True, southeast=True, south=True, southwest=True, west=True))
+
+# with player up
+dead_ends.add(WallSet2(east=True, southeast=True, south=True, southwest=True, west=True, north=True))
+
 Link = NewType('Link', Point)
 
 
 class Map:
     movements: list[Movement] = [Movement(x=1, y=0), Movement(x=-1, y=0), Movement(x=0, y=1), Movement(x=0, y=-1)]
+    directions = {
+        "north": Point(x=0, y=-1),
+        "northeast": Point(x=1, y=-1),
+        "east": Point(x=1, y=0),
+        "southeast": Point(x=1, y=1),
+        "south": Point(x=0, y=1),
+        "southwest": Point(x=-1, y=1),
+        "west": Point(x=-1, y=0),
+        "northwest": Point(x=-1, y=-1)
+    }
 
     def __init__(self, arr: ArrayLike, formatter: Optional[object] = None):
         self.map: ArrayLike = arr
         self.img: ArrayLike = np.zeros((self.map.shape[0], self.map.shape[1], 3), dtype='uint8')
-        self.center: int = self.map.shape[1] // 2
-        self.marked: set[Point] = set()
+        self.center: Point = Point(x=self.map.shape[1] // 2, y=self.map.shape[0] // 2)
         self.adj_list: dict[TileType, dict[Point, list[Point]]] = dict()
         self.formatter = formatter if formatter else DefaultFormatter()
 
     def set(self, tile: Point, sprite_type: TileType):
-        self.map[self.center + tile.y, self.center + tile.x] = sprite_type
-        self.img[self.center + tile.y, self.center + tile.x] = sprite_type.color.value
+        self.map[self.center.y + tile.y, self.center.y + tile.x] = sprite_type
+        self.img[self.center.y + tile.y, self.center.y + tile.x] = sprite_type.color.value
 
     def to_ascii(self) -> list[list[str]]:
         text_map = []
@@ -141,7 +194,6 @@ class Map:
         self.map[:] = TileType.UNFILLED
         self.img[:] = TileType.UNFILLED.color.value
         self.adj_list.clear()
-        self.marked.clear()
 
     @classmethod
     def from_tiles(cls, tiles: list[list[TileType]]):
@@ -170,16 +222,50 @@ class Map:
         img = np.asarray(img, dtype='uint8')
         cv2.imwrite(filename, img)
 
+    def analyze_tile_for_walls(self, point: Point, tile_type: TileType) -> TileType:
+        if tile_type is TileType.WALL or tile_type is TileType.UNKNOWN:
+            return tile_type
+
+        d = {}
+
+        point: Point
+        for direction, offset in self.directions.items():
+            try:
+                nearby_tile = self.map[point.y + offset.y, point.x + offset.x]
+                d[direction] = nearby_tile is TileType.WALL
+                if nearby_tile is TileType.UNKNOWN:
+                    d[direction] = True
+                elif nearby_tile is TileType.REACHABLE_BLACK:
+                    d[direction] = False
+            except IndexError:
+                d[direction] = False
+        wall_set = WallSet2(**d)
+
+        if wall_set.is_corridor():
+            return TileType.PASSAGEWAY_EXIT
+
+        # prevent wrongly marked dead ends (like chests)
+        if tile_type is TileType.CHEST:
+            return tile_type
+        elif tile_type is TileType.DECORATION:
+            return tile_type
+
+        if wall_set.is_dead_end():
+            return TileType.DEAD_END
+
+        return tile_type
+
+
     def find_reachable_blocks(self):
-
-        stack: deque[tuple[Point, Optional[Link]]] = deque()
+        marked: set[Point] = set()
+        # print(f"map center type = {self.map[self.center.y, self.center.x]}")
+        queue: deque[tuple[Point, Optional[Link]]] = deque()
         # add player position
-        start_point = Point(x=self.center, y=self.center)
         link: Optional[Point] = None
-        stack.append((start_point, link))
+        queue.append((self.center, link))
 
-        while stack:
-            v, link = stack.pop()
+        while queue:
+            v, link = queue.popleft()
             tile: TileType = TileType[self.map[v.y, v.x].name]
             if tile is TileType.WALL or tile is TileType.BLACK or tile is TileType.UNFILLED:
                 continue
@@ -189,9 +275,9 @@ class Map:
                 link = v
             for movement in Map.movements:
                 next_point = Point(x=v.x + movement.x, y=v.y + movement.y)
-                if not self.can_visit(next_point, tile):
+                if not self.can_visit(next_point, tile, marked):
                     continue
-                self.marked.add(next_point)
+                marked.add(next_point)
                 next_tile = TileType[self.map[next_point.y, next_point.x].name]
 
                 if tile is TileType.BLACK or tile is TileType.UNKNOWN or tile is TileType.WALL:
@@ -200,18 +286,44 @@ class Map:
                     link = v
 
                 self.adj_list.setdefault(next_tile, defaultdict(list))[next_point].append(link)
-                stack.append((next_point, link))
+                queue.append((next_point, link))
 
         for k, v in self.adj_list.items():
             if k is TileType.BLACK:
-                # print("black reachable tiles")
                 for node, neighbors in v.items():
                     self.map[node.y, node.x] = TileType.REACHABLE_BLACK
                     self.img[node.y, node.x] = TileType.REACHABLE_BLACK.color.value
 
+        # scan 3 tiles way from player for corridors
+        PASSAGE_VIEW = min(3, self.center.y)
+        ranges = ((-PASSAGE_VIEW, 0+1), (1, PASSAGE_VIEW+1))
+        for r in ranges:
+            for idx_tile in range(*r):
+                tile_to_analyze = Point(x=self.center.x, y=self.center.y + idx_tile)
+                numpy_tuple = (tile_to_analyze.y, tile_to_analyze.x)
+                current_tile = self.map[numpy_tuple]
+                if current_tile is TileType.WALL:
+                    break
 
-    def can_visit(self, tile: Point, tile_type: TileType) -> bool:
-        if tile in self.marked:
+                new_tile_type = self.analyze_tile_for_walls(tile_to_analyze, current_tile)
+                self.map[numpy_tuple] = new_tile_type
+                if new_tile_type.color:
+                    self.img[numpy_tuple] = new_tile_type.color.value
+        for r in ranges:
+            for idx_tile in range(*r):
+                tile_to_analyze = Point(x=self.center.x + idx_tile, y=self.center.y)
+                numpy_tuple = (tile_to_analyze.y, tile_to_analyze.x)
+                current_tile = self.map[numpy_tuple]
+                if current_tile is TileType.WALL:
+                    break
+
+                new_tile_type = self.analyze_tile_for_walls(tile_to_analyze, current_tile)
+                self.map[numpy_tuple] = new_tile_type
+                if new_tile_type.color:
+                    self.img[numpy_tuple] = new_tile_type.color.value
+
+    def can_visit(self, tile: Point, tile_type: TileType, marked: set[Point]) -> bool:
+        if tile in marked:
             return False
         if tile_type is TileType.BLACK:
             return False
@@ -222,21 +334,10 @@ class Map:
 
         return True
 
-
-from dataclasses import dataclass
-
-
-@dataclass(frozen=True, eq=True)
-class WallSet2:
-    north: bool = False
-    northeast: bool = False
-    east: bool = False
-    southeast: bool = False
-    south: bool = False
-    southwest: bool = False
-    west: bool = False
-    northwest: bool = False
+    def set_center(self, center: Point):
+        self.center = center
 
 
-# todo: dead end is a passageway exit
+
+
 

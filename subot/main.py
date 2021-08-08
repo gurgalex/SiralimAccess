@@ -423,9 +423,11 @@ class Bot:
         # xxxxxxx
         # xxxxxxx
         #
+        pixel_offset_x = self.su_client_rect.w // 2 % TILE_SIZE
+        pixel_offset_y = self.su_client_rect.h // 2 % TILE_SIZE
         return Rect(
-            x=(self.player_position_tile.x - NEARBY_TILES_WH // 2) * TILE_SIZE,
-            y=(self.player_position_tile.y - NEARBY_TILES_WH // 2) * TILE_SIZE,
+            x=pixel_offset_x + ( self.player_position_tile.x - NEARBY_TILES_WH // 2) * TILE_SIZE,
+            y=pixel_offset_y + (self.player_position_tile.y - NEARBY_TILES_WH // 2) * TILE_SIZE,
             w=TILE_SIZE * NEARBY_TILES_WH,
             h=TILE_SIZE * NEARBY_TILES_WH,
         )
@@ -531,11 +533,6 @@ class Bot:
                 self.nearby_send_deque.append(CheckWhatRealmIn)
             elif self.mode is BotMode.CASTLE:
                 self.nearby_send_deque.append(CheckWhatRealmIn)
-
-                # label player position
-                # top_left = self.player_position.top_left().as_tuple()
-                # bottom_right = self.player_position.bottom_right().as_tuple()
-                # cv2.rectangle(self.grid_slice_gray, top_left, bottom_right, (255), 1)
 
             if iters % every == 0:
                 root.debug(f"FPS: {clock.get_fps()}")
@@ -827,6 +824,7 @@ class NearPlayerProcessing(Thread):
         # This area was chosen since the player + 6 creatures are at most this long
         # At least 1 tile will not be dimmed by the fog of war
 
+
         # fast: if still in same realm
         for last_tile in self.parent.active_floor_tiles_gray:
             if aligned_rect := recompute_grid_offset(floor_tile=last_tile, gray_frame=self.near_frame_gray,
@@ -902,6 +900,7 @@ class NearPlayerProcessing(Thread):
         """Scans for decorations and quests in the castle"""
 
         self.map.clear()
+        self.map.set_center(Point(x=self.grid_near_rect.w//TILE_SIZE//2, y=self.grid_near_rect.h//TILE_SIZE//2))
         with self.parent.all_found_matches_rlock.gen_wlock():
 
             # Hack: add the grid offset to the player tile to realign the grid when moving left
@@ -948,7 +947,6 @@ class NearPlayerProcessing(Thread):
     def enter_realm_scanner(self):
         realm_alignment = self.detect_what_realm_in()
         if not realm_alignment:
-            self.enter_castle_scanner()
             return
 
         if isinstance(realm_alignment, CastleAlignment):
@@ -1032,11 +1030,10 @@ class NearPlayerProcessing(Thread):
         self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[
                                                           self.grid_near_rect.y:self.grid_near_rect.y + self.grid_near_rect.h,
                                                           self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
-        # self.grid_near_slice_color = self.grid_near_slice_color.copy()
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=10.0)
-        if settings.DEBUG:
+        if settings.VIEWER:
             debug_window = cv2.namedWindow("Siralim Access", cv2.WINDOW_KEEPRATIO)
 
         while not self.stop_event.is_set():
@@ -1064,7 +1061,7 @@ class NearPlayerProcessing(Thread):
                     latency = end - start
                     root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
 
-                if settings.DEBUG:
+                if settings.VIEWER:
                     cv2.imshow("Siralim Access", self.map.img)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         cv2.destroyAllWindows()
