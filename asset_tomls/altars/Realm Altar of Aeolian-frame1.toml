@@ -1,9 +1,0 @@
-short_name = "Altar"
-long_name = "Aeolian's Altar"
-realm = "Unsullied Meadows"
-item_type = "Altar"
-is_quest_item = true
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false
-quest_single_line_name = "So Close Yet So Far"

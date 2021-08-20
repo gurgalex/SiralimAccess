@@ -1,8 +1,0 @@
-short_name = "Frostbite Caverns Skeleton"
-long_name = "Frostbite Caverns Skeleton"
-realm = "Frostbite Caverns"
-item_type = "generic"
-is_quest_item = false
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false

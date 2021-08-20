@@ -1,7 +1,0 @@
-short_name = "Fusion Lab"
-long_name = "Fusion Lab"
-item_type = "Utility-NPC"
-is_quest_item = false
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false

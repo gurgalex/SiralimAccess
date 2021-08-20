@@ -1,7 +1,0 @@
-short_name = "Nether Portal"
-long_name = "Nether Portal"
-item_type = "Portal"
-is_quest_item = true
-is_floor_tile = false
-is_global_realm_item = true
-is_project_item = false

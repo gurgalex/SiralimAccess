@@ -1,6 +1,0 @@
-short_name = Floor Tile
-long_name = "Dead Ships Floor Tile"
-item_type = "Floor Tile"
-is_quest_item = false
-realm = "Dead Ships"
-tags = [ "Floor Tile", "Realm", "Dead Ships", "Dead Ships Floor Tile", "Common"]
