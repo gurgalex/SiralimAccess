@@ -1,8 +1,0 @@
-short_name = "Chest"
-long_name = "Treasure Chest (Path of the Damned)"
-realm = "Path of the Damned"
-item_type = "Chest"
-is_quest_item = true
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false

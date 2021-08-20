@@ -38,7 +38,6 @@ from subot.datatypes import Rect
 from subot.menu import MenuItem, Menu
 from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg, ScanForItems
 from subot.pathfinder.map import TileType, Map, Color
-from subot.read_tags import Asset
 
 from numpy.typing import ArrayLike
 
@@ -565,14 +564,6 @@ class Bot:
         end = time.time()
         root.info(f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.item_hashes)} phashes")
 
-    def print_realm_quests(self):
-        print(f"known quests")
-        frames_asset: list[Asset]
-        with Session() as session:
-            quest: Quest
-            for quest in session.query(Quest).all():
-                print(quest.title, [sprite.long_name for sprite in quest.sprites])
-
     def on_press(self, key):
         if control := settings.keyboard_controls.get(key.name):
             # print(f"found control = {control}, key pressed = {key}")
@@ -583,9 +574,6 @@ class Bot:
         # self.listener.start()
         self.audio_system.speak_blocking("Siralim Access has started")
         self.show_main_menu()
-
-        if settings.DEBUG:
-            self.print_realm_quests()
 
         iters = 0
         every = 10
@@ -945,8 +933,6 @@ class NearPlayerProcessing(Thread):
         self.grid_near_rect: Optional[Rect] = parent.nearby_rect_mss
         self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[:]
         self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[:]
-
-        self.unique_realm_assets = list[Asset]
 
         # The current active quests
         self.active_quests: list[Quest] = []

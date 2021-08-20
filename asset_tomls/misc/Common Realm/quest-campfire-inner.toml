@@ -1,8 +1,0 @@
-short_name = "Campfire"
-long_name = "Campfire"
-item_type = "Quest"
-is_quest_item = true
-is_floor_tile = false
-is_global_realm_item = true
-is_project_item = false
-quest_single_line_name = "A Favor For No One In"

@@ -1,9 +1,0 @@
-short_name = "Habitat"
-long_name = "Blood Grove Cave"
-realm = "Blood Grove"
-item_type = "generic"
-is_quest_item = true
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false
-quest_single_line_name = "Man-made Disaster"

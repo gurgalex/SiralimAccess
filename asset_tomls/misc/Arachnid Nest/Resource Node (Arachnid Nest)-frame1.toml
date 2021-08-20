@@ -1,8 +1,0 @@
-short_name = "Resource Node"
-long_name = "Resource Node (Arachnid Nest)"
-realm = "Arachnid Nest"
-item_type = "Resource Node"
-is_quest_item = true
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false

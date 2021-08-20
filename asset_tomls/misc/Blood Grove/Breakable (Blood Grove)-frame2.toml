@@ -1,8 +1,0 @@
-short_name = "Breakable"
-long_name = "Breakable (Blood Grove)"
-realm = "Blood Grove"
-item_type = "Breakable"
-is_quest_item = true
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false

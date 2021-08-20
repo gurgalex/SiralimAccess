@@ -1,8 +1,0 @@
-short_name = "Titan's Wound Scar 2 (H)"
-long_name = "Titan's Wound Scar 2 (H)"
-realm = "Titan's Wound"
-item_type = "generic"
-is_quest_item = false
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false

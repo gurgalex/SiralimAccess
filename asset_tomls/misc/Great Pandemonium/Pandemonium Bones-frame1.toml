@@ -1,8 +1,0 @@
-short_name = "Pandemonium Bones"
-long_name = "Pandemonium Bones"
-realm = "Great Pandemonium"
-item_type = "generic"
-is_quest_item = false
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false

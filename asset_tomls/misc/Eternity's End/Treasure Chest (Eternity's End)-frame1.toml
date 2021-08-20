@@ -1,8 +1,0 @@
-short_name = "Chest"
-long_name = "Treasure Chest (Eternity's End)"
-realm = "Eternity's End"
-item_type = "Chest"
-is_quest_item = true
-is_floor_tile = false
-is_global_realm_item = false
-is_project_item = false
