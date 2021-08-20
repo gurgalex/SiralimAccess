@@ -1,3 +1,7 @@
+## v0.9.12
+### feat
+- A console no longer shows up alongside the Siralim Access window
+
 ## v0.9.11
 ### Feat
 - Add Quest "Cast Away"
