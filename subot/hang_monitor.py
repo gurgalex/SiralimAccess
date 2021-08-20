@@ -62,6 +62,13 @@ class NotifyActivity:
 
 MonitoredComponentMsg = Union[Register, Unregister, NotifyActivity, NotifyWait]
 
+@dataclass
+class Shutdown:
+    pass
+
+
+ControlMsg = Union[Shutdown]
+
 
 @dataclass
 class MonitoredComponent:
@@ -107,8 +114,8 @@ class HangMonitorWorker(threading.Thread):
     """Moniter threads to make sure they didn't crash.
     Notify that a thread crashed by `interested`"""
 
-    def __init__(self, hang_notify_queue: 'multiprocessing.Queue[HangMonitorAlert]', control_port: queue.Queue
-                 , **kwargs):
+    def __init__(self, hang_notify_queue: 'multiprocessing.Queue[HangMonitorAlert]',
+                 control_port: queue.Queue[ControlMsg], **kwargs):
         super().__init__(**kwargs)
         self.interested = hang_notify_queue
         self.monitered_components: dict[ComponentId, MonitoredComponent] = dict()
@@ -117,8 +124,11 @@ class HangMonitorWorker(threading.Thread):
         self.monitee_recv_queue = queue.Queue()
         self.should_exit = False
 
-    def handle_control_msg(self, msg: Any):
-        print(f"got control msg = {msg=}")
+    def handle_control_msg(self, msg: ControlMsg):
+        if isinstance(msg, Shutdown):
+            self.should_exit = True
+        else:
+            raise Exception(f"unknown control msg = {msg} {type(msg)}")
 
     def handle_monitee_msg(self, msg: MonitoredComponentMsg):
         component_id, data = msg

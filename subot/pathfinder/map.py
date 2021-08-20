@@ -6,7 +6,8 @@ from typing import Optional, NewType
 import cv2
 from numpy.typing import ArrayLike
 
-from subot.utils import Point
+from subot.settings import GameControl
+from subot.utils import Point, PlayerDirection
 import numpy as np
 
 from enum import Enum
@@ -26,8 +27,9 @@ class Color(enum.Enum):
     orange = (0, 215, 255)
     olive = (0, 128, 128)
     pastel_red = (160, 160, 250)
-    purple = (255, 0, 255)
+    peachpuff = (185, 218, 255)
     pink = (147, 0, 255)
+    purple = (255, 0, 255)
     red = (0, 0, 255)
     saddlebrown = (19, 69, 139)
     silver = (192, 192, 192)
@@ -37,43 +39,48 @@ class Color(enum.Enum):
     yellow = (0, 255, 255)
     unfilled = (80, 80, 80)
 
+    def rgb(self) -> tuple[int, int, int]:
+        return self.value[2], self.value[1], self.value[0]
+
 
 class TileType(Enum):
-    UNKNOWN = (0, Color.maroon)
-    ALTAR = (1, Color.pink)
-    BLACK = (99, Color.black)
-    REACHABLE_BLACK = (98, Color.pastel_red)
-    CHEST = (2, Color.goldenrod)
-    COMMON_CHEST = (3, Color.saddlebrown)
-    CREATURE = (4, None)
-    DECORATION = (5, Color.khaki)
-    DIVINATION_CANDLE = (6, None)
-    DUMPLING = (7, None)
-    EMBLEM = (8, Color.silver)
-    ENEMY = (9, None)
-    FLOOR = (10, Color.white)
-    MASTER_NPC = (11, Color.orange)
-    NPC = (12, Color.green)
-    PROJECT_ITEM = (13, Color.yellow)
-    PLAYER = (14, Color.olive)
-    QUEST = (15, Color.red)
-    RESOURCE_NODE = (16, None)
-    TELEPORTATION_SHRINE = (17, Color.blue)
-    TREASURE_GOLEM = (18, None)
-    WALL = (19, Color.gray)
-    ARTIFACT_MATERIAL_BAG = (20, None)
-    SPELL_MATERIAL_BAG = (21, None)
+    UNKNOWN = (0, Color.maroon, "unknown")
+    ALTAR = (1, Color.pink, "altar")
+    BLACK = (99, Color.black, "black")
+    REACHABLE_BLACK = (98, Color.pastel_red, "untraveled tile")
+    CHEST = (2, Color.goldenrod, "chest")
+    COMMON_CHEST = (3, Color.saddlebrown, "common chest")
+    CREATURE = (4, None, "creature")
+    DECORATION = (5, Color.khaki, "decoration")
+    DIVINATION_CANDLE = (6, None, "divination candle")
+    DUMPLING = (7, None, "dumpling")
+    EMBLEM = (8, Color.silver, "emblem")
+    ENEMY = (9, None, "enemy")
+    FLOOR = (10, Color.white, "floor")
+    MASTER_NPC = (11, Color.orange, "master")
+    NPC = (12, Color.green, "NPC")
+    PROJECT_ITEM = (13, Color.yellow, "project item")
+    PLAYER = (14, Color.olive, "player")
+    QUEST = (15, Color.red, "quest item")
+    RESOURCE_NODE = (16, None, "resource node")
+    TELEPORTATION_SHRINE = (17, Color.blue, "teleportation shrine")
+    TREASURE_GOLEM = (18, None, "treasure golem")
+    WALL = (19, Color.gray, "wall")
+    ARTIFACT_MATERIAL_BAG = (20, None, "artifact material bag")
+    SPELL_MATERIAL_BAG = (21, None, "spell material bag")
     # blue bag
-    TRICK_MATERIAL_BOX = (22, None)
+    TRICK_MATERIAL_BOX = (22, None, "trick material bag")
     # gold box
-    TRAIT_MATERIAL_BOX = (23, None)
-    UNFILLED = (24, Color.unfilled)
-    PASSAGEWAY_EXIT = (25, Color.teal)
-    DEAD_END = (26, Color.tan)
+    TRAIT_MATERIAL_BOX = (23, None, "trait material bag")
+    UNFILLED = (24, Color.unfilled, "unfilled")
+    PASSAGEWAY_EXIT = (25, Color.teal, "passageway enter/exit")
+    DEAD_END = (26, Color.tan, "dead end")
+    REACHABLE_DIRECTION = (27, Color.peachpuff, "direction")
 
-    def __init__(self, num, color: Color):
+    def __init__(self, num, color: Color, description: str):
         self.num = num
         self.color = color
+        self.description = description
 
 
 class Movement(dataobject, fast_new=True, gc=False):
@@ -154,6 +161,12 @@ dead_ends.add(WallSet2(east=True, southeast=True, south=True, southwest=True, we
 
 Link = NewType('Link', Point)
 
+@dataclass()
+class FloorDirections:
+    up: bool = False
+    down: bool = False
+    left: bool = False
+    right: bool = False
 
 class Map:
     movements: list[Movement] = [Movement(x=1, y=0), Movement(x=-1, y=0), Movement(x=0, y=1), Movement(x=0, y=-1)]
@@ -168,12 +181,13 @@ class Map:
         "northwest": Point(x=-1, y=-1)
     }
 
-    def __init__(self, arr: ArrayLike, formatter: Optional[object] = None):
+    def __init__(self, arr: ArrayLike, formatter: Optional[object] = None, player_direction: Optional[PlayerDirection] = None):
         self.map: ArrayLike = arr
         self.img: ArrayLike = np.zeros((self.map.shape[0], self.map.shape[1], 3), dtype='uint8')
         self.center: Point = Point(x=self.map.shape[1] // 2, y=self.map.shape[0] // 2)
         self.adj_list: dict[TileType, dict[Point, list[Point]]] = dict()
         self.formatter = formatter if formatter else DefaultFormatter()
+        self.player_direction = PlayerDirection
 
     def set(self, tile: Point, sprite_type: TileType):
         self.map[self.center.y + tile.y, self.center.y + tile.x] = sprite_type
@@ -222,43 +236,41 @@ class Map:
         img = np.asarray(img, dtype='uint8')
         cv2.imwrite(filename, img)
 
-    def analyze_tile_for_walls(self, point: Point, tile_type: TileType) -> TileType:
-        if tile_type is TileType.WALL or tile_type is TileType.UNKNOWN:
-            return tile_type
+    def walkable_directions(self):
+        # scan 3 tiles way from player for corridors
+        PASSAGE_VIEW = min(3, self.center.y)
 
-        d = {}
+        if self.player_direction is GameControl.DOWN or self.player_direction is GameControl.UP:
+            directions = [('east', (1, 0)), ('west',(-1, 0))]
+        elif self.player_direction is GameControl.LEFT or GameControl.RIGHT:
+            directions = [('south',(0, 1)), ('north',(0, -1))]
+        else:
+            directions = [('east', (1, 0)), ('west',(-1, 0)), ('south',(0, 1)), ('north',(0, -1))]
 
-        point: Point
-        for direction, offset in self.directions.items():
-            try:
-                nearby_tile = self.map[point.y + offset.y, point.x + offset.x]
-                d[direction] = nearby_tile is TileType.WALL
-                if nearby_tile is TileType.UNKNOWN:
-                    d[direction] = True
-                elif nearby_tile is TileType.REACHABLE_BLACK:
-                    d[direction] = False
-            except IndexError:
-                d[direction] = False
-        wall_set = WallSet2(**d)
+        for name, direction in directions:
+            traversable = True
+            setup: list[TileType] = []
+            for idx_tile in range(0, PASSAGE_VIEW+1):
+                tile_to_analyze = Point(x=self.center.x + idx_tile * direction[0], y=self.center.y + idx_tile * direction[1])
+                numpy_tuple = (tile_to_analyze.y, tile_to_analyze.x)
+                current_tile = self.map[numpy_tuple]
+                if current_tile is TileType.PLAYER:
+                    continue
+                setup.append(current_tile)
 
-        if wall_set.is_corridor():
-            return TileType.PASSAGEWAY_EXIT
-
-        # prevent wrongly marked dead ends (like chests)
-        if tile_type is TileType.CHEST:
-            return tile_type
-        elif tile_type is TileType.DECORATION:
-            return tile_type
-
-        if wall_set.is_dead_end():
-            return TileType.DEAD_END
-
-        return tile_type
-
+            first_tile = setup[0]
+            tiles = setup[:2]
+            if tiles == [TileType.UNKNOWN, TileType.WALL]:
+                traversable = False
+            if first_tile is TileType.WALL:
+                traversable = False
+            if traversable:
+                center_adjusted_point = Point(y=direction[1], x=direction[0])
+                self.set(center_adjusted_point, TileType.REACHABLE_DIRECTION)
+                self.adj_list.setdefault(TileType.REACHABLE_DIRECTION, defaultdict(list))[center_adjusted_point].append(self.center)
 
     def find_reachable_blocks(self):
         marked: set[Point] = set()
-        # print(f"map center type = {self.map[self.center.y, self.center.x]}")
         queue: deque[tuple[Point, Optional[Link]]] = deque()
         # add player position
         link: Optional[Point] = None
@@ -294,33 +306,7 @@ class Map:
                     self.map[node.y, node.x] = TileType.REACHABLE_BLACK
                     self.img[node.y, node.x] = TileType.REACHABLE_BLACK.color.value
 
-        # scan 3 tiles way from player for corridors
-        PASSAGE_VIEW = min(3, self.center.y)
-        ranges = ((-PASSAGE_VIEW, 0+1), (1, PASSAGE_VIEW+1))
-        for r in ranges:
-            for idx_tile in range(*r):
-                tile_to_analyze = Point(x=self.center.x, y=self.center.y + idx_tile)
-                numpy_tuple = (tile_to_analyze.y, tile_to_analyze.x)
-                current_tile = self.map[numpy_tuple]
-                if current_tile is TileType.WALL:
-                    break
-
-                new_tile_type = self.analyze_tile_for_walls(tile_to_analyze, current_tile)
-                self.map[numpy_tuple] = new_tile_type
-                if new_tile_type.color:
-                    self.img[numpy_tuple] = new_tile_type.color.value
-        for r in ranges:
-            for idx_tile in range(*r):
-                tile_to_analyze = Point(x=self.center.x + idx_tile, y=self.center.y)
-                numpy_tuple = (tile_to_analyze.y, tile_to_analyze.x)
-                current_tile = self.map[numpy_tuple]
-                if current_tile is TileType.WALL:
-                    break
-
-                new_tile_type = self.analyze_tile_for_walls(tile_to_analyze, current_tile)
-                self.map[numpy_tuple] = new_tile_type
-                if new_tile_type.color:
-                    self.img[numpy_tuple] = new_tile_type.color.value
+        self.walkable_directions()
 
     def can_visit(self, tile: Point, tile_type: TileType, marked: set[Point]) -> bool:
         if tile in marked:

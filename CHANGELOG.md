@@ -1,3 +1,12 @@
+## v0.9.11
+### Feat
+- Add Quest "Cast Away"
+- Add Chest detection sound
+- Add Sound demo UI screen
+
+### Fix
+- Resource node quests now work correctly
+
 ## v0.9.10 (2021-07-23)
 
 ### Fix

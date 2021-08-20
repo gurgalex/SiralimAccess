@@ -142,6 +142,12 @@ def compute_phash(floor_tile: np.typing.ArrayLike, img_bgra, overlay: Optional[O
     return int.from_bytes(img_hash, byteorder='big', signed=True)
 
 
+def compute_hash(img_gray: ArrayLike) -> int:
+    img_hash = hasher.compute(img_gray)
+    hash_int = int.from_bytes(img_hash, byteorder='big', signed=True)
+    return hash_int
+
+
 class RealmSpriteHasher(UserDict):
     """Stores castle decorations for exact matching
     On get and set it will set any pixels that match the castle tile to 0.
