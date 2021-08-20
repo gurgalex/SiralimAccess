@@ -1,3 +1,8 @@
+## v0.9.13
+### Performance
+- Long realm scanning only happens if the previous realm hasn't been found for a bit
+    - Should help with some realm corridors causing lag spikes when moving
+
 ## v0.9.12
 ### feat
 - A console no longer shows up alongside the Siralim Access window

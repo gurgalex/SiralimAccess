@@ -36,7 +36,7 @@ from sqlalchemy.orm import joinedload
 from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.datatypes import Rect
 from subot.menu import MenuItem, Menu
-from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg
+from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg, ScanForItems
 from subot.pathfinder.map import TileType, Map, Color
 from subot.read_tags import Asset
 
@@ -632,14 +632,14 @@ class Bot:
                     self.tx_nearby_process_queue.put(WindowDim(mss_dict=self.nearby_mon))
 
             if self.mode is BotMode.UNDETERMINED:
-                self.nearby_send_deque.append(CheckWhatRealmIn)
+                self.nearby_send_deque.append(ScanForItems)
                 if self.realm:
                     self.mode = BotMode.REALM
 
             elif self.mode is BotMode.REALM:
-                self.nearby_send_deque.append(CheckWhatRealmIn)
+                self.nearby_send_deque.append(ScanForItems)
             elif self.mode is BotMode.CASTLE:
-                self.nearby_send_deque.append(CheckWhatRealmIn)
+                self.nearby_send_deque.append(ScanForItems)
 
             if iters % every == 0:
                 root.debug(f"FPS: {clock.get_fps()}")
@@ -886,6 +886,7 @@ class NearbyFrameGrabber(multiprocessing.Process):
                         if nearby_shot_np.shape == (0, 0, 4):
                             print("no nearby frame data")
                             self.color_nearby_queue.put(Minimized)
+
                         self.color_nearby_queue.put(NewFrame(nearby_shot_np), timeout=10)
                     except queue.Full:
                         root.debug("color nearby queue full")
@@ -950,6 +951,9 @@ class NearPlayerProcessing(Thread):
         # The current active quests
         self.active_quests: list[Quest] = []
 
+        # last time a realm was not identified
+        self.last_realm_identified_timer = time.time()
+
     def detect_what_realm_in(self) -> Optional[Union[RealmAlignment, CastleAlignment]]:
 
         # Scan the nearby tile area for lit tiles to determine what realm we are in currently
@@ -962,7 +966,12 @@ class NearPlayerProcessing(Thread):
         for last_tile in self.parent.active_floor_tiles_gray:
             if aligned_rect := recompute_grid_offset(floor_tile=last_tile, gray_frame=self.near_frame_gray,
                                                      mss_rect=self.parent.nearby_rect_mss):
+                self.last_realm_identified_timer = time.time()
                 return RealmAlignment(realm=self.parent.realm, alignment=aligned_rect)
+
+        # only check for different realm periodically
+        if time.time() - self.last_realm_identified_timer < 1.5:
+            return
 
         with Session() as session:
             floor_tiles = session.query(FloorSprite).options(joinedload('realm')).all()
@@ -976,9 +985,11 @@ class NearPlayerProcessing(Thread):
                                                          mss_rect=self.parent.nearby_rect_mss):
                     root.debug(f"floor tile = {floor_tile.long_name}")
                     if realm := floor_tile.realm:
+                        self.last_realm_identified_timer = time.time()
                         return RealmAlignment(realm=realm.enum, alignment=aligned_rect)
                     else:
                         root.info("in castle")
+                        self.last_realm_identified_timer = time.time()
                         return CastleAlignment(alignment=aligned_rect)
 
 
@@ -1025,7 +1036,7 @@ class NearPlayerProcessing(Thread):
         else:
             return TileType.DECORATION
 
-    def enter_castle_scanner(self):
+    def scan_for_items(self):
         """Scans for decorations and quests in the castle"""
 
         self.map.clear()
@@ -1059,10 +1070,8 @@ class NearPlayerProcessing(Thread):
                         if settings.DEBUG:
                             self.draw_debug(start_point, end_point, tile_type, "")
                         self.parent.all_found_matches[tile_type].append(asset_location)
-                        # slow for some reason setting
+
                         self.map.set(asset_location.point(), tile_type)
-                        # self.map.map[col//TILE_SIZE, row//TILE_SIZE] = tile_type
-                        # self.map.img[col//TILE_SIZE, row//TILE_SIZE] = tile_type.color.value
 
                     except KeyError:
                         self.map.set(asset_location.point(), TileType.UNKNOWN)
@@ -1082,22 +1091,16 @@ class NearPlayerProcessing(Thread):
         except KeyError:
             pass
 
-
         end = time.time()
         root.debug(f"reachable took {(end-start)*1000}ms to complete")
         self.parent.speak_nearby_objects()
 
-    def enter_realm_scanner(self):
-        start = time.time()
-        realm_alignment = self.detect_what_realm_in()
-        end = time.time()
-        root.debug(f"detection took {round((end-start)*1000)}ms")
+    def handle_realm_alignment(self, realm_alignment: Union[RealmAlignment, CastleAlignment]):
         if not realm_alignment:
             for tile_type in self.parent.all_found_matches.values():
                 tile_type.clear()
 
             self.parent.speak_nearby_objects()
-            # self.enter_castle_scanner()
             return
 
         if isinstance(realm_alignment, CastleAlignment):
@@ -1106,8 +1109,8 @@ class NearPlayerProcessing(Thread):
             self.parent.mode = BotMode.CASTLE
             self.parent.realm = None
 
-            floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=None)
-            self.parent.item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
+            floor_tiles_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=None)
+            self.parent.item_hashes = RealmSpriteHasher(floor_tiles=floor_tiles_info)
             start = time.time()
             self.parent.cache_image_hashes_of_decorations()
             end = time.time()
@@ -1115,9 +1118,8 @@ class NearPlayerProcessing(Thread):
 
             root.info(f"castle entered")
             root.info(f"new realm alignment = {realm_alignment=}")
-
-            self.enter_castle_scanner()
             return
+
         elif isinstance(realm_alignment, RealmAlignment):
             self.parent.mode = BotMode.REALM
             if realm_alignment.realm != self.parent.realm:
@@ -1143,8 +1145,8 @@ class NearPlayerProcessing(Thread):
                         overlay_tile_part = overlay_sprite.frames[0].data_color[:TILE_SIZE, :TILE_SIZE, :3]
                         overlay = Overlay(alpha=0.753, tile=overlay_tile_part)
 
-                floor_ties_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
-                self.parent.item_hashes = RealmSpriteHasher(floor_tiles=floor_ties_info)
+                floor_tiles_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
+                self.parent.item_hashes = RealmSpriteHasher(floor_tiles=floor_tiles_info)
                 start = time.time()
                 self.hang_activity_sender.notify_activity(HangAnnotation({"data": "get new phashes"}))
                 self.parent.cache_image_hashes_of_decorations()
@@ -1156,8 +1158,6 @@ class NearPlayerProcessing(Thread):
                 root.info(f"new realm alignment = {realm_alignment=}")
                 print(f"new item hashes = {len(self.parent.item_hashes)}")
 
-        self.enter_castle_scanner()
-
     def handle_new_frame(self, data: NewFrame):
         img = data.frame
         self.near_frame_color = img[:, :, :3]
@@ -1168,7 +1168,8 @@ class NearPlayerProcessing(Thread):
         cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGR2GRAY, dst=self.near_frame_gray)
 
         # calculate the correct alignment for grid
-        if realm_alignment := self.detect_what_realm_in():
+        realm_alignment = self.detect_what_realm_in()
+        if realm_alignment:
             self.grid_near_rect = realm_alignment.alignment
         else:
             root.debug(f"using default nearby grid")
@@ -1180,6 +1181,7 @@ class NearPlayerProcessing(Thread):
         self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[
                                                           self.grid_near_rect.y:self.grid_near_rect.y + self.grid_near_rect.h,
                                                           self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
+        self.handle_realm_alignment(realm_alignment)
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=10.0)
@@ -1203,13 +1205,13 @@ class NearPlayerProcessing(Thread):
                 comm_msg: MessageImpl = self.nearby_comm_deque.pop()
 
                 if comm_msg.type is MessageType.SCAN_FOR_ITEMS:
-                    self.enter_castle_scanner()
-                elif comm_msg.type is MessageType.CHECK_WHAT_REALM_IN:
                     start = time.time()
-                    self.enter_realm_scanner()
+                    self.scan_for_items()
                     end = time.time()
                     latency = end - start
                     root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
+                elif comm_msg.type is MessageType.CHECK_WHAT_REALM_IN:
+                    pass
 
                 if settings.VIEWER:
                     cv2.imshow("Siralim Access", self.map.img)
