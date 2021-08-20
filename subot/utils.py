@@ -1,3 +1,5 @@
+import enum
+from enum import auto
 from dataclasses import dataclass
 from pathlib import Path
 from typing import NoReturn
@@ -28,6 +30,13 @@ class Point:
 
     def as_tuple(self):
         return self.x, self.y
+
+
+class PlayerDirection(enum.Enum):
+    UP = auto()
+    DOWN = auto()
+    LEFT = auto()
+    RIGHT = auto()
 
 
 def assert_never(x: NoReturn) -> NoReturn:

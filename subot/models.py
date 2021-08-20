@@ -1,21 +1,20 @@
 from __future__ import annotations
-import pathlib
-from dataclasses import dataclass
 from functools import cache
 
 import cv2
 from numpy.typing import ArrayLike
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import declarative_base, relationship, sessionmaker
-from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Table, Computed, UniqueConstraint, Boolean
+from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import ForeignKey, String, Integer, Column, create_engine, Boolean
 import sqlalchemy as db
 import enum
+from enum import auto
 
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
-from subot.settings import DATABASE_CONFIG, IMAGE_PATH
+from subot.settings import DATABASE_CONFIG, IMAGE_PATH, engine
 
 Base = declarative_base()
+
 
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
@@ -44,6 +43,8 @@ class SpriteType(enum.Enum):
     # sprite used to overlay onto a rendered realm (rare)
     OVERLAY = 10
     RESOURCE_NODE = 11
+    WALL = 12
+    CHEST = 13
 
 
 @cache
@@ -64,9 +65,8 @@ class SpriteFrame(Base):
     meta_extra = Column(String, nullable=True)
     _filepath = Column('filepath', String, nullable=False, unique=True)
 
-    #relationships
+    # relationships
     sprite: Sprite = relationship("Sprite", lazy='joined', innerjoin=True, viewonly=True)
-
 
     @property
     def filepath(self) -> str:
@@ -123,26 +123,6 @@ class Sprite(Base):
 
     # Todo: Add collision rect in tiles from top-left (x, y, w, h)
 
-    @classmethod
-    def detetermine_child_class(cls, discriminator: SpriteType):
-        if discriminator is SpriteType.DECORATION:
-            return Sprite
-        elif discriminator is SpriteType.FLOOR:
-            return FloorSprite
-        elif discriminator is SpriteType.ALTAR:
-            return AltarSprite
-        elif discriminator is SpriteType.WARDROBE:
-            return WardrobeSprite
-        elif discriminator is SpriteType.NPC:
-            return NPCSprite
-        elif discriminator is SpriteType.ENEMY:
-            return EnemySprite
-        elif discriminator is SpriteType.CREATURE:
-            return CreatureSprite
-        elif discriminator is SpriteType.MASTER_NPC:
-            return MasterNPCSprite
-
-
 
 class QuestType(enum.Enum):
     """What type of object is the quest looking for"""
@@ -165,12 +145,6 @@ class QuestType(enum.Enum):
 
     # one of the chest in the realm is cursed
     cursed_chest = "cursed chest"
-
-
-class QuestAppearance(enum.Enum):
-    single_realm = 1
-    all_realm = 2
-    castle = 3
 
 
 class Realm(enum.Enum):
@@ -205,6 +179,7 @@ class Realm(enum.Enum):
         god_name = cls.internal_realm_name_to_god_mapping[generic_realm_name]
         return cls.god_to_realm_mapping[god_name]
 
+
 Realm.god_to_realm_mapping = {
     "Aeolian": Realm.UNSULLIED_MEADOWS,
     "Apocranox": Realm.BLOOD_GROVE,
@@ -230,21 +205,28 @@ Realm.god_to_realm_mapping = {
 }
 
 Realm.internal_realm_name_to_god_mapping = {
+    "autumn": "Apocranox",
+    "blood": "Mortem",
     "cave": "Regalis",
     "death": "Erebyss",
     "chaos": "Vulcanar",
     "desert": "Yseros",
     "dungeon": "Tartarith",
-    "haunted": "Gonfurian",
+    "gem": "Aurum",
     "grassland": "Aeolian",
+    "haunted": "Gonfurian",
     "island": "Lister",
     "jungle": "Torun",
     "life": "Surathli",
     "nature": "Meraxis",
     "underwater": "Friden",
+    "shadow": "Perdition",
+    "purgatory": "Perdition",
+    "reactor": "Venedon",
     "snow": "Azural",
     "sorcery": "Zonte",
     "space": "Vertraag",
+    "void": "Tenebris",
 
     "apocranox": "Apocranox",
     "aurum": "Aurum",
@@ -262,7 +244,7 @@ class RealmLookup(Base):
     __tablename__ = 'realm'
     id = Column(Integer, primary_key=True, nullable=False)
     enum = Column(db.Enum(Realm, name="enum_realm"), nullable=False, unique=True, index=True)
-    name = Column(String, nullable=False, unique=True,index=True)
+    name = Column(String, nullable=False, unique=True, index=True)
 
     god_altar_sprite = relationship("Sprite", secondary="altar_sprite", uselist=False)
     sprites = relationship("Sprite", secondary="realm_sprite", uselist=True)
@@ -280,12 +262,45 @@ class AltarSprite(Sprite):
         'polymorphic_identity': SpriteType.ALTAR.value
     }
 
+
+class ChestType(enum.Enum):
+    """Type of chest a sprite is"""
+    # Normal chest placed on realm creation
+    NORMAL = 1
+    # Spawned from enemy defeat
+    SPAWNED = 2
+    # Large chest in realm
+    LARGE = 3
+    # A haunted/cursed chest that is part of a specific quest
+    HAUNTED = 4
+
+
+class ChestTypeLookup(Base):
+    __tablename__ = "chest_type"
+    id = Column(Integer, primary_key=True, nullable=False)
+    name = Column(String, unique=True, nullable=False)
+
+
+class ChestSprite(Sprite):
+    __tablename__ = 'chest_sprite'
+    sprite_id = Column(Integer, ForeignKey('sprite.id', ondelete='CASCADE'), primary_key=True, nullable=False)
+    realm_id = Column(Integer, ForeignKey('realm.id'))
+    opened = Column(Boolean, nullable=False)
+    chest_type_id = Column(Integer, ForeignKey('chest_type.id'), nullable=False)
+
+    realm = relationship('RealmLookup', uselist=False)
+    chest_type = relationship('ChestTypeLookup', uselist=False)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.CHEST.value
+    }
+
+
 class OverlaySprite(Sprite):
     __tablename__ = 'overlay_sprite'
     sprite_id = Column(Integer, ForeignKey('sprite.id'), unique=True, primary_key=True)
     realm_id = Column(Integer, ForeignKey('realm.id'), unique=True, primary_key=True)
 
-    # sprite = relationship('Sprite', uselist=False, viewonly=False)
     realm = relationship('RealmLookup', uselist=False)
 
     __mapper_args__ = {
@@ -350,7 +365,6 @@ class ResourceNodeSprite(Sprite):
     sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True)
     realm_id = Column(Integer, ForeignKey('realm.id'), nullable=False, primary_key=True)
 
-
     sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
     realm = relationship('RealmLookup', uselist=False, viewonly=True)
 
@@ -385,7 +399,8 @@ class Quest(Base):
     supported = Column(Boolean, nullable=False, default=True)
     description = Column(String, nullable=True)
 
-    sprites = relationship('Sprite', secondary="quest_sprite", uselist=True, lazy='joined', doc="returns 0 or more sprites associated with a realm quest")
+    sprites = relationship('Sprite', secondary="quest_sprite", uselist=True, lazy='joined',
+                           doc="returns 0 or more sprites associated with a realm quest")
     specific_realm = relationship('RealmLookup', uselist=False)
 
     def __repr__(self):
@@ -435,6 +450,19 @@ class WardrobeSprite(Sprite):
     }
 
 
+class WallSprite(Sprite):
+    __tablename__ = "wall_sprite"
+    sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True)
+    realm_id = Column(Integer, ForeignKey('realm.id'), nullable=False, primary_key=True)
+
+    sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
+    realm = relationship('RealmLookup', uselist=False, viewonly=True)
+
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.WALL.value
+    }
+
+
 class EnemySprite(Sprite):
     __tablename__ = "enemy_sprite"
     sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
@@ -470,15 +498,11 @@ class HashFrameWithFloor(Base):
     phash = Column(Integer, nullable=False, primary_key=True)
 
     sprite = relationship('Sprite',
-                          primaryjoin=sprite_frame_id==SpriteFrame.id,
+                          primaryjoin=sprite_frame_id == SpriteFrame.id,
                           secondary=SpriteFrame.__table__,
-                          secondaryjoin=SpriteFrame.sprite_id == Sprite.id, uselist=False, viewonly=True, innerjoin=True)
+                          secondaryjoin=SpriteFrame.sprite_id == Sprite.id, uselist=False, viewonly=True,
+                          innerjoin=True)
 
-
-
-debug = False
-engine = create_engine(DATABASE_CONFIG.uri, echo=debug, connect_args={'timeout': 2})
-Session = sessionmaker(engine)
 
 if __name__ == "__main__":
     engine = create_engine(DATABASE_CONFIG.uri, echo=True)

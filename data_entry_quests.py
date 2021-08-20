@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 import subot
-from subot.models import Quest, QuestAppearance, QuestType, QuestSprite, Sprite, Realm, RealmLookup, SpriteType, \
+from subot.models import Quest, QuestType, QuestSprite, Sprite, Realm, RealmLookup, SpriteType, \
     SpriteFrame, SpriteTypeLookup, FloorSprite
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -31,7 +31,8 @@ def cli():
 @click.option("--sprites-long-name", help="Comma separated list of the 'long_name' of each sprite for a quest in the DB")
 @click.option("--quest-type", default=QuestType.decoration, type=click.Choice(choices=[quest_type.name for quest_type in QuestType]))
 @click.option("--specific-realm", type=click.Choice(choices=[realm.name for realm in Realm]))
-def add_quest(title: str, sprites_long_name: str, quest_type: Optional[str], specific_realm: Optional[str]):
+@click.option("--description", help="Part of quest after title, but before quest progress")
+def add_quest(title: str, sprites_long_name: str, quest_type: Optional[str], specific_realm: Optional[str], description: Optional[str]):
     with Session() as session:
 
         quest = Quest(title=title)
@@ -49,6 +50,8 @@ def add_quest(title: str, sprites_long_name: str, quest_type: Optional[str], spe
                 if sprite is None:
                     raise Exception(f"sprite long name `{sprite_name}` could not be found in the database")
                 quest.sprites.append(sprite)
+        if description:
+            quest.description = description
         click.echo(f"entered Quest info: {quest=}")
         session.add(quest)
         session.commit()

@@ -7,10 +7,14 @@ import numpy as np
 from typing import NewType, Optional
 from numpy.typing import ArrayLike
 
+from subot.models import SpriteType
+
+
 @dataclass(frozen=True)
 class ImageInfo:
     short_name: str
     long_name: str
+    sprite_type: SpriteType
 
 
 def img_float32(img):
@@ -136,6 +140,12 @@ def compute_phash(floor_tile: np.typing.ArrayLike, img_bgra, overlay: Optional[O
 
     # convert to int
     return int.from_bytes(img_hash, byteorder='big', signed=True)
+
+
+def compute_hash(img_gray: ArrayLike) -> int:
+    img_hash = hasher.compute(img_gray)
+    hash_int = int.from_bytes(img_hash, byteorder='big', signed=True)
+    return hash_int
 
 
 class RealmSpriteHasher(UserDict):

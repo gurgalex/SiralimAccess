@@ -6,6 +6,11 @@ pygame>=2.0.1
 pyinstaller>=4.4
 pywin32>=301
 pytesseract==0.3.8
-toml
-readerwriterlock
+toml~=0.10.2
+readerwriterlock~=1.0.8
 click==8.0.1
+
+numpy~=1.21.1
+recordclass~=0.15
+
+pynput~=1.7.3
