@@ -11,7 +11,7 @@
 #define MyVersionInfoVersion GetStringFileInfo(PathToBinary, FILE_VERSION)
 
 ; Misuse RemoveFileExt to strip the 4th patch-level version number.
-#define MyAppVersion RemoveFileExt(MyVersionInfoVersion)
+#define MyAppVersion "0.9.14"
 
 
 #define MyAppPublisher GetStringFileInfo(PathToBinary, COMPANY_NAME)
