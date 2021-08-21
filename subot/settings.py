@@ -20,6 +20,7 @@ IMAGE_PATH = Path(__file__).parent.parent.joinpath('resources')
 DEBUG = False
 VIEWER = False
 FPS = 20
+WHOLE_WINDOW_FPS = 10
 
 
 

@@ -1,3 +1,10 @@
+## v0.9.14
+# feature
+- Speak the selected menu item in green text
+
+# performance
+- Use native Windows 10 OCR instead of Tesseract OCR
+
 ## v0.9.13
 ### Performance
 - Long realm scanning only happens if the previous realm hasn't been found for a bit
