@@ -439,16 +439,15 @@ class Bot:
         self.speak_menu_entry_name()
 
 
-
     def stop(self):
         self.window_framegrabber_phandle.terminate()
         self.nearby_process.terminate()
         self.stop_event.set()
         self.hang_control_send.put(Shutdown())
         root.info("both should be shut down")
+        self.audio_system.speak_blocking("Exitting Siralim Access")
         pygame.display.quit()
         pygame.quit()
-        self.audio_system.speak_blocking("Exitting Siralim Access")
         sys.exit()
 
     def stop_signal(self, signum, frame):
