@@ -67,6 +67,7 @@ def before_send(event, hint):
     event["extra"]["exception"] = ["".join(
         traceback.format_exception(*hint["exc_info"])
     )]
+    event["extra"]["app_version"] = read_version()
     return event
 
 # BGR colors

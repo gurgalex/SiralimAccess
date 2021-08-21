@@ -4,6 +4,13 @@
 
 # performance
 - Use native Windows 10 OCR instead of Tesseract OCR
+## v0.9.17
+- Report version when sending remote error logs
+
+## v0.9.16
+# fix
+- Make sure certain versions of dependencies are installed to prevent initial launch crashes
+
 
 ## v0.9.13
 ### Performance
