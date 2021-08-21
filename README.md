@@ -7,6 +7,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Sound list screen to familiarize with which sounds are for what
 - Unique audio sounds for specific items
 - Replaces game font with accessible version (Arial bold)
+- Speaks the currently selected menu item
 
 ## Items sounds
 - Quest items
