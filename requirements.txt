@@ -13,3 +13,6 @@ numpy~=1.21.1
 recordclass~=0.15
 
 winrt~=1.0.21033.1
+
+brotli==1.0.9
+urllib3==1.26.6
