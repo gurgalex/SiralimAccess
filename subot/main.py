@@ -4,9 +4,6 @@ import signal
 import threading
 
 import sentry_sdk
-# from pynput import keyboard
-# from pynput.keyboard import Key
-# import keyboard
 
 import enum
 import logging
@@ -309,7 +306,6 @@ class Bot:
 
         # keyboard listener
         self.last_key_pressed = None
-        # self.listener = keyboard.on_press(self.on_press)
 
         # Floor tiles detected in current frame
         self.active_floor_tiles: list[np.typing.ArrayLike] = []
@@ -564,7 +560,6 @@ class Bot:
 
     def on_press(self, key):
         if control := settings.keyboard_controls.get(key.name):
-            # print(f"found control = {control}, key pressed = {key}")
             if control in player_direction:
                 self.player_direction = control
 

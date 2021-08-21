@@ -12,5 +12,4 @@ click==8.0.1
 numpy~=1.21.1
 recordclass~=0.15
 
-pynput~=1.7.3
 winrt~=1.0.21033.1
