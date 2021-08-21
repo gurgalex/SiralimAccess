@@ -43,7 +43,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: {#PathToBinary}; DestDir: "{app}"; Flags: ignoreversion
 Source: "dist\Siralim Access\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{tmp}\tesseract-ocr-w64-setup-v5.0.0-alpha.20210506.exe"; DestDir: "{app}"; Flags: external skipifsourcedoesntexist
 
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
@@ -51,20 +50,9 @@ Source: "{tmp}\tesseract-ocr-w64-setup-v5.0.0-alpha.20210506.exe"; DestDir: "{ap
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
-[code]
-
-function IsTesseractInstalled(): Boolean;
-begin;
-    Result := RegKeyExists(HKA64, 'SOFTWARE\Tesseract-OCR');
- end;
-
-
-
-
 
 [Code]
 var
-  DownloadPage: TDownloadWizardPage;
   OCRFontChoicePage: TInputOptionWizardPage;
 
 
@@ -72,13 +60,7 @@ function CheckOCR(): Boolean;
 begin
 	Result := OCRFontChoicePage.Values[0];
 end;
-	
-function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
-begin
-  if Progress = ProgressMax then
-    Log(Format('Successfully downloaded file to {tmp}: %s', [FileName]));
-  Result := True;
-end;
+
 
 procedure InitializeWizard;
 var
@@ -95,45 +77,17 @@ begin
   OCRFontChoicePage.Values[0] := True;
 
   AfterID := OCRFontChoicePage.ID;
-
-  DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
-
-
 end;
 
 
 
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
-  if IsTesseractInstalled() then begin
-  Result := True;
-  DownloadPage.Hide;
-  exit;
-  end;
-
-  if CurPageID = wpReady then begin
-    DownloadPage.Clear;
-    DownloadPage.Add('https://digi.bib.uni-mannheim.de/tesseract/tesseract-ocr-w64-setup-v5.0.0-alpha.20210506.exe', 'tesseract-ocr-w64-setup-v5.0.0-alpha.20210506.exe', '');
-    DownloadPage.Show;
-    try
-      try
-        DownloadPage.Download;
-        Result := True;
-      except
-        SuppressibleMsgBox(AddPeriod(GetExceptionMessage), mbCriticalError, MB_OK, IDOK);
-        Result := False;
-      end;
-    finally
-      DownloadPage.Hide;
-    end;
-  end else
     Result := True;
 end;
 
 
 [Run]
-Filename: "{app}\tesseract-ocr-w64-setup-v5.0.0-alpha.20210506.exe"; Parameters: ""; Flags: waituntilterminated; Check: not IsTesseractInstalled ; StatusMsg: "Tesseract OCR installation. Please wait..."
-
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: postinstall nowait
 ; install font
 Filename: "{app}\{#MyAppExeName}"; Parameters: "install"; Description: "Installer for OCR font"; Check: CheckOCR 

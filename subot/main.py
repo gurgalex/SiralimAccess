@@ -27,8 +27,8 @@ import numpy as np
 import mss
 import pygame
 import pygame.freetype
+from subot.ocr import recognize_cv2_image, detect_green_text
 import win32gui
-import pytesseract
 import math
 import time
 from sqlalchemy.orm import joinedload
@@ -71,9 +71,6 @@ def before_send(event, hint):
         traceback.format_exception(*hint["exc_info"])
     )]
     return event
-
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
-
 
 # BGR colors
 
@@ -167,13 +164,14 @@ def extract_quest_name_from_quest_area(gray_frame: np.typing.ArrayLike) -> list[
     y_text_dim = int(gray_frame.shape[0] * 0.33)
     x_text_dim = int(gray_frame.shape[1] * 0.33)
     thresh, threshold_white = cv2.threshold(gray_frame[:y_text_dim, -x_text_dim:], 220, 255, cv2.THRESH_BINARY_INV)
-    text = pytesseract.pytesseract.image_to_string(threshold_white, lang="eng")
-    quest_text_lines = [line.strip() for line in text.split("\n")]
+
+    text = recognize_cv2_image(threshold_white)
 
     # see if any lines match a quest title
     with Session() as session:
-        for quest_first_line in quest_text_lines:
-            if quest_obj := session.query(Quest).filter_by(title_first_line=quest_first_line).first():
+        for line_info in text["lines"]:
+            line_text = line_info["text"]
+            if quest_obj := session.query(Quest).filter_by(title_first_line=line_text).first():
                 quests.append(quest_obj)
     return quests
 
@@ -705,7 +703,9 @@ class WholeWindowGrabber(multiprocessing.Process):
             should_stop = False
 
             with mss.mss() as sct:
+                TARGET_WINDOW_CAPTURE_MS = 1 / settings.WHOLE_WINDOW_FPS
                 while not should_stop:
+                    start = time.time()
                     # check for incoming messages
                     try:
                         msg = self.rx_parent_queue.get_nowait()
@@ -716,8 +716,11 @@ class WholeWindowGrabber(multiprocessing.Process):
 
                     except queue.Empty:
                         pass
+                    end = time.time()
+                    took = end - start
+                    left = TARGET_WINDOW_CAPTURE_MS - took
+                    time.sleep(max(0, left))
 
-                    time.sleep(1)
                     try:
                         self.activity_notify.notify_activity(HangAnnotation({"data": ""}))
 
@@ -738,6 +741,7 @@ class WholeWindowGrabber(multiprocessing.Process):
 class WholeWindowAnalyzer(Thread):
     def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker ,**kwargs) -> None:
         super().__init__(**kwargs)
+        self.last_selected_next = ""
         self.parent: Bot = parent
         self.incoming_frame_queue: Queue = incoming_frame_queue
         self.out_quests_sprites_queue: Queue = out_quests_queue
@@ -748,15 +752,6 @@ class WholeWindowAnalyzer(Thread):
         self.frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w), dtype="uint8")
         self.gray_frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
                                                         dtype="uint8")
-
-    def discover_quests(self):
-        quests = extract_quest_name_from_quest_area(gray_frame=self.gray_frame)
-        for quest_number, quest in enumerate(quests, start=1):
-            sprite_short_names = [sprite.short_name for sprite in quest.sprites]
-            sprite_long_names = [sprite.long_name for sprite in quest.sprites]
-            print(f"active quest #{quest_number}: {quest.title} - Needs sprites: {sprite_short_names}")
-            for sprite_long_name in sprite_long_names:
-                self.out_quests_sprites_queue.put(sprite_long_name, timeout=1)
 
     def update_quests(self, new_quests: list[Quest]):
         if len(new_quests) == 0:
@@ -786,6 +781,18 @@ class WholeWindowAnalyzer(Thread):
                     self.parent.audio_system.speak_nonblocking(f"Unsupported quest: {quest.title}")
 
         self.parent.current_quests = new_quest_ids
+
+    def speak_selected_menu_item(self):
+        mask = detect_green_text(self.frame)
+        ocr_result = recognize_cv2_image(mask)
+        selected_text = ocr_result["text"]
+
+        # don't repeat announcing the same or no text at all
+        if selected_text == self.last_selected_next or selected_text == "":
+            return
+
+        self.last_selected_next = selected_text
+        self.parent.audio_system.speak_nonblocking(selected_text)
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
@@ -824,6 +831,8 @@ class WholeWindowAnalyzer(Thread):
             self.grid_slice_color: np.typing.ArrayLike = self.frame[
                                                          self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
                                                          self.grid_rect.x:self.grid_rect.x + self.grid_rect.w]
+            # menu entry selection is latency sensitive
+            self.speak_selected_menu_item()
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             current_quests = [quest.title for quest in quests]
@@ -834,8 +843,8 @@ class WholeWindowAnalyzer(Thread):
             self.update_quests(quests)
             root.debug(f"quests_len = {len(self.parent.quest_sprite_long_names)}")
 
-        root.info("WindowAnalyzer thread shutting down")
 
+        root.info("WindowAnalyzer thread shutting down")
 
 
 class NearbyFrameGrabber(multiprocessing.Process):
