@@ -721,7 +721,7 @@ class WholeWindowGrabber(multiprocessing.Process):
 
                         # Performance: copying overhead is not an issue for needing a frame at 1-2 FPS
                         frame_np: ArrayLike = np.asarray(sct.grab(self.screenshot_area))
-                        has_no_data = frame_np.shape == (0,0,4)
+                        has_no_data = frame_np.shape[0] == 0 or frame_np.shape[1] == 0
                         if has_no_data:
                             root.debug("whole window frame has no data or is minimized")
                             self.color_frame_queue.put_nowait(Minimized())
@@ -744,7 +744,7 @@ class WholeWindowAnalyzer(Thread):
         self._hang_monitor = hang_monitor
         self.hang_activity_sender: Optional[HangMonitorChan] = None
 
-        self.frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w), dtype="uint8")
+        self.frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w, 3), dtype="uint8")
         self.gray_frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
                                                         dtype="uint8")
 
@@ -832,8 +832,8 @@ class WholeWindowAnalyzer(Thread):
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             current_quests = [quest.title for quest in quests]
             quest_items = [sprite.long_name for quest in quests for sprite in quest.sprites]
-            root.info(f"quests = {current_quests}")
-            root.info(f"quest items = {quest_items}")
+            root.debug(f"quests = {current_quests}")
+            root.debug(f"quest items = {quest_items}")
 
             self.update_quests(quests)
             root.debug(f"quests_len = {len(self.parent.quest_sprite_long_names)}")
@@ -875,7 +875,8 @@ class NearbyFrameGrabber(multiprocessing.Process):
                     # Note: Possibly use shared memory if performance is an issue
                     try:
                         nearby_shot_np: ArrayLike = np.asarray(sct.grab(self.nearby_area))
-                        if nearby_shot_np.shape == (0, 0, 4):
+                        has_no_data = nearby_shot_np.shape[0] == 0 or nearby_shot_np.shape[1] == 0
+                        if has_no_data:
                             print("no nearby frame data")
                             self.color_nearby_queue.put(Minimized())
 
