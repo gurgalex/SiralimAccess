@@ -1,3 +1,8 @@
+## v0.9.18
+# fix
+- Application would stop responding if no screenshot data was captured or game is minimized
+- Downgrade python executable generator to hopefully prevent from being falsely flagged as a virus
+
 ## v0.9.17
 - Report version when sending remote error logs
 
