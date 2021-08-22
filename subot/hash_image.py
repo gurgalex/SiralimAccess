@@ -161,7 +161,6 @@ class RealmSpriteHasher(UserDict):
             val = {}
         self.floor_info = floor_tiles
         self.similar_hashes = 0
-        # self.hasher = cv2.img_hash.PHash_create()
         super().__init__(val)
 
     def insert_transparent_bgra_image(self, img_bgra: np.typing.ArrayLike, img_info: ImageInfo) -> Optional[list[int]]:
