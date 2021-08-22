@@ -877,7 +877,7 @@ class NearbyFrameGrabber(multiprocessing.Process):
                         nearby_shot_np: ArrayLike = np.asarray(sct.grab(self.nearby_area))
                         if nearby_shot_np.shape == (0, 0, 4):
                             print("no nearby frame data")
-                            self.color_nearby_queue.put(Minimized)
+                            self.color_nearby_queue.put(Minimized())
 
                         self.color_nearby_queue.put(NewFrame(nearby_shot_np), timeout=10)
                     except queue.Full:
@@ -1051,7 +1051,7 @@ class NearPlayerProcessing(Thread):
                         continue
 
                     try:
-                        img_info = self.parent.item_hashes.get_greyscale(tile_gray[:32, :32])
+                        img_info = self.parent.item_hashes.get_greyscale(tile_gray[:TILE_SIZE, :TILE_SIZE])
 
 
                         tile_type = self.identify_type(img_info, asset_location)
