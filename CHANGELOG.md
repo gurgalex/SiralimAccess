@@ -1,3 +1,7 @@
+## v0.9.19
+# fix
+- See if enabling console mode allows screenshots for some users
+
 ## v0.9.18
 # fix
 - Application would stop responding if no screenshot data was captured or game is minimized

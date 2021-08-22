@@ -832,8 +832,8 @@ class WholeWindowAnalyzer(Thread):
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             current_quests = [quest.title for quest in quests]
             quest_items = [sprite.long_name for quest in quests for sprite in quest.sprites]
-            root.info(f"quests = {current_quests}")
-            root.info(f"quest items = {quest_items}")
+            root.debug(f"quests = {current_quests}")
+            root.debug(f"quest items = {quest_items}")
 
             self.update_quests(quests)
             root.debug(f"quests_len = {len(self.parent.quest_sprite_long_names)}")
