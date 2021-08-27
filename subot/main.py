@@ -1116,7 +1116,7 @@ class NearPlayerProcessing(Thread):
             if realm_alignment.realm != self.parent.realm:
                 new_realm = realm_alignment.realm
                 if new_realm in models.UNSUPPORTED_REALMS:
-                    self.parent.audio_system.speak_nonblocking(f"Realm unsupported. {new_realm.value}")
+                    self.parent.audio_system.speak_nonblocking(f"Realm unsupported. {new_realm.realm_name}")
                 self.parent.realm = realm_alignment.realm
                 overlay = None
                 with Session() as session:

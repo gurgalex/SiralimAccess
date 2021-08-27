@@ -293,6 +293,15 @@ def realm_floortiles(export_dir: Path, dest_dir: Path):
         18: Realm.TORTURE_CHAMBER,
         19: Realm.UNSULLIED_MEADOWS,
         20: Realm.DEAD_SHIPS,
+        21: Realm.THE_FAE_LANDS,
+        22: Realm.AMALGAM_GARDENS,
+        23: Realm.ASTRAL_GALLERY,
+        24: Realm.DAMAREL,
+        25: Realm.FORBIDDEN_DEPTHS,
+        26: Realm.FORGOTTEN_LAB,
+        27: Realm.GAMBLERS_HIVE,
+        28: Realm.LAND_OF_BALANCE,
+        29: Realm.OVERGROWN_TEMPLE,
     }
 
     dest_dir_floortiles = dest_dir.joinpath("floortiles")

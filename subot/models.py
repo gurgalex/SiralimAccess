@@ -148,31 +148,47 @@ class QuestType(enum.Enum):
 
 
 class Realm(enum.Enum):
-    ARACHNID_NEST = 'Arachnid Nest'
-    AZURE_DREAM = 'Azure Dream'
-    BASTION_OF_THE_VOID = 'Bastion of the Void'
-    CAUSTIC_REACTOR = 'Caustic Reactor'
-    CUTTHROAT_JUNGLE = 'Cutthroat Jungle'
-    BLOOD_GROVE = 'Blood Grove'
-    DEAD_SHIPS = 'Where the Dead Ships Dwell'
-    ETERNITY_END = "Eternity's End"
-    FARAWAY_ENCLAVE = 'Faraway Enclave'
-    FROSTBITE_CAVERNS = 'Frostbite Caverns'
-    GREAT_PANDEMONIUM = 'Great Pandemonium'
-    KINGDOM_OF_HERETICS = 'Kingdom of Heretics'
-    PATH_OF_THE_DAMNED = 'Path of the Damned'
-    REFUGE_OF_THE_MAGI = 'Refuge of the Magi'
-    SANCTUM_UMBRA = 'Sanctum Umbra'
-    TEMPLE_OF_LIES = 'Temple of Lies'
-    THE_BARRENS = 'The Barrens'
-    THE_SWAMPLANDS = 'The Swamplands'
-    TITAN_WOUND = "Titan's Wound"
-    TORTURE_CHAMBER = 'Torture Chamber'
-    UNSULLIED_MEADOWS = 'Unsullied Meadows'
+    ARACHNID_NEST = ('Arachnid Nest', 'Cave', 'Regalis')
+    AZURE_DREAM = ('Azure Dream', 'Life', "Surathli")
+    BASTION_OF_THE_VOID = ('Bastion of the Void', 'Void', 'Tenebris')
+    CAUSTIC_REACTOR = ('Caustic Reactor', 'Reactor', 'Venedon')
+    CUTTHROAT_JUNGLE = ('Cutthroat Jungle', "Jungle", "Torun")
+    BLOOD_GROVE = ('Blood Grove', "Autumn", "Apocranox")
+    DEAD_SHIPS = ('Where the Dead Ships Dwell', "Underwater", "Friden")
+    ETERNITY_END = ("Eternity's End", "Space", "Vertraag")
+    FARAWAY_ENCLAVE = ('Faraway Enclave', "Island", "Lister")
+    FROSTBITE_CAVERNS = ('Frostbite Caverns', "Snow", "Azural")
+    GREAT_PANDEMONIUM = ('Great Pandemonium', "Chaos", "Vulcanar")
+    KINGDOM_OF_HERETICS = ('Kingdom of Heretics', "Haunted", "Gonfurian")
+    PATH_OF_THE_DAMNED = ('Path of the Damned', "Death", "Erebyss")
+    REFUGE_OF_THE_MAGI = ('Refuge of the Magi', "Sorcery", "Zonte")
+    SANCTUM_UMBRA = ('Sanctum Umbra', "Purgatory", "Perdition")
+    TEMPLE_OF_LIES = ('Temple of Lies', "Gem", "Aurum")
+    THE_BARRENS = ('The Barrens', "Desert", "Yseros")
+    THE_SWAMPLANDS = ('The Swamplands', "Nature", "Meraxis")
+    TITAN_WOUND = ("Titan's Wound", "BloodBone", "Mortem")
+    TORTURE_CHAMBER = ('Torture Chamber', "Dungeon", "Tartarith")
+    UNSULLIED_MEADOWS = ('Unsullied Meadows', "Grassland", "Aeolian")
+
+    # new realms
+    THE_FAE_LANDS = ('The Fae Lands', 'Fairy', 'Shallan')
+    AMALGAM_GARDENS = ('Amalgam Gardens', 'Amalgam', 'TMere Mrgo')
+    ASTRAL_GALLERY = ('Astral Gallery', "Astral", "Muse")
+    DAMAREL = ('Damarel', 'Damarel', "Alexandria")
+    FORBIDDEN_DEPTHS = ('Forbidden Depths', "ForbiddenDepths", "Anneltha")
+    FORGOTTEN_LAB = ('Forgotten Lab', "ForgottenLab", "Robo")
+    GAMBLERS_HIVE = ("Gambler's Hive", 'beehive', "Reclusa")
+    LAND_OF_BALANCE = ('Land of Breath and Balance', "LandOfBalance", "Ariamaki")
+    OVERGROWN_TEMPLE = ('Overgrown Temple', "OvergrownTemple", "Genaros")
 
     _ignore_ = ['god_to_realm_mapping', 'internal_realm_name_to_god_mapping']
     god_to_realm_mapping: dict[str, Realm] = {}
     internal_realm_name_to_god_mapping: dict[str, str] = {}
+
+    def __init__(self, realm_name: str, internal_realm_name: str, god_name: str):
+        self.realm_name = realm_name
+        self.internal_realm_name = internal_realm_name
+        self.god_name = god_name
 
     @classmethod
     def generic_realm_name_to_ingame_realm(cls, generic_realm_name: str) -> Realm:
@@ -180,64 +196,22 @@ class Realm(enum.Enum):
         return cls.god_to_realm_mapping[god_name]
 
 
-Realm.god_to_realm_mapping = {
-    "Aeolian": Realm.UNSULLIED_MEADOWS,
-    "Apocranox": Realm.BLOOD_GROVE,
-    "Aurum": Realm.TEMPLE_OF_LIES,
-    "Azural": Realm.FROSTBITE_CAVERNS,
-    "Erebyss": Realm.PATH_OF_THE_DAMNED,
-    "Friden": Realm.DEAD_SHIPS,
-    "Gonfurian": Realm.KINGDOM_OF_HERETICS,
-    "Lister": Realm.FARAWAY_ENCLAVE,
-    "Meraxis": Realm.THE_SWAMPLANDS,
-    "Mortem": Realm.TITAN_WOUND,
-    "Perdition": Realm.SANCTUM_UMBRA,
-    "Regalis": Realm.ARACHNID_NEST,
-    "Surathli": Realm.AZURE_DREAM,
-    "Tartarith": Realm.TORTURE_CHAMBER,
-    "Tenebris": Realm.BASTION_OF_THE_VOID,
-    "Torun": Realm.CUTTHROAT_JUNGLE,
-    "Venedon": Realm.CAUSTIC_REACTOR,
-    "Vertraag": Realm.ETERNITY_END,
-    "Vulcanar": Realm.GREAT_PANDEMONIUM,
-    "Yseros": Realm.THE_BARRENS,
-    "Zonte": Realm.REFUGE_OF_THE_MAGI,
-}
+Realm.god_to_realm_mapping = {realm.god_name: realm for realm in Realm}
 
-Realm.internal_realm_name_to_god_mapping = {
-    "autumn": "Apocranox",
-    "blood": "Mortem",
-    "cave": "Regalis",
-    "death": "Erebyss",
-    "chaos": "Vulcanar",
-    "desert": "Yseros",
-    "dungeon": "Tartarith",
-    "gem": "Aurum",
-    "grassland": "Aeolian",
-    "haunted": "Gonfurian",
-    "island": "Lister",
-    "jungle": "Torun",
-    "life": "Surathli",
-    "nature": "Meraxis",
-    "underwater": "Friden",
-    "shadow": "Perdition",
-    "purgatory": "Perdition",
-    "reactor": "Venedon",
-    "snow": "Azural",
-    "sorcery": "Zonte",
-    "space": "Vertraag",
-    "void": "Tenebris",
+Realm.internal_realm_name_to_god_mapping = {realm.internal_realm_name: realm for realm in Realm}
 
-    "apocranox": "Apocranox",
-    "aurum": "Aurum",
-    "caliban": "Caliban",
-    "mortem": "Mortem",
-    "perdition": "Perdition",
-    "tenebris": "Tenebris",
-    "venedon": "Venedon",
-}
-
-UNSUPPORTED_REALMS = {Realm.CAUSTIC_REACTOR, Realm.KINGDOM_OF_HERETICS, Realm.TORTURE_CHAMBER}
+UNSUPPORTED_REALMS = {Realm.CAUSTIC_REACTOR, Realm.KINGDOM_OF_HERETICS, Realm.TORTURE_CHAMBER,
+                      # new realms
+                      Realm.AMALGAM_GARDENS,
+                      Realm.ASTRAL_GALLERY,
+                      Realm.DAMAREL,
+                      Realm.FORBIDDEN_DEPTHS,
+                      Realm.FORGOTTEN_LAB,
+                      Realm.GAMBLERS_HIVE,
+                      Realm.LAND_OF_BALANCE,
+                      Realm.OVERGROWN_TEMPLE,
+                      Realm.THE_FAE_LANDS
+                      }
 
 
 class RealmLookup(Base):
