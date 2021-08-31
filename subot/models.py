@@ -30,8 +30,8 @@ class SpriteType(enum.Enum):
     # A catch-all for every other graphic asset in the game
     DECORATION = 2
     ENEMY = 3
-    # Costume the player can wear
-    WARDROBE = 4
+    # Decoration that only appears in the castle
+    CASTLE_DECORATION = 4
     NPC = 5
     FLOOR = 6
     ALTAR = 7
@@ -100,7 +100,7 @@ class SpriteTypeLookup(Base):
 class Sprite(Base):
     """A collection of sprite frames for a particular game graphic asset
     Assumptions
-    1. No tw2 sprites will share the same long_name
+    1. No two sprites will share the same long_name
     2. The frames of each sprite share the same collision area
     """
     __tablename__ = "sprite"
@@ -411,16 +411,14 @@ class MasterNPCSprite(Sprite):
     }
 
 
-class WardrobeSprite(Sprite):
-    __tablename__ = "wardrobe_sprite"
+class CastleSprite(Sprite):
+    __tablename__ = "castle_sprite"
     sprite_id = Column(Integer, ForeignKey('sprite.id'), nullable=False, primary_key=True, unique=True)
-    realm_id = Column(Integer, ForeignKey('realm.id'), nullable=True, index=True)
 
     sprite = relationship('Sprite', uselist=False, viewonly=True, lazy='joined')
-    realm = relationship('RealmLookup', uselist=False, viewonly=True)
 
     __mapper_args__ = {
-        'polymorphic_identity': SpriteType.WARDROBE.value
+        'polymorphic_identity': SpriteType.CASTLE_DECORATION.value
     }
 
 
