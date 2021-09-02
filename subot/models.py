@@ -177,13 +177,13 @@ class Realm(enum.Enum):
     DAMAREL = ('Damarel', 'Damarel', "Alexandria")
     FORBIDDEN_DEPTHS = ('Forbidden Depths', "ForbiddenDepths", "Anneltha")
     FORGOTTEN_LAB = ('Forgotten Lab', "ForgottenLab", "Robo")
-    GAMBLERS_HIVE = ("Gambler's Hive", 'beehive', "Reclusa")
+    GAMBLERS_HIVE = ("Gambler's Hive", 'Beehive', "Reclusa")
     LAND_OF_BALANCE = ('Land of Breath and Balance', "LandOfBalance", "Ariamaki")
     OVERGROWN_TEMPLE = ('Overgrown Temple', "OvergrownTemple", "Genaros")
 
     _ignore_ = ['god_to_realm_mapping', 'internal_realm_name_to_god_mapping']
     god_to_realm_mapping: dict[str, Realm] = {}
-    internal_realm_name_to_god_mapping: dict[str, str] = {}
+    internal_realm_name_to_god_mapping: dict[str, Realm] = {}
 
     def __init__(self, realm_name: str, internal_realm_name: str, god_name: str):
         self.realm_name = realm_name
