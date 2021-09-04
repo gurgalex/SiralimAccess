@@ -93,7 +93,7 @@ def match_chest(sprite_path: Path) -> Optional[ChestResult]:
     except KeyError:
         pass
 
-    giant_chests_names = {"giant_treasure_chest", "blood_giantchest","chest_gem_heaping", "bigdebris_underwater2"}
+    giant_chests_names = {"giant_treasure_chest", "blood_giantchest", "chest_gem_heaping", "bigdebris_underwater2"}
 
     if long_name in giant_chests_names:
         chest_type = ChestType.LARGE
@@ -111,7 +111,6 @@ def match_chest(sprite_path: Path) -> Optional[ChestResult]:
 
 
 def match_master(path: Path) -> Optional[re.Match]:
-
     matched = master_name_regex.match(path.as_posix())
     if not matched:
         return
@@ -233,7 +232,7 @@ def should_skip_hashing(filepath: str) -> bool:
     return False
 
 
-def hash_items(sprite_type: Optional[SpriteType]=None):
+def hash_items(sprite_type: Optional[SpriteType] = None):
     @dataclass(frozen=True)
     class PHashReuse:
         phash: int
@@ -252,7 +251,8 @@ def hash_items(sprite_type: Optional[SpriteType]=None):
         standard_castle_tile = session.query(FloorSprite).filter_by(long_name="floor_standard1").one()
         floortiles.append(standard_castle_tile)
 
-        only_seen_in_castle_sprite_ids = set(session.query(Sprite.id).filter_by(type_id=SpriteType.CASTLE_DECORATION.value).all())
+        only_seen_in_castle_sprite_ids = set(
+            session.query(Sprite.id).filter_by(type_id=SpriteType.CASTLE_DECORATION.value).all())
         print(f"only seen in castle len = {len(only_seen_in_castle_sprite_ids)}")
 
         if not sprite_type:
@@ -296,7 +296,8 @@ def hash_items(sprite_type: Optional[SpriteType]=None):
                     hash_entry.phash = compute_phash(floor_frame_data_color, one_tile_worth_img, overlay)
                     if not sprite_frame.sprite:
                         continue
-                    new_hash = PHashReuse(phash=hash_entry.phash, floor_frame_id=hash_entry.floor_sprite_frame_id, sprite_canonical_name=sprite_frame.sprite.long_name)
+                    new_hash = PHashReuse(phash=hash_entry.phash, floor_frame_id=hash_entry.floor_sprite_frame_id,
+                                          sprite_canonical_name=sprite_frame.sprite.long_name)
                     if existing_hash := existing_phashes.get(new_hash):
                         similar_ct += 1
                         print(f"similar hash detected. old={existing_hash=} new {new_hash=}")
@@ -321,12 +322,12 @@ def drop_existing_phashes(sprite_type: Optional[SpriteType] = None):
     # clear all previous hash entries
     with Session() as session:
         if sprite_type:
-            frame_ids = session.query(SpriteFrame.id).filter(Sprite.type_id == sprite_type.value)\
-                .join(Sprite, Sprite.id == SpriteFrame.sprite_id)\
+            frame_ids = session.query(SpriteFrame.id).filter(Sprite.type_id == sprite_type.value) \
+                .join(Sprite, Sprite.id == SpriteFrame.sprite_id) \
                 .all()
             frame_ids = [frame_id[0] for frame_id in frame_ids]
-            rows_deleted = session.query(HashFrameWithFloor)\
-                .filter(HashFrameWithFloor.sprite_frame_id.in_(frame_ids))\
+            rows_deleted = session.query(HashFrameWithFloor) \
+                .filter(HashFrameWithFloor.sprite_frame_id.in_(frame_ids)) \
                 .delete()
             session.commit()
             print(f"cleared {sprite_type.name} type from phash table, deleted {rows_deleted} rows")
@@ -366,7 +367,6 @@ class Inserter:
 
         return CreatureSprite(short_name=long_name, long_name=long_name)
 
-
     def altars(self, sprite_path: Path) -> Optional[AltarSprite]:
 
         altar_realm = match_altar(sprite_path)
@@ -385,7 +385,7 @@ class Inserter:
 
         with Session() as session:
             realm_id = session.query(RealmLookup).filter_by(enum=realm).one().id
-        return AltarSprite(short_name="Altar", long_name=altar_name_in_game,realm_id=realm_id)
+        return AltarSprite(short_name="Altar", long_name=altar_name_in_game, realm_id=realm_id)
 
     def castle_decorations(self, path: Path) -> Optional[CastleSprite]:
         match = castle_item_regex.match(path.as_posix())
@@ -602,7 +602,8 @@ class Inserter:
 
     def generic_sprite(self, sprite_path: Path):
         # excluders
-        for excluder in [sprite_crits_battle_regex, animation_regex, spell_regex, wall_alt_regex, gui_regex, relic_regex, bg_chaos, battle_background_regex, wall_source_regex]:
+        for excluder in [sprite_crits_battle_regex, animation_regex, spell_regex, wall_alt_regex, gui_regex,
+                         relic_regex, bg_chaos, battle_background_regex, wall_source_regex]:
             if excluder.match(sprite_path.as_posix()):
                 return
 
