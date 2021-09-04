@@ -312,9 +312,9 @@ class Bot:
         self.active_floor_tiles: list[np.typing.ArrayLike] = []
         self.active_floor_tiles_gray: list[np.typing.ArrayLike] = []
 
-        self.castle_tile: np.typing.ArrayLike = cv2.imread(
-            (Path.cwd() / __file__).parent.parent.joinpath('resources').joinpath("extracted_assets/generic/floor_standard1_0.png").as_posix(),
-            cv2.IMREAD_COLOR)
+        with Session() as session:
+            castle_tile = session.query(Sprite).filter_by(long_name="floor_standard1").one().frames[0].filepath
+            self.castle_tile = cv2.imread(castle_tile, cv2.IMREAD_COLOR)
 
         self.castle_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.castle_tile, cv2.COLOR_BGR2GRAY)
 

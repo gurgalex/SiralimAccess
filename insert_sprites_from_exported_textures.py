@@ -34,15 +34,14 @@ custom_floortile_regex = re.compile(r"floortiles/(?P<realm>.*)/*.png")
 overlay_sprite_regex = re.compile(r".*Underwater/Sprites/(?P<realm>.*)_overlay_[\d].png")
 pre_extract_realm_floortiles_regex = re.compile(r"Chaos/Sprites/bg_chaos_0.png")
 saved_realm_floortiles_regex = re.compile(r".*floortiles/.*/.*.png")
+castle_floortile_regex = re.compile(r".*CastleTiles/Sprites/(?P<long_name>.*)_[\d].png")
 wall_regex = re.compile(r".*/Sprites/wall_(?P<realm>.*)_0.png")
 castle_item_regex = re.compile(r".*Decorations/Sprites/(?:spr_)?(?P<long_name>.*)_(?P<frame>[\d]+).png")
 generic_sprite_regex = re.compile(r".*/Sprites/(?:spr_)?(?P<long_name>.*)_(?P<frame>[\d]+).png")
 extracted_wall_regex = re.compile(r".*wall_realm_tiles/.*/.*.png")
-#TODO! overworld creature regex test with examples spr_carnageOW_1.png spr_monster_OW_1.png spr_devil_ow_1.png
 overworld_regex = re.compile(r".*/Sprites/(?P<long_name>.*_OW)_(?P<frame>[\d]+).png")
 overworld_regex2 = re.compile(r".*/Sprites/(?P<long_name>(?:ospr_).*)_(?P<frame>[\d]+).png")
 
-#TODO: After saving all new sprites. get filepath and change long_name of sprite in DB. Then delete duplicate sprites with 0 sprite_frame entries
 # chests
 generic_chest_regex = re.compile(r".*/Sprites/spr_chest_(?P<realm>.*)_(?P<frame>[\d]+).png")
 
@@ -102,7 +101,7 @@ def match_chest(sprite_path: Path) -> Optional[ChestResult]:
     if long_name in giant_chests_names:
         chest_type = ChestType.LARGE
         return ChestResult(chest_type=chest_type, realm=realm, opened=opened, long_name=long_name)
-    elif long_name == "chest_haunted":
+    elif long_name == "chest_haunted_untouched":
         chest_type = ChestType.HAUNTED
         return ChestResult(chest_type=chest_type, realm=realm, opened=opened, long_name=long_name)
     elif long_name == "chest_spawned":
@@ -342,16 +341,19 @@ def drop_existing_phashes(sprite_type: Optional[SpriteType] = None):
 
 
 class Inserter:
-    def __init__(self, export_dir: Path, dest_dir: Path):
+    def __init__(self, export_dir: Path, dest_dir: Path, custom_assets_dir: Path):
         self.export_dir = export_dir
         self.dest_dir = dest_dir
+        self.custom_assets_dir = custom_assets_dir
         self.sprites: dict[str, Sprite] = dict()
         self.scanners: list[Callable[[Path], Optional[Sprite]]] = [self.altars,
-                                                                   self.floortiles, self.master_npcs,
+                                                                   self.floortiles,
+                                                                   self.castle_tiles,
+                                                                   self.master_npcs,
+                                                                   self.npc,
                                                                    self.add_chests,
                                                                    self.add_walls,
                                                                    self.insert_project_items,
-                                                                   self.npc,
                                                                    self.add_overlay_tiles,
                                                                    self.castle_decorations,
                                                                    self.overworld_creatures,
@@ -511,7 +513,16 @@ class Inserter:
 
         with Session() as session:
             realm_id = session.query(RealmLookup).filter_by(enum=realm).one().id
-        return FloorSprite(short_name=sprite_name_short, long_name=sprite_name_long,realm_id=realm_id)
+
+        return FloorSprite(short_name=sprite_name_short, long_name=sprite_name_long, realm_id=realm_id)
+
+    def castle_tiles(self, path: Path) -> Optional[FloorSprite]:
+        match = castle_floortile_regex.match(path.as_posix())
+        if not match:
+            return
+        long_name = match.group('long_name')
+        if long_name == "floor_standard1":
+            return FloorSprite(short_name=long_name, long_name=long_name, realm_id=None)
 
     def master_npcs(self, sprite_path: Path) -> Optional[MasterNPCSprite]:
 
@@ -569,20 +580,24 @@ class Inserter:
         if sprite_path.name.startswith("master"):
             raise AssertionError(f"Master not an NPC: {sprite_name}")
 
-        sprite_proper_name = f"NPC {sprite_name.replace('_', ' ')}"
-        sprite_proper_name = sprite_proper_name.replace("  ", " ")
+        if sprite_path.name.startswith("ospr_"):
+            sprite_proper_name = f"ospr_{sprite_name.replace('_', ' ')}"
+        elif sprite_path.name.startswith("npc_"):
+            sprite_proper_name = f"NPC {sprite_name.replace('_', ' ')}"
+            sprite_proper_name = sprite_proper_name.replace("  ", " ")
+        else:
+            sprite_proper_name = sprite_name
         return NPCSprite(short_name=sprite_proper_name, long_name=sprite_proper_name)
 
     def add_overlay_tiles(self, sprite_path: Path) -> Optional[OverlaySprite]:
 
-        match = overlay_sprite_regex.match(sprite_path.name)
+        match = overlay_sprite_regex.match(sprite_path.as_posix())
         if not match:
             return
-        print("got match for overlay", match.group(0))
 
         realm_in_game: Realm = get_realm_from_parent(sprite_path)
         overlay_sprite = OverlaySprite()
-        overlay_sprite.long_name = f"{realm_in_game.value} Overlay"
+        overlay_sprite.long_name = f"{realm_in_game.realm_name} Overlay"
         overlay_sprite.short_name = overlay_sprite.long_name
         with Session() as session:
             overlay_sprite.realm_id = session.query(RealmLookup).filter_by(enum=realm_in_game).one().id
@@ -597,7 +612,6 @@ class Inserter:
 
         match = generic_sprite_regex.match(sprite_path.as_posix())
         if not match:
-            # print(f"generic no match: {sprite_path}")
             return
 
         sprite = Sprite()
@@ -605,29 +619,53 @@ class Inserter:
         sprite.short_name = sprite.long_name
         return sprite
 
+    def manual_sprites(self) -> Iterator[tuple[Path, Sprite]]:
+
+        with Session() as session:
+            sprite = FloorSprite(short_name="floor",
+                        long_name="Where the Dead Ships Dwell floor tile test with overlay",
+                        realm_id=session.query(RealmLookup).filter_by(enum=Realm.DEAD_SHIPS).one().id)
+            for path in self.custom_assets_dir.joinpath(("floortiles/Where the Dead Ships Dwell")).glob("*.png"):
+                yield path, sprite
+
+            sprite = NPCSprite(short_name="Rhea", long_name="Rhea the Enchantress")
+            for path in self.custom_assets_dir.joinpath(("NPCs/Castle/Rhea")).glob("*.png"):
+                yield path, sprite
+
+    @staticmethod
+    def chop_path(path: Path, source_dir: Path) -> SpriteFrame:
+        destination_file = source_dir.joinpath(path.relative_to(source_dir))
+        chopped_path = destination_file.relative_to(source_dir)
+        chopped_path = Path(source_dir.name).joinpath(chopped_path)
+        return SpriteFrame(_filepath=chopped_path.as_posix())
+
     def scan_sprites(self):
         start = time.time()
         for path in self.paths:
             for scanner in self.scanners:
                 if sprite := scanner(path):
-                    destination_file = dest_dir.joinpath(path.relative_to(export_dir))
-                    sprite_frame = SpriteFrame(_filepath=destination_file.as_posix())
+                    sprite_frame = self.chop_path(path, self.export_dir)
                     self.sprites.setdefault(sprite.long_name, sprite).frames.append(sprite_frame)
                     break
+
+        for path, sprite in self.manual_sprites():
+            sprite_frame = self.chop_path(path, self.custom_assets_dir)
+            self.sprites.setdefault(sprite.long_name, sprite).frames.append(sprite_frame)
+
         end = time.time()
-        took = end-start
-        print(f"{took} seconds")
+        took = end - start
+        print(f"reading sprites took {took} seconds")
         add_or_update_sprites(self.sprites)
         return
 
 
 if __name__ == "__main__":
     drop_existing_phashes()
+    custom_assets_dir = settings.IMAGE_PATH.joinpath("custom_assets")
     export_dir = settings.IMAGE_PATH.joinpath("extracted_assets")
     dest_dir = settings.IMAGE_PATH.joinpath("extracted_assets")
-    sprite_scanner = Inserter(export_dir, dest_dir)
+    sprite_scanner = Inserter(export_dir, dest_dir, custom_assets_dir)
     sprite_scanner.extract_wall_sprites()
     sprite_scanner.extract_realm_floortiles()
     sprite_scanner.scan_sprites()
-    sys.exit()
     hash_items()
