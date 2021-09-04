@@ -217,16 +217,11 @@ def match_alt_walls(path) -> Optional[re.Match]:
 
 
 def should_skip_hashing(filepath: str) -> bool:
-    if "/Rhea" in filepath:
-        return False
 
     # skip obelisk life and hash obelisk_life_cleansed and corrupted instead
-    elif "spr_obelisk_life_0.png" in filepath:
+    if "spr_obelisk_life_0.png" in filepath:
         return True
     elif "spr_obelisk_life_1.png" in filepath:
-        return True
-
-    if "assets_padded" in filepath:
         return True
 
     return False
@@ -242,6 +237,7 @@ def hash_items(sprite_type: Optional[SpriteType] = None):
     with Session() as session:
         existing_phashes: dict[PHashReuse, PHashReuse] = {}
 
+        hash_time_taken = 0
         bulk_hash_entries = []
 
         ct = 1
@@ -251,15 +247,17 @@ def hash_items(sprite_type: Optional[SpriteType] = None):
         standard_castle_tile = session.query(FloorSprite).filter_by(long_name="floor_standard1").one()
         floortiles.append(standard_castle_tile)
 
-        only_seen_in_castle_sprite_ids = set(
-            session.query(Sprite.id).filter_by(type_id=SpriteType.CASTLE_DECORATION.value).all())
-        print(f"only seen in castle len = {len(only_seen_in_castle_sprite_ids)}")
+        only_seen_in_castle_sprite_frame_ids = set(res[0] for res in
+            session.query(SpriteFrame.id).join(SpriteFrame.sprite).filter(Sprite.type_id == SpriteType.CASTLE_DECORATION.value).all())
+        print(f"only seen in castle len = {len(only_seen_in_castle_sprite_frame_ids)}")
+        print(only_seen_in_castle_sprite_frame_ids)
 
         if not sprite_type:
             query_result = session.query(SpriteFrame).all()
         else:
             query_result = session.query(SpriteFrame).join(Sprite).filter_by(type_id=sprite_type.value).all()
 
+        hps_start = time.time()
         for floortile in floortiles:
             overlay = None
             if floortile.realm:
@@ -271,18 +269,15 @@ def hash_items(sprite_type: Optional[SpriteType] = None):
             for floor_frame in floortile.frames:
                 floor_frame_id = floor_frame.id
                 floor_frame_data_color = floor_frame.data_color
+                if floor_frame.sprite.long_name == "Where the Dead Ships Dwell floor tile test with overlay":
+                    continue
 
                 for sprite_frame in query_result:
-                    if sprite_frame.sprite_id in only_seen_in_castle_sprite_ids:
-                        print(f"skipping - castle only sprite - {sprite_frame.filepath}")
+                    if sprite_frame.id in only_seen_in_castle_sprite_frame_ids:
                         continue
 
                     if should_skip_hashing(sprite_frame.filepath):
-                        print(f"assets_padded skipping = {sprite_frame.filepath}")
                         continue
-                    hash_entry = HashFrameWithFloor()
-                    hash_entry.floor_sprite_frame_id = floor_frame_id
-                    hash_entry.sprite_frame_id = sprite_frame.id
 
                     sprite_frame_data_color = sprite_frame.data_color
                     if sprite_frame_data_color is None:
@@ -293,26 +288,38 @@ def hash_items(sprite_type: Optional[SpriteType] = None):
                         print(f"not padded tile -skipping - {sprite_frame.filepath}")
                         continue
 
-                    hash_entry.phash = compute_phash(floor_frame_data_color, one_tile_worth_img, overlay)
+                    phash = compute_phash(floor_frame_data_color, one_tile_worth_img, overlay)
+
+                    hash_entry = {
+                        "floor_sprite_frame_id": floor_frame_id,
+                        "sprite_frame_id": sprite_frame.id,
+                        "phash": phash,
+                    }
+
                     if not sprite_frame.sprite:
                         continue
-                    new_hash = PHashReuse(phash=hash_entry.phash, floor_frame_id=hash_entry.floor_sprite_frame_id,
+                    new_hash = PHashReuse(phash=hash_entry["phash"], floor_frame_id=hash_entry["floor_sprite_frame_id"],
                                           sprite_canonical_name=sprite_frame.sprite.long_name)
                     if existing_hash := existing_phashes.get(new_hash):
                         similar_ct += 1
-                        print(f"similar hash detected. old={existing_hash=} new {new_hash=}")
+                        # print(f"similar hash detected. old={existing_hash=} new {new_hash=}")
                         continue
                     existing_phashes[new_hash] = new_hash
                     bulk_hash_entries.append(hash_entry)
 
-                    if ct % 5000 == 0:
-                        print(f"{ct} hash entries saved")
-                        session.add_all(bulk_hash_entries)
-                        session.commit()
+                    commit_threshold = 10000
+                    if ct % commit_threshold == 0:
+                        session.bulk_insert_mappings(HashFrameWithFloor, bulk_hash_entries)
+                        session.flush()
                         bulk_hash_entries.clear()
+                        hps_end = time.time()
+                        took = hps_end - hps_start
+                        hps = commit_threshold / took
+                        print(f"{ct} hash entries saved - took {took} seconds. {hps} hps/s")
+                        hps_start = time.time()
 
                     ct += 1
-        session.add_all(bulk_hash_entries)
+        session.bulk_insert_mappings(HashFrameWithFloor, bulk_hash_entries)
         session.commit()
         bulk_hash_entries.clear()
         print(f"total hashes = {ct},similar hashes={similar_ct}, similar% = {(similar_ct / ct) * 100}%")
