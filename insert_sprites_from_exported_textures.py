@@ -1,19 +1,16 @@
-import enum
 import logging
-import shutil
 import sys
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Callable, Type, Union
+from typing import Optional, Callable, Type, Union, Iterator
 
 import cv2
 import re
 import numpy as np
 
-import sqlalchemy
 from numpy.typing import ArrayLike
+from sqlalchemy import update, func
 from sqlalchemy.exc import NoResultFound
 
 from subot.hash_image import Overlay, FloorTilesInfo, compute_phash
@@ -154,51 +151,50 @@ def match_overlay(path: Path) -> Optional[re.Match]:
 
 
 def add_or_update_sprites(sprites: dict[str, Type[Sprite]]):
+    start = time.time()
+    ct = 0
     with Session() as session:
+        start_qps = time.time()
+        # drop all existing sprite frames
+        rows_deleted = session.query(SpriteFrame).delete()
+        print(f"deleted {rows_deleted} sprite frames")
+
         for sprite_name, sprite_new in sprites.items():
             try:
-                sprite_base = session.query(Sprite).filter_by(long_name=sprite_new.long_name).one()
+                sprite_base_id, sprite_base_type_id = session.query(Sprite.id, Sprite.type_id).filter_by(long_name=sprite_new.long_name).one()
+                sprite_new.id = sprite_base_id
                 try:
-                    sprite = session.query(sprite_new.__class__).filter_by(long_name=sprite_new.long_name).one()
+                    session.query(sprite_new.__class__.id).filter_by(long_name=sprite_new.long_name).one()
+                    ct += 1
+                    if ct % 1000 == 0:
+                        end_qps = time.time()
+                        qps = 1 / ((end_qps - start_qps) / 1000)
+                        print(f"{qps=}")
+                        start_qps = time.time()
                 except NoResultFound:
-                    print(f"{sprite_base.long_name} does not have subclass {sprite_new.__tablename__} created")
-                    session.execute(f"INSERT INTO {sprite_new.__tablename__} (sprite_id) VALUES ({sprite_base.id})")
-                    sprite_base.type_id = sprite_new.type_id
-                    session.commit()
-                    continue
-                print(f"reusing sprite {sprite_new.__class__} id={sprite.id}")
+                    if sprite_base_type_id == 2:
+                        session.execute(f"INSERT INTO {sprite_new.__tablename__} (sprite_id) VALUES ({sprite_base_id})")
+                        session.execute(
+                            update(Sprite)
+                            .where(Sprite.id == sprite_base_id)
+                            .values(type_id=sprite_new.type_id))
+                        session.flush()
             except NoResultFound:
                 print(f"noresultfuond - {sprite_new.long_name}")
-                sprite = sprite_new.__class__()
-                print(f"{sprite_new=}")
-                session.add(sprite)
-            sprite.long_name = sprite_new.long_name
-            sprite.short_name = sprite_new.short_name
-            try:
-                sprite.realm_id = sprite_new.realm_id
-            except AttributeError:
-                pass
-            try:
-                sprite.chest_type_id = sprite_new.chest_type_id
-            except AttributeError:
-                pass
-            try:
-                sprite.opened = sprite_new.opened
-            except AttributeError:
-                pass
 
-            session.commit()
+            _ = session.merge(sprite_new)
+        session.commit()
 
-            sprite_id = sprite.id
-            sprite.frames = []
-            session.commit()
-            for frame in sprite_new.frames:
-                new_path = Path(settings.IMAGE_PATH).joinpath(frame._filepath)
-                chopped_path = new_path.relative_to(settings.IMAGE_PATH)
-                new_frame = SpriteFrame(sprite_id=sprite_id, _filepath=chopped_path.as_posix())
-                session.add(new_frame)
-                sprite.frames.append(new_frame)
-            session.commit()
+    # cleanup sprites without attachment
+    with Session() as session:
+        session.execute('PRAGMA foreign_keys = ON;')
+        session.commit()
+        saved_frames_subquery = session.query(SpriteFrame.sprite_id).subquery()
+        rows_deleted = session.query(Sprite).filter(Sprite.id.not_in(saved_frames_subquery)).delete(synchronize_session=False)
+        session.commit()
+        print(f"deleted {rows_deleted} unused sprites")
+    end = time.time()
+    print(f"adding sprites took {end - start} seconds")
 
 
 def match_battle_sprite(path: Path) -> Optional[re.Match]:
