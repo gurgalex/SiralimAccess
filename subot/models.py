@@ -200,7 +200,7 @@ Realm.god_to_realm_mapping = {realm.god_name: realm for realm in Realm}
 
 Realm.internal_realm_name_to_god_mapping = {realm.internal_realm_name: realm for realm in Realm}
 
-UNSUPPORTED_REALMS = {Realm.CAUSTIC_REACTOR, Realm.KINGDOM_OF_HERETICS, Realm.TORTURE_CHAMBER,
+UNSUPPORTED_REALMS = {
                       # new realms
                       Realm.AMALGAM_GARDENS,
                       Realm.ASTRAL_GALLERY,
