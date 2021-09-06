@@ -55,7 +55,7 @@ from subot.pathfinder.map import TileType, Map, Color, Movement
 
 from numpy.typing import ArrayLike
 
-from subot.hash_image import ImageInfo, RealmSpriteHasher, FloorTilesInfo, Overlay, compute_hash
+from subot.hash_image import ImageInfo, RealmSpriteHasher, compute_hash
 
 from dataclasses import dataclass
 
@@ -303,23 +303,12 @@ class Bot:
         # keyboard listener
         self.last_key_pressed = None
 
-        # Floor tiles detected in current frame
-        self.active_floor_tiles: list[np.typing.ArrayLike] = []
-        self.active_floor_tiles_gray: list[np.typing.ArrayLike] = []
-
-        with Session() as session:
-            castle_tile = session.query(Sprite).filter_by(long_name="floor_standard1").one().frames[0].filepath
-            self.castle_tile = cv2.imread(castle_tile, cv2.IMREAD_COLOR)
-
-        self.castle_tile_gray: np.typing.ArrayLike = cv2.cvtColor(self.castle_tile, cv2.COLOR_BGR2GRAY)
-
         # hashes of sprite frames that have matching `self.castle_tile` pixels set to black.
         # This avoids false negative matches if the placed object has matching color pixels in a position
-        self.item_hashes: RealmSpriteHasher = RealmSpriteHasher(floor_tiles=self.active_floor_tiles)
+        self.item_hashes: RealmSpriteHasher = RealmSpriteHasher(floor_tiles=None)
 
         self.all_found_matches: dict[TileType, list[AssetGridLoc]] = defaultdict(list)
         self.all_found_matches_rlock = rwlock.RWLockFair()
-
 
         self.stop_event = threading.Event()
         self.nearby_process = NearbyFrameGrabber(name=NearbyFrameGrabber.__name__,
@@ -1102,13 +1091,10 @@ class NearPlayerProcessing(Thread):
             if self.parent.mode is BotMode.CASTLE:
                 return
 
-            self.parent.active_floor_tiles = [self.parent.castle_tile]
-            self.parent.active_floor_tiles_gray = [self.parent.castle_tile_gray]
             self.parent.mode = BotMode.CASTLE
             self.parent.realm = None
 
-            floor_tiles_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=None)
-            self.parent.item_hashes = RealmSpriteHasher(floor_tiles=floor_tiles_info)
+            self.parent.item_hashes = RealmSpriteHasher(floor_tiles=None)
             start = time.time()
             self.parent.cache_image_hashes_of_decorations()
             end = time.time()
@@ -1125,26 +1111,8 @@ class NearPlayerProcessing(Thread):
                 if new_realm in models.UNSUPPORTED_REALMS:
                     self.parent.audio_system.speak_nonblocking(f"Realm unsupported. {new_realm.realm_name}")
                 self.parent.realm = realm_alignment.realm
-                overlay = None
-                with Session() as session:
-                    realm = session.query(RealmLookup).filter_by(enum=realm_alignment.realm).one()
-                    realm_tiles = session.query(FloorSprite).filter_by(realm_id=realm.id).all()
-                    temp = []
-                    temp_gray = []
-                    for realm_tile in realm_tiles:
-                        for frame in realm_tile.frames:
-                            temp.append(frame.data_color)
-                            temp_gray.append(frame.data_gray)
-                    self.parent.active_floor_tiles = temp
-                    self.parent.active_floor_tiles_gray = temp_gray
 
-                    if self.parent.realm is Realm.DEAD_SHIPS:
-                        overlay_sprite = session.query(OverlaySprite).filter_by(realm_id=realm.id).one()
-                        overlay_tile_part = overlay_sprite.frames[0].data_color[:TILE_SIZE, :TILE_SIZE, :3]
-                        overlay = Overlay(alpha=0.753, tile=overlay_tile_part)
-
-                floor_tiles_info = FloorTilesInfo(floortiles=self.parent.active_floor_tiles, overlay=overlay)
-                self.parent.item_hashes = RealmSpriteHasher(floor_tiles=floor_tiles_info)
+                self.parent.item_hashes = RealmSpriteHasher(floor_tiles=None)
                 start = time.time()
                 self.hang_activity_sender.notify_activity(HangAnnotation({"data": "get new phashes"}))
                 self.parent.cache_image_hashes_of_decorations()
