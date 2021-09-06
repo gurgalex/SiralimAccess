@@ -5,6 +5,16 @@ import threading
 
 import sentry_sdk
 
+from ctypes import windll
+
+user32 = windll.user32
+def set_dpi_aware():
+    # makes functions return real pixel numbers instead of scaled values
+    user32.SetProcessDPIAware()
+
+set_dpi_aware()
+
+
 import enum
 import logging
 import multiprocessing
@@ -22,45 +32,41 @@ from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotatio
 import cv2
 import numpy as np
 import mss
-import pygame
-import pygame.freetype
+from subot.settings import Session, GameControl
+import subot.settings as settings
 from subot.ocr import recognize_cv2_image, detect_green_text
 import win32gui
+import pygame
+
+os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
+if settings.SHOW_UI:
+    import pygame.freetype
+    pygame.init()
+else:
+    pygame.mixer.init()
 import math
 import time
-from sqlalchemy.orm import joinedload
 
 from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.datatypes import Rect
 from subot.menu import MenuItem, Menu
 from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg, ScanForItems
-from subot.pathfinder.map import TileType, Map, Color
+from subot.pathfinder.map import TileType, Map, Color, Movement
 
 from numpy.typing import ArrayLike
 
-from subot.hash_image import ImageInfo, RealmSpriteHasher, FloorTilesInfo, Overlay
+from subot.hash_image import ImageInfo, RealmSpriteHasher, FloorTilesInfo, Overlay, compute_hash
 
 from dataclasses import dataclass
 
 from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, NPCSprite, OverlaySprite, HashFrameWithFloor, \
     QuestType, ResourceNodeSprite, \
     SpriteTypeLookup, SpriteType, ChestSprite
-from subot.settings import Session, GameControl
-import subot.settings as settings
 
 from readerwriterlock import rwlock
 
 from subot.utils import Point, read_version, PlayerDirection
 import traceback
-from ctypes import windll
-
-user32 = windll.user32
-def set_dpi_aware():
-    # makes functions return real pixel numbers instead of scaled values
-    user32.SetProcessDPIAware()
-
-
-set_dpi_aware()
 
 # sentry annotation for pyinstaller
 def before_send(event, hint):
@@ -70,20 +76,10 @@ def before_send(event, hint):
     event["extra"]["app_version"] = read_version()
     return event
 
-# BGR colors
-
 TILE_SIZE = 32
 NEARBY_TILES_WH: int = 8 * 2 + 1
 
 title = "Siralim Access"
-
-
-@dataclass(frozen=True)
-class TemplateMeta:
-    name: str
-    data: np.typing.ArrayLike
-    color: tuple
-    mask: np.typing.ArrayLike
 
 
 class GameNotOpenException(Exception):
@@ -179,23 +175,6 @@ class GridType(enum.Enum):
     NEARBY = enum.auto()
 
 
-def recompute_grid_offset(floor_tile: ArrayLike, gray_frame: ArrayLike, mss_rect: Rect) -> Optional[Rect]:
-    # find matching realm tile on map
-    # We use matchTemplate since the grid shifts when the player is moving
-    # (the tiles smoothly slide to the next `TILE_SIZE increment)
-
-    res = cv2.matchTemplate(gray_frame, floor_tile, cv2.TM_SQDIFF)
-    min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-    threshold = 1 / 16
-    if min_val > threshold:
-        return
-    tile = Rect.from_cv2_loc(min_loc, w=TILE_SIZE, h=TILE_SIZE)
-
-    top_left_pt = Bot.top_left_tile(aligned_floor_tile=tile, client_rect=mss_rect)
-    bottom_right_pt = Bot.bottom_right_tile(aligned_tile=tile, client_rect=mss_rect)
-    return Bot.compute_grid_rect(top_left_tile=top_left_pt, bottom_right_tile=bottom_right_pt)
-
-
 root = logging.getLogger()
 
 que = queue.Queue(-1)  # no limit on size
@@ -218,6 +197,11 @@ listener.start()
 
 player_direction = {GameControl.UP, GameControl.DOWN, GameControl.LEFT, GameControl.RIGHT}
 
+@dataclass(frozen=True, eq=True)
+class FloorInfo:
+    realm: Optional[Realm]
+    long_name: str
+
 
 class Bot:
     def __init__(self):
@@ -239,8 +223,6 @@ class Bot:
 
         self.teleportation_shrine_names: set[str] = {'bigroomchanger', 'teleshrine_inactive'}
 
-        os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
-        pygame.init()
         self.audio_system: AudioSystem = AudioSystem()
 
         self.color_frame_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=1)
@@ -294,9 +276,22 @@ class Bot:
 
         root.debug(f"{self.nearby_tile_top_left=}")
 
-        self.grid_rect: Optional[Rect] = None
-        self.grid_slice_gray: np.typing.ArrayLike = None
-        self.grid_slice_color: np.typing.ArrayLike = None
+        self.grid_rect: Rect = Bot.default_grid_rect(self.su_client_rect)
+
+        with Session() as session:
+            floor_ids = [floor_id[0] for floor_id in session.query(HashFrameWithFloor.floor_sprite_frame_id).distinct()]
+            floor_phashes_query = session.query(HashFrameWithFloor.phash, Sprite.long_name, RealmLookup.enum) \
+                .join(SpriteFrame, SpriteFrame.id == HashFrameWithFloor.sprite_frame_id) \
+                .join(Sprite, Sprite.id == SpriteFrame.sprite_id) \
+                .join(FloorSprite, Sprite.id == FloorSprite.sprite_id) \
+                .outerjoin(RealmLookup, FloorSprite.realm_id == RealmLookup.id) \
+                .filter(HashFrameWithFloor.sprite_frame_id.in_(floor_ids)) \
+                .group_by(HashFrameWithFloor.phash, Sprite.long_name, RealmLookup.enum)
+            floor_phashes = floor_phashes_query.all()
+            self.floor_hashes: dict[int, FloorInfo] = dict()
+
+            for phash, long_name, realm in floor_phashes:
+                self.floor_hashes[phash] = FloorInfo(realm=realm, long_name=long_name)
 
         # multiple directions playing previous
         self.all_directions: set[Point] = {Point(1, 0), Point(-1, 0), Point(0, 1), Point(0, -1)}
@@ -366,16 +361,17 @@ class Bot:
         self.whole_window_thandle.start()
 
         # UI menu start
-        self.game_size = (600, 600)
+        if settings.SHOW_UI:
+            self.game_size = (600, 600)
 
-        self.game_font: pygame.freetype.Font = pygame.freetype.SysFont('Arial', 48, bold=True)
-        pygame.display.set_caption("Siralim Access Menu")
-        self.screen = pygame.display.set_mode(self.game_size, 0, 32)
-        self.screen.fill(Color.black.rgb())
+            self.game_font: pygame.freetype.Font = pygame.freetype.SysFont('Arial', 48, bold=True)
+            pygame.display.set_caption("Siralim Access Menu")
+            self.screen = pygame.display.set_mode(self.game_size, 0, 32)
+            self.screen.fill(Color.black.rgb())
 
-        self.audio_system: AudioSystem = AudioSystem()
-        self.current_menu = self.generate_main_menu()
-        self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title, fgcolor=Color.white.rgb())
+            self.audio_system: AudioSystem = AudioSystem()
+            self.current_menu = self.generate_main_menu()
+            self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title, fgcolor=Color.white.rgb())
 
 
     def generate_main_menu(self) -> Menu:
@@ -565,8 +561,9 @@ class Bot:
 
     def run(self):
         # self.listener.start()
-        self.audio_system.speak_blocking("Siralim Access has started")
-        self.show_main_menu()
+        self.audio_system.speak_nonblocking("Siralim Access has started")
+        if settings.SHOW_UI:
+            self.show_main_menu()
 
         iters = 0
         every = 10
@@ -626,18 +623,19 @@ class Bot:
                 root.debug(f"FPS: {clock.get_fps()}")
             iters += 1
 
-            # pygame menu check events
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.stop()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_DOWN:
-                        self.next_menu_item()
-                    elif event.key == pygame.K_UP:
-                        self.previous_menu_item()
-                    elif event.key in [pygame.K_SPACE, pygame.K_RETURN]:
-                        self.current_menu.current_entry.on_enter()
-                self.update()
+            if settings.SHOW_UI:
+                # pygame menu check events
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        self.stop()
+                    elif event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_DOWN:
+                            self.next_menu_item()
+                        elif event.key == pygame.K_UP:
+                            self.previous_menu_item()
+                        elif event.key in [pygame.K_SPACE, pygame.K_RETURN]:
+                            self.current_menu.current_entry.on_enter()
+                    self.update()
 
             clock.tick(settings.FPS)
 
@@ -658,10 +656,10 @@ class Bot:
                         for tile in tiles:
                             audio_location = AudioLocation(distance=tile.point())
                             self.audio_system.play_sound(audio_location, sound_type)
-                        current_direction_points = set([t.point() for t in tiles])
-                        not_active_directions = self.all_directions - current_direction_points
-                        for point in not_active_directions:
-                            self.audio_system.stop(sound_type, point)
+                        # current_direction_points = set([t.point() for t in tiles])
+                        # not_active_directions = self.all_directions - current_direction_points
+                        # for point in not_active_directions:
+                        #     self.audio_system.stop(sound_type, point)
                     else:
                         audio_location = AudioLocation(distance=tiles[0].point())
                         self.audio_system.play_sound(audio_location, sound_type)
@@ -813,19 +811,6 @@ class WholeWindowAnalyzer(Thread):
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
 
-            if aligned_rect := recompute_grid_offset(floor_tile=self.parent.castle_tile_gray,
-                                                     gray_frame=self.gray_frame,
-                                                     mss_rect=self.parent.su_client_rect):
-                self.grid_rect = aligned_rect
-            else:
-                self.grid_rect = Bot.default_grid_rect(self.parent.su_client_rect)
-
-            self.grid_slice_gray: np.typing.ArrayLike = self.gray_frame[
-                                                        self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
-                                                        self.grid_rect.x:self.grid_rect.x + self.grid_rect.w]
-            self.grid_slice_color: np.typing.ArrayLike = self.frame[
-                                                         self.grid_rect.y:self.grid_rect.y + self.grid_rect.h,
-                                                         self.grid_rect.x:self.grid_rect.x + self.grid_rect.w]
             # menu entry selection is latency sensitive
             self.speak_selected_menu_item()
 
@@ -902,16 +887,15 @@ class NearbyFrameGrabber(multiprocessing.Process):
             self.color_nearby_queue.put(None)
 
 
-@dataclass
-class RealmAlignment(object):
-    """Tells the realm detected and the alignment for the realm"""
+@dataclass()
+class RealmAlignment:
+    """Tells the realm detected"""
     realm: Realm
-    alignment: Rect
 
 
-@dataclass
+@dataclass()
 class CastleAlignment:
-    alignment: Rect
+    pass
 
 
 class NearPlayerProcessing(Thread):
@@ -936,8 +920,6 @@ class NearPlayerProcessing(Thread):
                                                              dtype='uint8')
 
         self.grid_near_rect: Optional[Rect] = parent.nearby_rect_mss
-        self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[:]
-        self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[:]
 
         # The current active quests
         self.active_quests: list[Quest] = []
@@ -945,44 +927,65 @@ class NearPlayerProcessing(Thread):
         # last time a realm was not identified
         self.last_realm_identified_timer = time.time()
 
+        self.was_match: bool = False
+        self.last_match_time: float = time.time()
+
+    def bfs_near(self) -> Optional[FloorInfo]:
+        DIRECTIONS: list[Movement] = [Movement(x=1, y=0), Movement(x=-1, y=0), Movement(x=0, y=1), Movement(x=0, y=-1)]
+        queue: deque[Point] = deque()
+        marked: set[Point] = set()
+
+        x_tiles = self.grid_near_rect.w // TILE_SIZE
+        y_tiles = self.grid_near_rect.h // TILE_SIZE
+
+        center = Point(x=x_tiles // 2, y=y_tiles//2)
+        def can_visit(point: Point, marked: set[Point]) -> bool:
+            if point in marked:
+                return False
+
+            past_tiles_to_search = center.x - point.x >= 4 or center.y - point.y >= 4
+            if past_tiles_to_search:
+                return False
+            out_of_bounds = point.x < 0 or point.x >= x_tiles or point.y < 0 or point.y >= y_tiles
+            if out_of_bounds:
+                return False
+
+            return True
+
+        queue.append(center)
+
+        while queue:
+            node = queue.popleft()
+            start_x = node.x * TILE_SIZE
+            start_y = node.y * TILE_SIZE
+            tile_gray = self.near_frame_gray[start_y:start_y + TILE_SIZE, start_x:start_x + TILE_SIZE]
+            try:
+                computed_hash = compute_hash(tile_gray[:TILE_SIZE, :TILE_SIZE])
+                floor_info = self.parent.floor_hashes[computed_hash]
+                return floor_info
+            except KeyError:
+                pass
+
+            for direction in DIRECTIONS:
+                new_point = Point(x=node.x + direction.x, y=node.y + direction.y)
+                if can_visit(new_point, marked):
+                    queue.append(new_point)
+                marked.add(new_point)
+
     def detect_what_realm_in(self) -> Optional[Union[RealmAlignment, CastleAlignment]]:
 
         # Scan the nearby tile area for lit tiles to determine what realm we are in currently
         # This area was chosen since the player + 6 creatures are at most this long
         # At least 1 tile will not be dimmed by the fog of war
 
-
-
-        # fast: if still in same realm
-        for last_tile in self.parent.active_floor_tiles_gray:
-            if aligned_rect := recompute_grid_offset(floor_tile=last_tile, gray_frame=self.near_frame_gray,
-                                                     mss_rect=self.parent.nearby_rect_mss):
-                self.last_realm_identified_timer = time.time()
-                return RealmAlignment(realm=self.parent.realm, alignment=aligned_rect)
-
-        # only check for different realm periodically
-        if time.time() - self.last_realm_identified_timer < 1.5:
+        floor_type = self.bfs_near()
+        if not floor_type:
             return
 
-        with Session() as session:
-            floor_tiles = session.query(FloorSprite).options(joinedload('realm')).all()
+        if not floor_type.realm:
+            return CastleAlignment()
 
-        floor_tile: FloorSprite
-        for floor_tile in floor_tiles:
-            tile_frame: SpriteFrame
-            for frame_num, tile_frame in enumerate(floor_tile.frames, start=1):
-                if aligned_rect := recompute_grid_offset(floor_tile=tile_frame.data_gray,
-                                                         gray_frame=self.near_frame_gray,
-                                                         mss_rect=self.parent.nearby_rect_mss):
-                    root.debug(f"floor tile = {floor_tile.long_name}")
-                    if realm := floor_tile.realm:
-                        self.last_realm_identified_timer = time.time()
-                        return RealmAlignment(realm=realm.enum, alignment=aligned_rect)
-                    else:
-                        root.info("in castle")
-                        self.last_realm_identified_timer = time.time()
-                        return CastleAlignment(alignment=aligned_rect)
-
+        return RealmAlignment(realm=floor_type.realm)
 
     def exclude_from_debug(self, img_info: ImageInfo):
         s = img_info.long_name
@@ -1035,11 +1038,9 @@ class NearPlayerProcessing(Thread):
         self.map.set_center(Point(x=self.grid_near_rect.w//TILE_SIZE//2, y=self.grid_near_rect.h//TILE_SIZE//2))
         with self.parent.all_found_matches_rlock.gen_wlock():
 
-            # Hack: add the grid offset to the player tile to realign the grid when moving left
-            # aligned_player_tile_x = round(self.parent.nearby_tile_top_left.x + self.grid_near_rect.x / TILE_SIZE)
             for row in range(0, self.grid_near_rect.w, TILE_SIZE):
                 for col in range(0, self.grid_near_rect.h, TILE_SIZE):
-                    tile_gray = self.grid_near_slice_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
+                    tile_gray = self.near_frame_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
                     start_point = (row + self.grid_near_rect.x, col + self.grid_near_rect.y)
                     end_point = (start_point[0] + TILE_SIZE, start_point[1] + TILE_SIZE)
                     asset_location = AssetGridLoc(
@@ -1086,15 +1087,21 @@ class NearPlayerProcessing(Thread):
         root.debug(f"reachable took {(end-start)*1000}ms to complete")
         self.parent.speak_nearby_objects()
 
-    def handle_realm_alignment(self, realm_alignment: Union[RealmAlignment, CastleAlignment]):
+    def handle_realm_alignment(self, realm_alignment: Optional[Union[RealmAlignment, CastleAlignment]]):
         if not realm_alignment:
-            for tile_type in self.parent.all_found_matches.values():
-                tile_type.clear()
-
-            self.parent.speak_nearby_objects()
+            if time.time() - self.last_match_time >= 1/15 * 4:
+                for tile_type in self.parent.all_found_matches.values():
+                    tile_type.clear()
+                self.parent.speak_nearby_objects()
             return
+        else:
+            self.was_match = True
+            self.last_match_time = time.time()
 
         if isinstance(realm_alignment, CastleAlignment):
+            if self.parent.mode is BotMode.CASTLE:
+                return
+
             self.parent.active_floor_tiles = [self.parent.castle_tile]
             self.parent.active_floor_tiles_gray = [self.parent.castle_tile_gray]
             self.parent.mode = BotMode.CASTLE
@@ -1146,7 +1153,7 @@ class NearPlayerProcessing(Thread):
                     f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.parent.item_hashes)} phashes")
 
                 root.info(f"new realm entered: {self.parent.realm.name}")
-                root.info(f"new realm alignment = {realm_alignment=}")
+                root.info(f"new realm alignment = {realm_alignment.realm.name}")
                 print(f"new item hashes = {len(self.parent.item_hashes)}")
 
     def handle_new_frame(self, data: NewFrame):
@@ -1157,27 +1164,17 @@ class NearPlayerProcessing(Thread):
 
         # make grayscale version
         cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGR2GRAY, dst=self.near_frame_gray)
+        self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
 
-        # calculate the correct alignment for grid
+        self.was_match = False
         realm_alignment = self.detect_what_realm_in()
-        if realm_alignment:
-            self.grid_near_rect = realm_alignment.alignment
-        else:
-            root.debug(f"using default nearby grid")
-            self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
-
-        self.grid_near_slice_gray: np.typing.ArrayLike = self.near_frame_gray[
-                                                         self.grid_near_rect.y:self.grid_near_rect.y + self.grid_near_rect.h,
-                                                         self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
-        self.grid_near_slice_color: np.typing.ArrayLike = self.near_frame_color[
-                                                          self.grid_near_rect.y:self.grid_near_rect.y + self.grid_near_rect.h,
-                                                          self.grid_near_rect.x:self.grid_near_rect.x + self.grid_near_rect.w]
         self.handle_realm_alignment(realm_alignment)
+        self.last_realm_identified_timer = time.time()
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=10.0)
         if settings.VIEWER:
-            debug_window = cv2.namedWindow("Siralim Access", cv2.WINDOW_GUI_EXPANDED)
+            debug_window = cv2.namedWindow("Siralim Access", cv2.WINDOW_AUTOSIZE)
 
         while not self.stop_event.is_set():
             try:
@@ -1189,6 +1186,7 @@ class NearPlayerProcessing(Thread):
             self.hang_activity_sender.notify_activity(HangAnnotation({"event": "near_frame_processing"}))
             if msg is None:
                 return
+            start = time.time()
             if msg.type is MessageType.NEW_FRAME:
                 self.handle_new_frame(msg)
             try:
@@ -1197,7 +1195,8 @@ class NearPlayerProcessing(Thread):
 
                 if comm_msg.type is MessageType.SCAN_FOR_ITEMS:
                     start = time.time()
-                    self.scan_for_items()
+                    if self.was_match:
+                        self.scan_for_items()
                     end = time.time()
                     latency = end - start
                     root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
@@ -1205,12 +1204,16 @@ class NearPlayerProcessing(Thread):
                     pass
 
                 if settings.VIEWER:
-                    cv2.imshow("Siralim Access", self.map.img)
+                    # cv2.imshow("Siralim Access", self.map.img)
+                    cv2.imshow("Siralim Access", self.near_frame_color)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         cv2.destroyAllWindows()
                         break
             except IndexError:
                 continue
+            end = time.time()
+            latency = end - start
+            root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
         root.info(f"{self.name} is shutting down")
 
 

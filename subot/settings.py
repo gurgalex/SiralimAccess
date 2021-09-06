@@ -19,9 +19,10 @@ IMAGE_PATH = Path(__file__).parent.parent.joinpath('resources')
 
 DEBUG = False
 VIEWER = False
-FPS = 20
+FPS = 60
 WHOLE_WINDOW_FPS = 10
 
+SHOW_UI = True
 
 
 class GameControl(Enum):

@@ -1,5 +1,4 @@
 import logging
-import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -10,10 +9,10 @@ import re
 import numpy as np
 
 from numpy.typing import ArrayLike
-from sqlalchemy import update, func
+from sqlalchemy import update
 from sqlalchemy.exc import NoResultFound
 
-from subot.hash_image import Overlay, FloorTilesInfo, compute_phash
+from subot.hash_image import Overlay, compute_phash
 from subot.models import MasterNPCSprite, SpriteFrame, AltarSprite, Realm, RealmLookup, ProjectItemSprite, \
     NPCSprite, FloorSprite, OverlaySprite, Sprite, HashFrameWithFloor, WallSprite, SpriteType, ChestType, ChestSprite, \
     CastleSprite, CreatureSprite
