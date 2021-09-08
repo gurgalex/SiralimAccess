@@ -835,7 +835,7 @@ class WholeWindowAnalyzer(Thread):
                 self.speak_selected_menu_item()
                 end = time.time()
                 took_ms = math.ceil((end-start)*1000)
-                root.info(f"ocr took {took_ms}ms")
+                root.debug(f"ocr took {took_ms}ms")
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             current_quests = [quest.title for quest in quests]
@@ -844,9 +844,6 @@ class WholeWindowAnalyzer(Thread):
             root.debug(f"quest items = {quest_items}")
 
             self.update_quests(quests)
-
-            root.debug(f"quests_len = {len(self.parent.quest_sprite_long_names)}")
-
 
         root.info("WindowAnalyzer thread shutting down")
 
@@ -1057,7 +1054,8 @@ class NearPlayerProcessing(Thread):
 
     def scan_for_items(self):
         """Scans for decorations and quests in the castle"""
-        if not self.parent.config.repeat_sound_when_stationary and self.match_streak >= 4 * 6:
+        max_stationary_streak = 60 * self.parent.config.required_stationary_seconds
+        if not self.parent.config.repeat_sound_when_stationary and self.match_streak >= max_stationary_streak:
             for tile_type, tiles in self.parent.all_found_matches.items():
                 tiles.clear()
             self.parent.speak_nearby_objects()

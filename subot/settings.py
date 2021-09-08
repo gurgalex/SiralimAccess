@@ -45,6 +45,7 @@ class Config:
 
     # repeat detected object sounds. If false, stops playing the sound if play has not moved
     repeat_sound_when_stationary: bool = True
+    required_stationary_seconds: float = 0.5
 
     def save_config(self, path: Path):
         ini = configparser.ConfigParser()
@@ -53,6 +54,7 @@ class Config:
             "show_ui": self.show_ui,
             "whole_window_fps": self.whole_window_scanning_frequency,
             "repeat_sound_when_stationary": self.repeat_sound_when_stationary,
+            "repeat_sound_seconds": self.required_stationary_seconds,
         }
 
         ini["OCR"] = {
@@ -88,6 +90,7 @@ class Config:
 
         default_config.whole_window_scanning_frequency = general.getfloat("whole_window_fps", fallback=default_config.whole_window_scanning_frequency)
         default_config.repeat_sound_when_stationary = general.getboolean('repeat_sound_when_stationary', fallback=default_config.repeat_sound_when_stationary)
+        default_config.required_stationary_seconds = general.getfloat('repeat_sound_seconds', fallback=default_config.required_stationary_seconds)
 
         volume = ini["VOLUME"]
 
