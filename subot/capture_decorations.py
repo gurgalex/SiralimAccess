@@ -3,16 +3,14 @@ from typing import Union, List
 
 import cv2
 import mss
-import pytesseract
 from main import TILE_SIZE
 import numpy as np
 
 from main import Bot
 from subot.datatypes import Rect
 from background_subtract import subtract_background_color_tile
+from subot.ocr import recognize_cv2_image, detect_green_text
 
-
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract'
 
 MENU_CAPTURE_AREA = {"top": 38, "left": 0, "width": 1000, "height": 1000}
 
@@ -50,21 +48,12 @@ class Capture:
 
 
 
-    def detect_green_text(self, image) -> np.array:
-        """Using a source image of RGB color, extract highlighted menu items which are a green color"""
-        lower_green = np.array([60, 50, 100])
-        upper_green = np.array([60, 255, 255])
-
-        img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        mask = cv2.inRange(img, lower_green, upper_green)
-        mask = cv2.bitwise_not(mask)
-        return mask
 
     def capture_decoration(self, folder: Path):
-        selected_menu_option_img = self.detect_green_text(self.menu_img_rgb)
+        selected_menu_option_img = detect_green_text(self.menu_img_rgb)
 
-        text = pytesseract.image_to_string(selected_menu_option_img, lang="eng")
-        text = text.strip("\x0c")
+        result = recognize_cv2_image(selected_menu_option_img)
+        text = result["text"]
         text = text.strip()
         single_line = text.split("\n")[0]
         print(f"Got text: {single_line}")

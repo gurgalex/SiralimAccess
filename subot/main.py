@@ -37,13 +37,10 @@ import subot.settings as settings
 from subot.ocr import recognize_cv2_image, detect_green_text
 import win32gui
 import pygame
+import pygame.freetype
+pygame.init()
 
 os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
-if settings.SHOW_UI:
-    import pygame.freetype
-    pygame.init()
-else:
-    pygame.mixer.init()
 import math
 import time
 
@@ -75,6 +72,7 @@ def before_send(event, hint):
     )]
     event["extra"]["app_version"] = read_version()
     return event
+
 
 TILE_SIZE = 32
 NEARBY_TILES_WH: int = 8 * 2 + 1
@@ -206,6 +204,9 @@ class FloorInfo:
 class Bot:
     def __init__(self):
         # queue to monitor for incoming hang alert
+        self.config = settings.load_config()
+
+
         self.player_direction: Optional[GameControl] = None
         self.realm: Optional[Realm] = None
 
@@ -223,7 +224,7 @@ class Bot:
 
         self.teleportation_shrine_names: set[str] = {'bigroomchanger', 'teleshrine_inactive'}
 
-        self.audio_system: AudioSystem = AudioSystem()
+        self.audio_system: AudioSystem = AudioSystem(config=self.config)
 
         self.color_frame_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=1)
         self.out_quests: multiprocessing.Queue = multiprocessing.Queue()
@@ -333,6 +334,7 @@ class Bot:
                                                               screenshot_area=self.mon_full_window,
                                                               rx_queue=self.tx_window_queue,
                                                               hang_notifier=self.hang_alert_queue,
+                                                              config=self.config,
                                                               )
         print(f"{self.window_framegrabber_phandle=}")
         self.window_framegrabber_phandle.start()
@@ -345,12 +347,13 @@ class Bot:
                                                         parent=self,
                                                         stop_event=self.stop_event,
                                                         hang_monitor=self.hang_monitor_controller,
+                                                        config=self.config,
                                                         daemon=True
                                                         )
         self.whole_window_thandle.start()
 
         # UI menu start
-        if settings.SHOW_UI:
+        if self.config.show_ui:
             self.game_size = (600, 600)
 
             self.game_font: pygame.freetype.Font = pygame.freetype.SysFont('Arial', 48, bold=True)
@@ -358,7 +361,6 @@ class Bot:
             self.screen = pygame.display.set_mode(self.game_size, 0, 32)
             self.screen.fill(Color.black.rgb())
 
-            self.audio_system: AudioSystem = AudioSystem()
             self.current_menu = self.generate_main_menu()
             self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title, fgcolor=Color.white.rgb())
 
@@ -549,9 +551,8 @@ class Bot:
                 self.player_direction = control
 
     def run(self):
-        # self.listener.start()
         self.audio_system.speak_nonblocking("Siralim Access has started")
-        if settings.SHOW_UI:
+        if self.config.show_ui:
             self.show_main_menu()
 
         iters = 0
@@ -612,7 +613,7 @@ class Bot:
                 root.debug(f"FPS: {clock.get_fps()}")
             iters += 1
 
-            if settings.SHOW_UI:
+            if self.config.show_ui:
                 # pygame menu check events
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -665,8 +666,10 @@ FrameType = Union[ArrayLike, Minimized]
 class WholeWindowGrabber(multiprocessing.Process):
     def __init__(self, out_quests: Queue, outgoing_color_frame_queue: multiprocessing.Queue, screenshot_area: dict,
                  rx_queue: multiprocessing.Queue, hang_notifier: queue.Queue[HangMonitorAlert],
+                 config: settings.Config,
                  **kwargs):
         super().__init__(**kwargs)
+        self.config = config
         self.color_frame_queue: queue.Queue[FrameType] = outgoing_color_frame_queue
         self.out_quests: Queue = out_quests
         self.screenshot_area: dict = screenshot_area
@@ -685,7 +688,7 @@ class WholeWindowGrabber(multiprocessing.Process):
             should_stop = False
 
             with mss.mss() as sct:
-                TARGET_WINDOW_CAPTURE_MS = 1 / settings.WHOLE_WINDOW_FPS
+                TARGET_WINDOW_CAPTURE_MS = 1 / self.config.whole_window_scanning_frequency
                 while not should_stop:
                     start = time.time()
                     # check for incoming messages
@@ -721,8 +724,9 @@ class WholeWindowGrabber(multiprocessing.Process):
 
 
 class WholeWindowAnalyzer(Thread):
-    def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker ,**kwargs) -> None:
+    def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker, config: settings.Config, **kwargs) -> None:
         super().__init__(**kwargs)
+        self.config = config
         self.last_selected_next = ""
         self.parent: Bot = parent
         self.incoming_frame_queue: Queue = incoming_frame_queue
@@ -745,6 +749,7 @@ class WholeWindowAnalyzer(Thread):
 
         if new_quest_ids == self.parent.current_quests:
             return
+
 
         self.parent.quest_sprite_long_names.clear()
         with Session() as session:
@@ -800,8 +805,9 @@ class WholeWindowAnalyzer(Thread):
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
 
-            # menu entry selection is latency sensitive
-            self.speak_selected_menu_item()
+            if self.config.ocr_selected_menu_item:
+                # menu entry selection is latency sensitive, so we do this first
+                self.speak_selected_menu_item()
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             current_quests = [quest.title for quest in quests]
@@ -810,6 +816,7 @@ class WholeWindowAnalyzer(Thread):
             root.debug(f"quest items = {quest_items}")
 
             self.update_quests(quests)
+
             root.debug(f"quests_len = {len(self.parent.quest_sprite_long_names)}")
 
 
@@ -917,6 +924,7 @@ class NearPlayerProcessing(Thread):
         self.last_realm_identified_timer = time.time()
 
         self.was_match: bool = False
+        self.match_streak: int = 0
         self.last_match_time: float = time.time()
 
     def bfs_near(self) -> Optional[FloorInfo]:
@@ -1021,6 +1029,11 @@ class NearPlayerProcessing(Thread):
 
     def scan_for_items(self):
         """Scans for decorations and quests in the castle"""
+        if not self.parent.config.repeat_sound_when_stationary and self.match_streak >= 4 * 6:
+            for tile_type, tiles in self.parent.all_found_matches.items():
+                tiles.clear()
+            self.parent.speak_nearby_objects()
+            return
 
         self.map.clear()
         self.map.player_direction = self.parent.player_direction
@@ -1078,6 +1091,7 @@ class NearPlayerProcessing(Thread):
 
     def handle_realm_alignment(self, realm_alignment: Optional[Union[RealmAlignment, CastleAlignment]]):
         if not realm_alignment:
+            self.match_streak = 0
             if time.time() - self.last_match_time >= 1/15 * 4:
                 for tile_type in self.parent.all_found_matches.values():
                     tile_type.clear()
@@ -1085,6 +1099,7 @@ class NearPlayerProcessing(Thread):
             return
         else:
             self.was_match = True
+            self.match_streak += 1
             self.last_match_time = time.time()
 
         if isinstance(realm_alignment, CastleAlignment):
@@ -1125,13 +1140,12 @@ class NearPlayerProcessing(Thread):
                 print(f"new item hashes = {len(self.parent.item_hashes)}")
 
     def handle_new_frame(self, data: NewFrame):
-        img = data.frame
-        self.near_frame_color = img[:, :, :3]
+        self.near_frame_color = data.frame
         if settings.DEBUG:
             self.near_frame_color = self.near_frame_color.copy()
 
         # make grayscale version
-        cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGR2GRAY, dst=self.near_frame_gray)
+        cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGRA2GRAY, dst=self.near_frame_gray)
         self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
 
         self.was_match = False
@@ -1142,7 +1156,7 @@ class NearPlayerProcessing(Thread):
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=10.0)
         if settings.VIEWER:
-            debug_window = cv2.namedWindow("Siralim Access", cv2.WINDOW_AUTOSIZE)
+            debug_window = cv2.namedWindow("Siralim Access", cv2.WINDOW_KEEPRATIO)
 
         while not self.stop_event.is_set():
             try:
@@ -1172,8 +1186,7 @@ class NearPlayerProcessing(Thread):
                     pass
 
                 if settings.VIEWER:
-                    # cv2.imshow("Siralim Access", self.map.img)
-                    cv2.imshow("Siralim Access", self.near_frame_color)
+                    cv2.imshow("Siralim Access", self.map.img)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         cv2.destroyAllWindows()
                         break

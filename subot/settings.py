@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
@@ -17,12 +18,113 @@ engine = create_engine(DATABASE_CONFIG.uri, echo=False, connect_args={'timeout':
 Session = sessionmaker(engine)
 IMAGE_PATH = Path(__file__).parent.parent.joinpath('resources')
 
+import configparser
+
+@dataclass
+class Config:
+    debug: bool = False
+    map_viewer: bool = False
+    show_ui: bool = True
+    whole_window_scanning_frequency: int = 10
+
+    ocr_selected_menu_item: bool = True
+
+    master_volume: float = 1.0
+    main_volume = 100
+    altar = 100
+    chest = 100
+    npc_master = 100
+    npc_generic = 100
+    project_item = 100
+    quest = 100
+    teleportation_shrine = 100
+
+    detect_objects_through_walls: bool = True
+
+    # repeat detected object sounds. If false, stops playing the sound if play has not moved
+    repeat_sound_when_stationary: bool = True
+
+    def save_config(self, path: Path):
+        ini = configparser.ConfigParser()
+
+        ini["DEFAULT"] = {
+            "show_ui": self.show_ui,
+            "whole_window_fps": self.whole_window_scanning_frequency,
+            "repeat_sound_when_stationary": self.repeat_sound_when_stationary,
+        }
+
+        ini["OCR"] = {
+            "read_selected_menu": self.ocr_selected_menu_item,
+        }
+
+        ini["VOLUME"] = {
+            "main_volume": self.main_volume,
+            "altar": self.altar,
+            "chest": self.chest,
+            "npc_master": self.npc_master,
+            "npc_generic": self.npc_generic,
+            "project_item": self.project_item,
+            "quest": self.quest,
+            "teleportation_shrine": self.teleportation_shrine,
+        }
+
+        ini["REALM_OBJECT_DETECTION"] = {
+            "detect_objects_through_walls": self.detect_objects_through_walls,
+        }
+
+        with open(path, "w+", encoding="utf8") as f:
+            ini.write(f)
+
+    @classmethod
+    def from_ini(cls, path: Path) -> Config:
+        default_config = Config()
+        ini = configparser.ConfigParser()
+        ini.read(path.as_posix())
+
+        default = ini["DEFAULT"]
+        default_config.show_ui = default.getboolean("show_ui", fallback=default_config.show_ui)
+
+        default_config.whole_window_scanning_frequency = default.getfloat("whole_window_fps", fallback=default_config.whole_window_scanning_frequency)
+        default_config.repeat_sound_when_stationary = default.getboolean('repeat_sound_when_stationary', fallback=default_config.repeat_sound_when_stationary)
+
+        volume = ini["VOLUME"]
+
+        default_config.master_volume = volume.getint("main_volume", fallback=default_config.master_volume)
+        default_config.altar = volume.getint("altar", fallback=default_config.altar)
+        default_config.chest = volume.getint("chest", fallback=default_config.chest)
+        default_config.npc_master = volume.getint('npc_master', fallback=default_config.npc_master)
+        default_config.npc_generic = volume.getint("npc_generic", fallback=default_config.npc_generic)
+        default_config.project_item = volume.getint("project_item", fallback=default_config.project_item)
+        default_config.quest = volume.getint("quest", fallback=default_config.quest)
+        default_config.teleportation_shrine = volume.getint("teleportation_shrine", fallback=default_config.teleportation_shrine)
+
+        ocr = ini["OCR"]
+        default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)
+
+        object_detection = ini["REALM_OBJECT_DETECTION"]
+        default_config.detect_objects_through_walls = object_detection.getboolean("detect_objects_through_walls", fallback=default_config.detect_objects_through_walls)
+
+        print(f"{default_config=}")
+        return default_config
+
+import os
+
+
+def load_config() -> Config:
+
+    config_path = Path(os.path.expandvars("%LOCALAPPDATA%")).joinpath("SiralimAccess").joinpath("config.ini")
+    if config_path.exists():
+        config = Config.from_ini(config_path)
+    else:
+        print(f"ini doesn't exist. generating default config for {config_path}")
+        config_path.parent.mkdir(exist_ok=True)
+        config = Config()
+    config.save_config(config_path)
+    return config
+
 DEBUG = False
 VIEWER = False
 FPS = 60
-WHOLE_WINDOW_FPS = 10
-
-SHOW_UI = True
 
 
 class GameControl(Enum):

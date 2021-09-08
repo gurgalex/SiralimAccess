@@ -10,7 +10,9 @@ import pygame
 import win32com.client
 from time import sleep
 
+from subot import settings
 from subot.pathfinder.map import TileType
+from subot.settings import Config
 from subot.utils import Point
 
 
@@ -86,7 +88,7 @@ class SoundMapping:
 AUDIO_DIR = (Path.cwd() / __file__).parent.parent.joinpath("resources").joinpath('audio')
 
 
-def volume_from_distance(distance: Point) -> tuple[Left, Right]:
+def volume_from_distance(distance: Point, volume_adj: float = 1.0) -> tuple[Left, Right]:
     if distance.x > 0:
         return Left(0), \
                Right(1 / (distance.x + 1 + abs(distance.y)))
@@ -223,7 +225,7 @@ class AudioSystem:
         else:
             sound = sound_mapping.sounds.normal
 
-        volume = volume_from_distance(audio_tile.distance)
+        volume = volume_from_distance(audio_tile.distance, self.config.master_volume)
 
         if channel.get_sound() != sound:
             channel.play(sound, -1)
