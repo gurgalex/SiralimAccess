@@ -84,7 +84,7 @@ def overlay_transparent(background_img, img_to_overlay_t):
     alpha_sum = np.sum(a)
     has_partial_transparency = alpha_sum % 255 != 0
     if has_partial_transparency:
-        print("using expensive partial transparnecy fn")
+        # print("using expensive partial transparnecy fn")
         result = overlay_with_transparency(bgimg=background_img, fgimg=img_to_overlay_t)
         return result[:, :, :3]
 

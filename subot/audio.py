@@ -1,6 +1,5 @@
 from __future__ import annotations
 import enum
-import socketserver
 from dataclasses import dataclass
 from enum import auto
 from pathlib import Path
@@ -11,6 +10,7 @@ import win32com.client
 from time import sleep
 
 from subot.pathfinder.map import TileType
+from subot.settings import Config
 from subot.utils import Point
 
 
@@ -73,6 +73,7 @@ class SoundIndicator:
 @dataclass
 class SoundMapping:
     channel: Union[dict[str, pygame.mixer.Channel], pygame.mixer.Channel]
+    volume_adj: int
     sounds: SoundIndicator
 
     def sounds_as_dict(self) -> dict[str, pygame.mixer.Sound]:
@@ -94,16 +95,18 @@ def volume_from_distance(distance: Point) -> tuple[Left, Right]:
         return Left(1 / (abs(abs(distance.x) + abs(distance.y)) + 1)), \
                Right(0)
     else:
-        return Left(1 / (abs(distance.y) + 1)), \
-               Right(1 / (abs(distance.y) + 1))
+        return Left((1 / (abs(distance.y) + 1))), \
+               Right((1 / (abs(distance.y) + 1)))
 
 
 class AudioSystem:
-    def __init__(self):
+    def __init__(self, config: Config):
+        self.config = config
         pygame.mixer.set_num_channels(16)
         self.sound_mappings: dict[SoundType, SoundMapping] = {
             SoundType.ALTAR: SoundMapping(
                 channel=pygame.mixer.Channel(2),
+                volume_adj=self.config.altar,
                 sounds=SoundIndicator(
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("altar-angel-low.ogg").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("altar-angel-normal.ogg").as_posix()),
@@ -113,6 +116,7 @@ class AudioSystem:
 
             SoundType.MASTER_NPC: SoundMapping(
                 channel=pygame.mixer.Channel(5),
+                volume_adj=self.config.npc_master,
                 sounds=SoundIndicator(
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("horse_sound_cc0-low.wav").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("horse_sound_cc0.wav").as_posix()),
@@ -122,6 +126,7 @@ class AudioSystem:
 
             SoundType.NPC_NORMAL: SoundMapping(
                 channel=pygame.mixer.Channel(4),
+                volume_adj=self.config.npc_generic,
                 sounds=SoundIndicator(
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("npc-low.ogg").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("npc-normal.ogg").as_posix()),
@@ -131,6 +136,7 @@ class AudioSystem:
 
             SoundType.PROJECT_ITEM: SoundMapping(
                 channel=pygame.mixer.Channel(3),
+                volume_adj=self.config.project_item,
                 sounds=SoundIndicator(
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("project-item-low.ogg").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("project-item-normal.ogg").as_posix()),
@@ -140,6 +146,7 @@ class AudioSystem:
 
             SoundType.QUEST_ITEM: SoundMapping(
                 channel=pygame.mixer.Channel(0),
+                volume_adj=self.config.quest,
                 sounds=SoundIndicator(
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-low.wav").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-normal.wav").as_posix()),
@@ -149,6 +156,7 @@ class AudioSystem:
 
             SoundType.TELEPORTATION_SHRINE: SoundMapping(
                 channel=pygame.mixer.Channel(6),
+                volume_adj=self.config.teleportation_shrine,
                 sounds=SoundIndicator(
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath('teleportation-shrine/low.ogg').as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath('teleportation-shrine/normal.ogg').as_posix()),
@@ -157,6 +165,7 @@ class AudioSystem:
             ),
             SoundType.CHEST: SoundMapping(
                 channel=pygame.mixer.Channel(7),
+                volume_adj=self.config.chest,
                 sounds=SoundIndicator(
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("snd_ChestOpening/low.wav").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("snd_ChestOpening/normal.wav").as_posix()),
@@ -225,11 +234,14 @@ class AudioSystem:
 
         volume = volume_from_distance(audio_tile.distance)
 
+        volume_adj = self.config.master_volume / 100 * sound_mapping.volume_adj / 100
+        adjusted_volume = volume[0] * volume_adj, volume[1] * volume_adj
+
         if channel.get_sound() != sound:
             channel.play(sound, -1)
-            channel.set_volume(*volume)
+            channel.set_volume(*adjusted_volume)
 
-        channel.set_volume(*volume)
+        channel.set_volume(*adjusted_volume)
 
     def stop(self, sound_type: SoundType, point: Optional[Point]=None):
         channel = self.sound_mappings[sound_type].channel
@@ -260,7 +272,6 @@ class AudioSystem:
         return self.sound_mappings
 
     def play_sound_demo(self, sound_type: SoundType, play_for_seconds: float):
-        # self.speak_blocking(sound_type.description)
 
         sounds = self.sound_mappings[sound_type]
         for sound_name, sound_type in sounds.sounds_as_dict().items():

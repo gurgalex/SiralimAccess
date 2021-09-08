@@ -1,3 +1,17 @@
+# v0.9.20
+# feat
+- Many parts of the program are now configurable. A config file is generated at `%APPLOCALDATA%\SiralimAccess`.
+  - OCR menu reading can be toggled or off with the `read_selected_menu` config option
+  - Master and individual sound effect volumes can now be adjusted from 0-100%
+  - You can now choose if you'd like the detected object sounds to turn off when you have not moved for a period of time
+    - `repeat_sound_when_stationary` and duration with `repeat_sound_seconds`
+
+  - The program menu can be disabled with the `show_ui` config option
+- Torture Chamber, Kingdom of Heretics, and Where the Dead Ships Dwell realms should have much better support now.
+# perf
+- object detection is now much more responsive and no longer lags after enemy encounters
+- OCR of menu entries is now slightly faster, frequency of scanning can be adjusted with `whole_window_fps`
+
 ## v0.9.19
 # fix
 - See if enabling console mode allows screenshots for some users

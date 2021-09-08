@@ -121,5 +121,4 @@ def detect_green_text(image) -> np.array:
 
     img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(img, lower_green, upper_green)
-    mask = cv2.bitwise_not(mask)
     return mask
