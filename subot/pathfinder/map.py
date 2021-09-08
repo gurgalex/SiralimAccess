@@ -237,7 +237,7 @@ class Map:
         cv2.imwrite(filename, img)
 
     def walkable_directions(self):
-        # scan 3 tiles way from player for corridors
+        # scan 3 tiles away from player for corridors
         PASSAGE_VIEW = min(3, self.center.y)
 
         if self.player_direction is GameControl.DOWN or self.player_direction is GameControl.UP:

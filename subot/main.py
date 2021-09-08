@@ -38,7 +38,9 @@ from subot.ocr import recognize_cv2_image, detect_green_text
 import win32gui
 import pygame
 import pygame.freetype
-pygame.init()
+pygame.mixer.init()
+pygame.freetype.init()
+pygame.display.init()
 
 os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
 import math
@@ -60,7 +62,6 @@ from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLo
     QuestType, ResourceNodeSprite, \
     SpriteTypeLookup, SpriteType, ChestSprite
 
-from readerwriterlock import rwlock
 
 from subot.utils import Point, read_version, PlayerDirection
 import traceback
@@ -309,7 +310,6 @@ class Bot:
         self.item_hashes: RealmSpriteHasher = RealmSpriteHasher(floor_tiles=None)
 
         self.all_found_matches: dict[TileType, list[AssetGridLoc]] = defaultdict(list)
-        self.all_found_matches_rlock = rwlock.RWLockFair()
 
         self.stop_event = threading.Event()
         self.nearby_process = NearbyFrameGrabber(name=NearbyFrameGrabber.__name__,
@@ -630,30 +630,29 @@ class Bot:
             clock.tick(settings.FPS)
 
     def speak_nearby_objects(self):
-        with self.all_found_matches_rlock.gen_wlock():
 
-            for tile_type, tiles in self.all_found_matches.items():
-                try:
-                    sound_type = SoundType.from_tile_type(tile_type)
-                except KeyError:
-                    tiles.clear()
-                    continue
-
-                if not tiles:
-                    self.audio_system.stop(sound_type)
-                else:
-                    if tile_type is TileType.REACHABLE_DIRECTION:
-                        for tile in tiles:
-                            audio_location = AudioLocation(distance=tile.point())
-                            self.audio_system.play_sound(audio_location, sound_type)
-                        # current_direction_points = set([t.point() for t in tiles])
-                        # not_active_directions = self.all_directions - current_direction_points
-                        # for point in not_active_directions:
-                        #     self.audio_system.stop(sound_type, point)
-                    else:
-                        audio_location = AudioLocation(distance=tiles[0].point())
-                        self.audio_system.play_sound(audio_location, sound_type)
+        for tile_type, tiles in self.all_found_matches.items():
+            try:
+                sound_type = SoundType.from_tile_type(tile_type)
+            except KeyError:
                 tiles.clear()
+                continue
+
+            if not tiles:
+                self.audio_system.stop(sound_type)
+            else:
+                if tile_type is TileType.REACHABLE_DIRECTION:
+                    for tile in tiles:
+                        audio_location = AudioLocation(distance=tile.point())
+                        self.audio_system.play_sound(audio_location, sound_type)
+                    # current_direction_points = set([t.point() for t in tiles])
+                    # not_active_directions = self.all_directions - current_direction_points
+                    # for point in not_active_directions:
+                    #     self.audio_system.stop(sound_type, point)
+                else:
+                    audio_location = AudioLocation(distance=tiles[0].point())
+                    self.audio_system.play_sound(audio_location, sound_type)
+            tiles.clear()
 
 
 class Minimized:
@@ -1038,37 +1037,34 @@ class NearPlayerProcessing(Thread):
         self.map.clear()
         self.map.player_direction = self.parent.player_direction
         self.map.set_center(Point(x=self.grid_near_rect.w//TILE_SIZE//2, y=self.grid_near_rect.h//TILE_SIZE//2))
-        with self.parent.all_found_matches_rlock.gen_wlock():
 
-            for row in range(0, self.grid_near_rect.w, TILE_SIZE):
-                for col in range(0, self.grid_near_rect.h, TILE_SIZE):
-                    tile_gray = self.near_frame_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
-                    start_point = (row + self.grid_near_rect.x, col + self.grid_near_rect.y)
-                    end_point = (start_point[0] + TILE_SIZE, start_point[1] + TILE_SIZE)
-                    asset_location = AssetGridLoc(
-                        # x=aligned_player_tile_x + row // TILE_SIZE - self.parent.player_position_tile.x,
-                        x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE - self.parent.player_position_tile.x,
-                        y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
-                    )
-                    if asset_location.point() == Point(0,0):
-                        self.map.set(asset_location.point(), TileType.PLAYER)
-                        continue
+        for row in range(0, self.grid_near_rect.w, TILE_SIZE):
+            for col in range(0, self.grid_near_rect.h, TILE_SIZE):
+                tile_gray = self.near_frame_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
+                start_point = (row + self.grid_near_rect.x, col + self.grid_near_rect.y)
+                end_point = (start_point[0] + TILE_SIZE, start_point[1] + TILE_SIZE)
+                asset_location = AssetGridLoc(
+                    x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE - self.parent.player_position_tile.x,
+                    y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
+                )
+                if asset_location.point() == Point(0,0):
+                    self.map.set(asset_location.point(), TileType.PLAYER)
+                    continue
 
-                    try:
-                        img_info = self.parent.item_hashes.get_greyscale(tile_gray[:TILE_SIZE, :TILE_SIZE])
+                try:
+                    img_info = self.parent.item_hashes.get_greyscale(tile_gray[:TILE_SIZE, :TILE_SIZE])
 
+                    tile_type = self.identify_type(img_info, asset_location)
+                    if not self.exclude_from_debug(img_info):
+                        root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}, {tile_type}")
+                    if settings.DEBUG:
+                        self.draw_debug(start_point, end_point, tile_type, "")
+                    self.parent.all_found_matches[tile_type].append(asset_location)
 
-                        tile_type = self.identify_type(img_info, asset_location)
-                        if not self.exclude_from_debug(img_info):
-                            root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}, {tile_type}")
-                        if settings.DEBUG:
-                            self.draw_debug(start_point, end_point, tile_type, "")
-                        self.parent.all_found_matches[tile_type].append(asset_location)
+                    self.map.set(asset_location.point(), tile_type)
 
-                        self.map.set(asset_location.point(), tile_type)
-
-                    except KeyError:
-                        self.map.set(asset_location.point(), TileType.UNKNOWN)
+                except KeyError:
+                    self.map.set(asset_location.point(), TileType.UNKNOWN)
         start = time.time()
         self.map.find_reachable_blocks()
         try:
