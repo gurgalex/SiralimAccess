@@ -1,12 +1,15 @@
 from __future__ import annotations
+import configparser
 from dataclasses import dataclass
 from enum import Enum, auto
+import os
 from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 sqlite_path = (Path.cwd() / __file__).parent.parent.joinpath('assets.db')
+
 
 @dataclass()
 class DatabaseConfig:
@@ -18,26 +21,25 @@ engine = create_engine(DATABASE_CONFIG.uri, echo=False, connect_args={'timeout':
 Session = sessionmaker(engine)
 IMAGE_PATH = Path(__file__).parent.parent.joinpath('resources')
 
-import configparser
 
 @dataclass
 class Config:
     debug: bool = False
     map_viewer: bool = False
     show_ui: bool = True
-    whole_window_scanning_frequency: int = 10
+    whole_window_scanning_frequency: int = 7
 
     ocr_selected_menu_item: bool = True
 
-    master_volume: float = 1.0
-    main_volume = 100
-    altar = 100
-    chest = 100
-    npc_master = 100
-    npc_generic = 100
-    project_item = 100
-    quest = 100
-    teleportation_shrine = 100
+    master_volume: int = 100
+    main_volume: int = 100
+    altar: int = 100
+    chest: int = 100
+    npc_master: int = 100
+    npc_generic: int = 100
+    project_item: int = 100
+    quest: int = 100
+    teleportation_shrine: int = 100
 
     detect_objects_through_walls: bool = True
 
@@ -47,7 +49,7 @@ class Config:
     def save_config(self, path: Path):
         ini = configparser.ConfigParser()
 
-        ini["DEFAULT"] = {
+        ini["GENERAL"] = {
             "show_ui": self.show_ui,
             "whole_window_fps": self.whole_window_scanning_frequency,
             "repeat_sound_when_stationary": self.repeat_sound_when_stationary,
@@ -81,11 +83,11 @@ class Config:
         ini = configparser.ConfigParser()
         ini.read(path.as_posix())
 
-        default = ini["DEFAULT"]
-        default_config.show_ui = default.getboolean("show_ui", fallback=default_config.show_ui)
+        general = ini["GENERAL"]
+        default_config.show_ui = general.getboolean("show_ui", fallback=default_config.show_ui)
 
-        default_config.whole_window_scanning_frequency = default.getfloat("whole_window_fps", fallback=default_config.whole_window_scanning_frequency)
-        default_config.repeat_sound_when_stationary = default.getboolean('repeat_sound_when_stationary', fallback=default_config.repeat_sound_when_stationary)
+        default_config.whole_window_scanning_frequency = general.getfloat("whole_window_fps", fallback=default_config.whole_window_scanning_frequency)
+        default_config.repeat_sound_when_stationary = general.getboolean('repeat_sound_when_stationary', fallback=default_config.repeat_sound_when_stationary)
 
         volume = ini["VOLUME"]
 
@@ -106,8 +108,6 @@ class Config:
 
         print(f"{default_config=}")
         return default_config
-
-import os
 
 
 def load_config() -> Config:
