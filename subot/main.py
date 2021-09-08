@@ -770,7 +770,32 @@ class WholeWindowAnalyzer(Thread):
 
     def speak_selected_menu_item(self):
         mask = detect_green_text(self.frame)
-        ocr_result = recognize_cv2_image(mask)
+        # remove non-font green pixels
+        start_blur_time = time.time()
+        blurred = cv2.medianBlur(mask, 3)
+        end_blur_time = time.time()
+        root.debug(f"blurring took {math.ceil((end_blur_time-start_blur_time)*1000)}ms")
+        x,y,w,h = cv2.boundingRect(blurred)
+
+        no_match = w == 0 or h == 0
+        if no_match:
+            return
+
+        # padding around font is used to improve OCR output
+        padding = 16
+
+        # don't go out of bounds
+        y_start = max(y-padding, 0)
+        y_end = min(y + h + padding, mask.shape[0])
+        x_start = max(x-padding, 0)
+        x_end = min(x + w + padding,mask.shape[1])
+
+        roi = mask[y_start:y_end, x_start:x_end]
+        # only resize if image capture area likely contains a single section of text (saves CPU)
+        if roi.shape[0] < 400 or roi.shape[1] < 400:
+            roi = cv2.resize(roi, (roi.shape[1]*2, roi.shape[0]*2), interpolation=cv2.INTER_NEAREST)
+
+        ocr_result = recognize_cv2_image(roi)
         selected_text = ocr_result["text"]
 
         # don't repeat announcing the same or no text at all
@@ -806,7 +831,11 @@ class WholeWindowAnalyzer(Thread):
 
             if self.config.ocr_selected_menu_item:
                 # menu entry selection is latency sensitive, so we do this first
+                start = time.time()
                 self.speak_selected_menu_item()
+                end = time.time()
+                took_ms = math.ceil((end-start)*1000)
+                root.info(f"ocr took {took_ms}ms")
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             current_quests = [quest.title for quest in quests]
