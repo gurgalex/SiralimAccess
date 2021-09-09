@@ -1,3 +1,7 @@
+#v0.9.22
+# fix
+- Program can now run if Siralim Ultimate is not installed through Steam
+
 #v0.9.21
 # fix
 - encountering resource nodes should no longer crash the program. They were misclassified as regular sprites
