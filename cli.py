@@ -2,27 +2,12 @@ import os
 import sys
 from pathlib import Path
 import shutil
-from winreg import *
 
 import click
 
-
-def detect_siralim_ultimate_install_location() -> Path:
-    siralim_ultimate_steam_uninstall_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 1289810"
-
-    local_registry = ConnectRegistry(None, HKEY_LOCAL_MACHINE)
-
-    siralim_ultimate_key_open = OpenKey(local_registry, siralim_ultimate_steam_uninstall_key)
-    try:
-        value, key_type = QueryValueEx(siralim_ultimate_key_open, "InstallLocation")
-        return Path(value)
-    except FileNotFoundError as e:
-        raise e
-
-
 OCR_FONT = 'arialbd.ttf'
-FONT_FILE_ORIG_SIRALIM_ULTIMATE: Path = detect_siralim_ultimate_install_location().joinpath("Eight-Bit-Dragon2.otf")
-ORIGINAL_BACKUP_FONT_FILEPATH: Path = FONT_FILE_ORIG_SIRALIM_ULTIMATE.parent.joinpath("Eight-Bit-Dragon2-orig.otf")
+FONT_FILE_ORIG_SIRALIM_ULTIMATE = Path("C:\Program Files (x86)\Steam\steamapps\common\Siralim Ultimate\Eight-Bit-Dragon2.otf")
+ORIGINAL_BACKUP_FONT_FILEPATH = FONT_FILE_ORIG_SIRALIM_ULTIMATE.parent.joinpath("Eight-Bit-Dragon2-orig.otf")
 
 
 @click.group()

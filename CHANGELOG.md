@@ -1,10 +1,3 @@
-#v0.9.21
-# fix
-- encountering resource nodes should no longer crash the program. They were misclassified as regular sprites
-- detect Siralim Ultimate install location on non-C drives. Fixes the font failing to install
-- Maximizing the game (not fullscreen) now doesn't break object detection
-- The game can now be resized without breaking object detection
-
 # v0.9.20
 # feat
 - Many parts of the program are now configurable. A config file is generated at `%APPLOCALDATA%\SiralimAccess`.
