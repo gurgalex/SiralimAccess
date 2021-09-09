@@ -502,8 +502,8 @@ class Bot:
         # xxxxxxx
         # xxxxxxx
         #
-        pixel_offset_x = round(self.su_client_rect.w / 2) % TILE_SIZE
-        pixel_offset_y = round(self.su_client_rect.h / 2) % TILE_SIZE
+        pixel_offset_x = self.su_client_rect.w // 2 % TILE_SIZE
+        pixel_offset_y = self.su_client_rect.h // 2 % TILE_SIZE
         return Rect(
             x=pixel_offset_x + ( self.player_position_tile.x - NEARBY_TILES_WH // 2) * TILE_SIZE,
             y=pixel_offset_y + (self.player_position_tile.y - NEARBY_TILES_WH // 2) * TILE_SIZE,
@@ -550,22 +550,6 @@ class Bot:
             if control in player_direction:
                 self.player_direction = control
 
-    def reinit_bot(self, new_full_window_rec: Rect):
-        self.su_client_rect = new_full_window_rec
-        self.player_position: Rect = Bot.compute_player_position(self.su_client_rect)
-
-        self.player_position_tile = TileCoord(x=self.player_position.x // TILE_SIZE,
-                                              y=self.player_position.y // TILE_SIZE)
-
-        self.mon_full_window = new_full_window_rec.to_mss_dict()
-        self.nearby_rect_mss: Rect = self.compute_nearby_screenshot_area()
-        self.nearby_tile_top_left: TileCoord = TileCoord(x=self.nearby_rect_mss.x // TILE_SIZE,
-                                                         y=self.nearby_rect_mss.y // TILE_SIZE)
-
-        self.nearby_mon: dict = {"top": self.su_client_rect.y + self.nearby_rect_mss.y,
-                                 "left": self.su_client_rect.x + self.nearby_rect_mss.x,
-                                 "width": self.nearby_rect_mss.w, "height": self.nearby_rect_mss.h}
-
     def run(self):
         self.audio_system.speak_nonblocking("Siralim Access has started")
         if self.config.show_ui:
@@ -606,7 +590,11 @@ class Bot:
 
                 if new_su_client_rect != self.su_client_rect:
                     print(f"SU window changed. new={new_su_client_rect}, old={self.su_client_rect}")
-                    self.reinit_bot(new_su_client_rect)
+                    self.su_client_rect = new_su_client_rect
+                    self.mon_full_window = new_su_client_rect.to_mss_dict()
+                    self.nearby_mon: dict = {"top": self.su_client_rect.y + self.nearby_rect_mss.y,
+                                             "left": self.su_client_rect.x + self.nearby_rect_mss.x,
+                                             "width": self.nearby_rect_mss.w, "height": self.nearby_rect_mss.h}
 
                     self.tx_window_queue.put(WindowDim(mss_dict=self.mon_full_window))
                     self.tx_nearby_process_queue.put(WindowDim(mss_dict=self.nearby_mon))

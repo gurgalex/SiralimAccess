@@ -161,8 +161,6 @@ def add_or_update_sprites(sprites: dict[str, Type[Sprite]]):
             try:
                 sprite_base_id, sprite_base_type_id = session.query(Sprite.id, Sprite.type_id).filter_by(long_name=sprite_new.long_name).one()
                 sprite_new.id = sprite_base_id
-                if sprite_base_type_id != SpriteType.DECORATION.value:
-                    sprite_new.type_id = sprite_base_type_id
                 try:
                     session.query(sprite_new.__class__.id).filter_by(long_name=sprite_new.long_name).one()
                     ct += 1
