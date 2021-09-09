@@ -20,9 +20,6 @@ def detect_siralim_ultimate_install_location() -> Path:
         raise e
 
 
-OCR_FONT = 'arialbd.ttf'
-FONT_FILE_ORIG_SIRALIM_ULTIMATE: Path = detect_siralim_ultimate_install_location().joinpath("Eight-Bit-Dragon2.otf")
-ORIGINAL_BACKUP_FONT_FILEPATH: Path = FONT_FILE_ORIG_SIRALIM_ULTIMATE.parent.joinpath("Eight-Bit-Dragon2-orig.otf")
 
 
 @click.group()
@@ -76,4 +73,9 @@ if __name__ == "__main__":
     if len(sys.argv) == 1:
         start_bot()
     else:
+        OCR_FONT = 'arialbd.ttf'
+        FONT_FILE_ORIG_SIRALIM_ULTIMATE: Path = detect_siralim_ultimate_install_location().joinpath(
+            "Eight-Bit-Dragon2.otf")
+        ORIGINAL_BACKUP_FONT_FILEPATH: Path = FONT_FILE_ORIG_SIRALIM_ULTIMATE.parent.joinpath(
+            "Eight-Bit-Dragon2-orig.otf")
         enter_cli()
