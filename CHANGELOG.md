@@ -1,7 +1,6 @@
 #v0.9.22
 # fix
-- Program can now run if Siralim Ultimate is not installed through Steam
-
+- Program was incorrectly checking for Siralim Ultimate install location outside of the installer. Now no longer crashes on launch
 #v0.9.21
 # fix
 - encountering resource nodes should no longer crash the program. They were misclassified as regular sprites
