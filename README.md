@@ -21,6 +21,10 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 # Required game settings
 - Display Zoom: 1x - to identify any realm object
 
+# Operating System Requirements
+- Windows 10 - only so far tested on 2021 releases
+- The English United States language pack must be installed [Instructions can be found here](https://support.microsoft.com/en-us/windows/install-a-language-for-windows-ccd853d3-9ecd-7da7-9ef0-72b4a055410a)
+
 
 # How to download
 The latest version of the installer can be found [here https://github.com/gurgalex/SiralimAccess/releases/latest](https://github.com/gurgalex/SiralimAccess/releases/latest)
