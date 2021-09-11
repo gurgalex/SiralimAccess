@@ -97,6 +97,10 @@ def convert_to_rect(rect, clientRect) -> Rect:
     return Rect(x=newRect[0], y=newRect[1], w=newRect[2] - newRect[0], h=newRect[3] - newRect[1])
 
 
+class GameMinimizedException(Exception):
+    pass
+
+
 def get_su_client_rect() -> Rect:
     """Returns Rect class of the Siralim Ultimate window. Coordinates are without title bar and borders
     :raises GameNotOpenException if the game is not open
@@ -114,6 +118,10 @@ def get_su_client_rect() -> Rect:
     is_fullscreen = rect == full_screen_rect
     if is_fullscreen:
         raise GameFullscreenException("game is fullscreen")
+
+    is_minimized = window_rect.w == 0 or window_rect.h == 0
+    if is_minimized:
+        raise GameMinimizedException('game is minimized')
 
     return window_rect
 
@@ -135,6 +143,8 @@ class BotMode(Enum):
     UNDETERMINED = auto()
     CASTLE = auto()
     REALM = auto()
+    MINIMIZED = auto()
+
 
 
 @dataclass(frozen=True)
@@ -156,7 +166,8 @@ def extract_quest_name_from_quest_area(gray_frame: np.typing.ArrayLike) -> list[
     quests: list[Quest] = []
     y_text_dim = int(gray_frame.shape[0] * 0.33)
     x_text_dim = int(gray_frame.shape[1] * 0.33)
-    thresh, threshold_white = cv2.threshold(gray_frame[:y_text_dim, -x_text_dim:], 220, 255, cv2.THRESH_BINARY_INV)
+    quest_area = gray_frame[:y_text_dim, -x_text_dim:]
+    thresh, threshold_white = cv2.threshold(quest_area, 215, 255, cv2.THRESH_BINARY_INV)
 
     text = recognize_cv2_image(threshold_white)
 
@@ -203,10 +214,11 @@ class FloorInfo:
 
 
 class Bot:
-    def __init__(self):
+    def __init__(self, audio_system: AudioSystem, config: settings.Config):
         # queue to monitor for incoming hang alert
-        self.config = settings.load_config()
-
+        initialized = False
+        self.config = config
+        self.mode: BotMode = BotMode.UNDETERMINED
 
         self.player_direction: Optional[GameControl] = None
         self.realm: Optional[Realm] = None
@@ -219,13 +231,12 @@ class Bot:
 
 
         self.current_quests: set[int] = set()
-        signal.signal(signal.SIGINT, self.stop_signal)
         self.timer = None
         self.tx_nearby_process_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
 
         self.teleportation_shrine_names: set[str] = {'bigroomchanger', 'teleshrine_inactive'}
 
-        self.audio_system: AudioSystem = AudioSystem(config=self.config)
+        self.audio_system = audio_system
 
         self.color_frame_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=1)
         self.out_quests: multiprocessing.Queue = multiprocessing.Queue()
@@ -239,7 +250,6 @@ class Bot:
         self.nearby_send_deque = deque(maxlen=10)
         self.quest_sprite_long_names: set[str] = set()
 
-        self.mode: BotMode = BotMode.UNDETERMINED
 
         # Used to analyze the SU window
         try:
@@ -255,7 +265,6 @@ class Bot:
 
             self.audio_system.speak_blocking("Shutting down")
             sys.exit(1)
-
 
         """player tile position in grid"""
         self.player_position: Rect = Bot.compute_player_position(self.su_client_rect)
@@ -363,6 +372,7 @@ class Bot:
 
             self.current_menu = self.generate_main_menu()
             self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title, fgcolor=Color.white.rgb())
+        signal.signal(signal.SIGINT, self.stop_signal)
 
 
     def generate_main_menu(self) -> Menu:
@@ -603,6 +613,8 @@ class Bot:
                     self.stop()
                     self.audio_system.speak_blocking("Shutting down")
                     return
+                except GameMinimizedException:
+                    pass
 
                 if new_su_client_rect != self.su_client_rect:
                     print(f"SU window changed. new={new_su_client_rect}, old={self.su_client_rect}")
@@ -1233,8 +1245,23 @@ class NearPlayerProcessing(Thread):
         root.info(f"{self.name} is shutting down")
 
 
+def init_bot() -> Bot:
+    config = settings.load_config()
+    audio_system = AudioSystem(config)
+
+    is_minimized = True
+    while is_minimized:
+        try:
+            bot = Bot(audio_system=audio_system, config=config)
+            root.debug("Siralim ultimate is not minimized")
+            return bot
+        except GameMinimizedException:
+            root.info("Siralim Ultimate is minimized, waiting")
+            time.sleep(1)
+
+
 def start_bot():
-    bot = Bot()
+    bot = init_bot()
     bot.run()
 
 
@@ -1247,4 +1274,7 @@ if __name__ == "__main__":
 
     root.info(f"Siralim Access version = {read_version()}")
 
-    start_bot()
+    try:
+        start_bot()
+    except KeyboardInterrupt:
+        pass
