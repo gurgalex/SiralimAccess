@@ -1,3 +1,8 @@
+v0.9.23
+# fix
+- No longer crash if Siralim Ultimate is minimized when starting up Siralim Access
+- Commas should now be detected in the standard game resolution. It is no looser on what is considered white.
+
 #v0.9.22
 # fix
 - Program was incorrectly checking for Siralim Ultimate install location outside of the installer. Now no longer crashes on launch
