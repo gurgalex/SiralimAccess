@@ -1,12 +1,11 @@
-v0.9.23
+#v0.9.23
 # fix
 - No longer crash if Siralim Ultimate is minimized when starting up Siralim Access
-- Commas should now be detected in the standard game resolution. It is no looser on what is considered white.
+- Commas should now be detected in the standard game resolution. It is now looser on what is considered white.
 
 #v0.9.22
 # fix
-- Program was incorrectly checking for Siralim Ultimate install location outside of the installer. Now no longer crashes on launch
-#v0.9.21
+- Program now no longer crashes without admin privileges. Determining the font install location is now only done during the installer phase when those privileges are given.#v0.9.21
 # fix
 - encountering resource nodes should no longer crash the program. They were misclassified as regular sprites
 - detect Siralim Ultimate install location on non-C drives. Fixes the font failing to install
