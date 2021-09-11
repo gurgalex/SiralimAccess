@@ -166,7 +166,8 @@ def extract_quest_name_from_quest_area(gray_frame: np.typing.ArrayLike) -> list[
     quests: list[Quest] = []
     y_text_dim = int(gray_frame.shape[0] * 0.33)
     x_text_dim = int(gray_frame.shape[1] * 0.33)
-    thresh, threshold_white = cv2.threshold(gray_frame[:y_text_dim, -x_text_dim:], 220, 255, cv2.THRESH_BINARY_INV)
+    quest_area = gray_frame[:y_text_dim, -x_text_dim:]
+    thresh, threshold_white = cv2.threshold(quest_area, 215, 255, cv2.THRESH_BINARY_INV)
 
     text = recognize_cv2_image(threshold_white)
 
