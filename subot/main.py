@@ -34,7 +34,7 @@ import numpy as np
 import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
-from subot.ocr import recognize_cv2_image, detect_green_text
+from subot.ocr import recognize_cv2_image, detect_green_text, detect_dialog_text
 import win32gui
 import pygame
 import pygame.freetype
