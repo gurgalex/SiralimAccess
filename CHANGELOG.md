@@ -2,6 +2,8 @@
 # perf
 - Pause object detection, OCR, and frame capture when Siralim Ultimate is minimized and/or in the background
   - This drops CPU usage to near 0% when not needing to do any analysis
+# fix
+  - Unsupported quest notification was broken in the last update. Now speaks it
 #v0.9.24
 # feat
 - Story and NPC dialog boxes are now spoken
