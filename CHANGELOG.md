@@ -1,3 +1,7 @@
+#v0.9.24
+# feat
+- Story and NPC dialog boxes are now spoken
+
 #v0.9.23
 # fix
 - No longer crash if Siralim Ultimate is minimized when starting up Siralim Access

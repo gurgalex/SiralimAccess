@@ -30,6 +30,7 @@ class Config:
     whole_window_scanning_frequency: int = 7
 
     ocr_selected_menu_item: bool = True
+    ocr_read_dialog_boxes: bool = True
 
     master_volume: int = 100
     main_volume: int = 100
@@ -59,6 +60,7 @@ class Config:
 
         ini["OCR"] = {
             "read_selected_menu": self.ocr_selected_menu_item,
+            "read_dialog_boxes": self.ocr_read_dialog_boxes,
         }
 
         ini["VOLUME"] = {
@@ -105,6 +107,7 @@ class Config:
 
         ocr = ini["OCR"]
         default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)
+        default_config.ocr_read_dialog_boxes = ocr.getboolean('read_dialog_boxes', fallback=default_config.ocr_read_dialog_boxes)
 
         object_detection = ini["REALM_OBJECT_DETECTION"]
         default_config.detect_objects_through_walls = object_detection.getboolean("detect_objects_through_walls", fallback=default_config.detect_objects_through_walls)
