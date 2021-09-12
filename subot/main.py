@@ -7,6 +7,8 @@ import sentry_sdk
 
 from ctypes import windll
 
+import win32process
+
 user32 = windll.user32
 def set_dpi_aware():
     # makes functions return real pixel numbers instead of scaled values
@@ -49,7 +51,8 @@ import time
 from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.datatypes import Rect
 from subot.menu import MenuItem, Menu
-from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg, ScanForItems
+from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg, ScanForItems, \
+    Resume, Pause
 from subot.pathfinder.map import TileType, Map, Color, Movement
 
 from numpy.typing import ArrayLike
@@ -101,6 +104,10 @@ class GameMinimizedException(Exception):
     pass
 
 
+class GameNotForegroundException(Exception):
+    pass
+
+
 def get_su_client_rect() -> Rect:
     """Returns Rect class of the Siralim Ultimate window. Coordinates are without title bar and borders
     :raises GameNotOpenException if the game is not open
@@ -121,7 +128,12 @@ def get_su_client_rect() -> Rect:
 
     is_minimized = window_rect.w == 0 or window_rect.h == 0
     if is_minimized:
+        root.debug("Siralim Ultimate is not in the foreground")
         raise GameMinimizedException('game is minimized')
+
+    su_tid, su_pid = win32process.GetWindowThreadProcessId(su_hwnd)
+    if not is_foreground_process(su_pid):
+        raise GameNotForegroundException("Siralim Ultimate is not in the foreground")
 
     return window_rect
 
@@ -212,13 +224,23 @@ class FloorInfo:
     realm: Optional[Realm]
     long_name: str
 
+def is_foreground_process(pid: int) -> bool:
+    hwnd = win32gui.GetForegroundWindow()
+    if not hwnd:
+        return False
+    active_tid, active_pid = win32process.GetWindowThreadProcessId(hwnd)
+    if active_pid == 0:
+        return False
+    return pid == active_pid
+
 
 class Bot:
     def __init__(self, audio_system: AudioSystem, config: settings.Config):
         # queue to monitor for incoming hang alert
-        initialized = False
         self.config = config
         self.mode: BotMode = BotMode.UNDETERMINED
+        self.game_is_foreground: bool = False
+        self.paused: bool = False
 
         self.player_direction: Optional[GameControl] = None
         self.realm: Optional[Realm] = None
@@ -232,7 +254,7 @@ class Bot:
 
         self.current_quests: set[int] = set()
         self.timer = None
-        self.tx_nearby_process_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
+        self.tx_nearby_process_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=1)
 
         self.teleportation_shrine_names: set[str] = {'bigroomchanger', 'teleshrine_inactive'}
 
@@ -243,17 +265,18 @@ class Bot:
         self.rx_color_nearby_queue = multiprocessing.Queue(maxsize=1)
 
         # queues for communicaitng with WindowGrabber and NearbyGrabber
-        self.rx_queue = multiprocessing.Queue(maxsize=100)
-        self.tx_window_queue = multiprocessing.Queue(maxsize=100)
+        self.rx_queue = multiprocessing.Queue(maxsize=10)
+        self.tx_window_queue = multiprocessing.Queue(maxsize=10)
 
 
-        self.nearby_send_deque = deque(maxlen=10)
+        self.nearby_send_deque = deque(maxlen=1)
         self.quest_sprite_long_names: set[str] = set()
 
 
         # Used to analyze the SU window
         try:
             self.su_client_rect = get_su_client_rect()
+            self.game_is_foreground = True
         except GameNotOpenException:
             self.audio_system.speak_blocking("Siralim Access will not work unless Siralim Ultimate is open.")
 
@@ -374,6 +397,9 @@ class Bot:
             self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title, fgcolor=Color.white.rgb())
         signal.signal(signal.SIGINT, self.stop_signal)
 
+    def clear_all_matches(self):
+        for match_group in self.all_found_matches.values():
+            match_group.clear()
 
     def generate_main_menu(self) -> Menu:
         main_menu = Menu(title="Main Menu",
@@ -576,6 +602,48 @@ class Bot:
                                  "left": self.su_client_rect.x + self.nearby_rect_mss.x,
                                  "width": self.nearby_rect_mss.w, "height": self.nearby_rect_mss.h}
 
+    def check_if_window_changed_position(self):
+        self.timer = time.time()
+        try:
+            new_su_client_rect = get_su_client_rect()
+            prev_forground = self.game_is_foreground == True
+            self.game_is_foreground = True
+            if self.paused:
+                self.paused = False
+                self.tx_window_queue.put(Resume())
+                self.tx_nearby_process_queue.put(Resume())
+            if not prev_forground:
+                self.tx_window_queue.put(Resume())
+                self.tx_nearby_process_queue.put(Resume())
+        except GameNotOpenException:
+            self.audio_system.speak_blocking("Siralim Ultimate is no longer open")
+            self.stop()
+            self.audio_system.speak_blocking("Shutting down")
+            return
+
+        except GameFullscreenException:
+            self.audio_system.speak_blocking("Siralim Ultimate cannot be fullscreen")
+            self.stop()
+            self.audio_system.speak_blocking("Shutting down")
+            return
+        except GameMinimizedException:
+            self.tx_window_queue.put(Pause())
+            self.tx_nearby_process_queue.put(Pause())
+            self.paused = True
+            return
+        except GameNotForegroundException:
+            self.game_is_foreground = False
+            self.tx_window_queue.put(Pause())
+            self.tx_nearby_process_queue.put(Pause())
+            return
+
+        if new_su_client_rect != self.su_client_rect:
+            print(f"SU window changed. new={new_su_client_rect}, old={self.su_client_rect}")
+            self.reinit_bot(new_su_client_rect)
+
+            self.tx_window_queue.put(WindowDim(mss_dict=self.mon_full_window))
+            self.tx_nearby_process_queue.put(WindowDim(mss_dict=self.nearby_mon))
+
     def run(self):
         self.audio_system.speak_nonblocking("Siralim Access has started")
         if self.config.show_ui:
@@ -599,29 +667,7 @@ class Bot:
             except queue.Empty:
                 pass
             if (time.time() - self.timer) > 1:
-                self.timer = time.time()
-                try:
-                    new_su_client_rect = get_su_client_rect()
-                except GameNotOpenException:
-                    self.audio_system.speak_blocking("Siralim Ultimate is no longer open")
-                    self.stop()
-                    self.audio_system.speak_blocking("Shutting down")
-                    return
-
-                except GameFullscreenException:
-                    self.audio_system.speak_blocking("Siralim Ultimate cannot be fullscreen")
-                    self.stop()
-                    self.audio_system.speak_blocking("Shutting down")
-                    return
-                except GameMinimizedException:
-                    pass
-
-                if new_su_client_rect != self.su_client_rect:
-                    print(f"SU window changed. new={new_su_client_rect}, old={self.su_client_rect}")
-                    self.reinit_bot(new_su_client_rect)
-
-                    self.tx_window_queue.put(WindowDim(mss_dict=self.mon_full_window))
-                    self.tx_nearby_process_queue.put(WindowDim(mss_dict=self.nearby_mon))
+                self.check_if_window_changed_position()
 
             if self.mode is BotMode.UNDETERMINED:
                 self.nearby_send_deque.append(ScanForItems)
@@ -700,6 +746,7 @@ class WholeWindowGrabber(multiprocessing.Process):
         self.hang_notifier = hang_notifier
         self.hang_control: Optional[queue.Queue] = None
         self.activity_notify: Optional[HangMonitorChan] = None
+        self.paused: bool = False
 
     def run(self):
         self.hang_control = queue.Queue()
@@ -716,17 +763,30 @@ class WholeWindowGrabber(multiprocessing.Process):
                     # check for incoming messages
                     try:
                         msg = self.rx_parent_queue.get_nowait()
-                        if msg.type == ConfigMsg.WINDOW_DIM:
+                        if isinstance(msg, WindowDim):
                             msg: WindowDim
                             root.info(f"got windowgrabber newmsg = {msg=}")
                             self.screenshot_area = msg.mss_dict
-
+                        elif isinstance(msg, Pause):
+                            root.debug("Pausing capture of whole window frames")
+                            self.paused = True
+                            self.color_frame_queue.put(Pause(), timeout=1)
+                            self.activity_notify.notify_wait()
+                        elif isinstance(msg, Resume):
+                            root.debug("Resuming capture of whole window frames")
+                            self.color_frame_queue.put(Resume(), timeout=2)
+                            self.paused = False
                     except queue.Empty:
                         pass
+
                     end = time.time()
                     took = end - start
                     left = TARGET_WINDOW_CAPTURE_MS - took
                     time.sleep(max(0.0, left))
+
+                    if self.paused:
+                        root.debug("whole window - skipping capture due to being paused")
+                        continue
 
                     try:
                         self.activity_notify.notify_activity(HangAnnotation({"data": ""}))
@@ -738,6 +798,7 @@ class WholeWindowGrabber(multiprocessing.Process):
                             root.debug("whole window frame has no data or is minimized")
                             self.color_frame_queue.put_nowait(Minimized())
                             continue
+                        root.debug("Sending whole frame")
                         self.color_frame_queue.put_nowait(frame_np)
                     except queue.Full:
                         continue
@@ -748,6 +809,7 @@ class WholeWindowGrabber(multiprocessing.Process):
 class WholeWindowAnalyzer(Thread):
     def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker, config: settings.Config, **kwargs) -> None:
         super().__init__(**kwargs)
+        self.paused: bool = False
         self.config = config
         self.last_selected_text: str = ""
         self.last_dialog_text: str = ""
@@ -777,7 +839,6 @@ class WholeWindowAnalyzer(Thread):
         if new_quest_ids == self.parent.current_quests:
             return
 
-
         self.parent.quest_sprite_long_names.clear()
         with Session() as session:
             for quest in new_quests:
@@ -795,6 +856,18 @@ class WholeWindowAnalyzer(Thread):
                     self.parent.audio_system.speak_nonblocking(f"Unsupported quest: {quest.title}")
 
         self.parent.current_quests = new_quest_ids
+
+    def ocr_screen(self):
+        if self.config.ocr_selected_menu_item:
+            # menu entry selection is latency sensitive, so we do this first
+            start = time.time()
+            self.speak_selected_menu_item()
+            end = time.time()
+            took_ms = math.ceil((end - start) * 1000)
+            root.debug(f"OCR of menu entry took {took_ms}ms")
+
+        if self.config.ocr_read_dialog_boxes:
+            self.speak_dialog_box()
 
     def speak_dialog_box(self):
         mask = detect_dialog_text(self.frame)
@@ -890,13 +963,28 @@ class WholeWindowAnalyzer(Thread):
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
         while not self.stop_event.is_set():
+            if not self.parent.game_is_foreground:
+                self.hang_activity_sender.notify_wait()
+                time.sleep(1/settings.FPS)
+                self.paused = True
             try:
                 msg = self.incoming_frame_queue.get(timeout=5)
                 self.hang_activity_sender.notify_activity(HangAnnotation(data={"data": "window analyze"}))
                 if msg is None:
                     break
                 if isinstance(msg, Minimized):
+                    self.paused = True
                     continue
+                elif isinstance(msg, Pause):
+                    self.paused = True
+                    self.parent.clear_all_matches()
+                    self.parent.speak_nearby_objects()
+                    self.parent.audio_system.speak_nonblocking(" ")
+                    continue
+                elif isinstance(msg, Resume):
+                    self.paused = False
+                    continue
+
                 shot = msg
             except queue.Empty:
                 # is it empty because stuff is shut down?
@@ -911,16 +999,8 @@ class WholeWindowAnalyzer(Thread):
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
 
-            if self.config.ocr_selected_menu_item:
-                # menu entry selection is latency sensitive, so we do this first
-                start = time.time()
-                self.speak_selected_menu_item()
-                end = time.time()
-                took_ms = math.ceil((end-start)*1000)
-                root.debug(f"ocr took {took_ms}ms")
-
-            if self.config.ocr_read_dialog_boxes:
-                self.speak_dialog_box()
+            if self.parent.game_is_foreground:
+                self.ocr_screen()
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             current_quests = [quest.title for quest in quests]
@@ -946,6 +1026,8 @@ class NearbyFrameGrabber(multiprocessing.Process):
         self.hang_notifier = hang_notifier
         self.hang_control: Optional[queue.Queue] = None
         self.activity_notify: Optional[HangMonitorChan] = None
+        self.paused: bool = False
+
 
     def run(self):
         """Screenshots the area defined as nearby the player. no more than 8x8 tiles (256pxx256px)
@@ -961,6 +1043,29 @@ class NearbyFrameGrabber(multiprocessing.Process):
             should_stop = False
             with mss.mss() as sct:
                 while not should_stop:
+
+                    try:
+                        msg = self.rx_parent.get_nowait()
+                        if isinstance(msg, WindowDim):
+                            msg: WindowDim
+                            print(f"updated nearbyframeGrabber rect. new={msg.mss_dict} old={self.nearby_area}")
+                            self.nearby_area = msg.mss_dict
+                        elif isinstance(msg, Pause):
+                            root.debug("nearby got pause message. Pause grabbing frames")
+                            self.paused = True
+                            self.color_nearby_queue.put(Pause())
+                        elif isinstance(msg, Resume):
+                            root.debug("nearby got resume message. Resume grabbing frames")
+                            self.paused = False
+                            self.color_nearby_queue.put(Resume())
+
+                    except queue.Empty:
+                        pass
+
+                    if self.paused:
+                        time.sleep(TARGET_MS)
+                        continue
+
                     start = time.time()
                     # Performance: Unsure if 1MB copying at 60FPS is fine
                     # Note: Possibly use shared memory if performance is an issue
@@ -970,20 +1075,14 @@ class NearbyFrameGrabber(multiprocessing.Process):
                         if has_no_data:
                             print("no nearby frame data")
                             self.color_nearby_queue.put(Minimized())
+                            continue
 
+                        root.debug("Sending new nearby frame")
                         self.color_nearby_queue.put(NewFrame(nearby_shot_np), timeout=10)
                     except queue.Full:
                         root.debug("color nearby queue full")
                         pass
 
-                    try:
-                        msg = self.rx_parent.get_nowait()
-                        if msg.type == ConfigMsg.WINDOW_DIM:
-                            msg: WindowDim
-                            print(f"updated nearbyframeGrabber rect. new={msg.mss_dict} old={self.nearby_area}")
-                            self.nearby_area = msg.mss_dict
-                    except queue.Empty:
-                        pass
                     end = time.time()
                     took = end - start
                     left = TARGET_MS - took
@@ -1036,6 +1135,7 @@ class NearPlayerProcessing(Thread):
         self.was_match: bool = False
         self.match_streak: int = 0
         self.last_match_time: float = time.time()
+        self.paused: bool = False
 
     def bfs_near(self) -> Optional[FloorInfo]:
         DIRECTIONS: list[Movement] = [Movement(x=1, y=0), Movement(x=-1, y=0), Movement(x=0, y=1), Movement(x=0, y=-1)]
@@ -1141,8 +1241,7 @@ class NearPlayerProcessing(Thread):
         """Scans for decorations and quests in the castle"""
         max_stationary_streak = 60 * self.parent.config.required_stationary_seconds
         if not self.parent.config.repeat_sound_when_stationary and self.match_streak >= max_stationary_streak:
-            for tile_type, tiles in self.parent.all_found_matches.items():
-                tiles.clear()
+            self.parent.clear_all_matches()
             self.parent.speak_nearby_objects()
             return
 
@@ -1201,8 +1300,7 @@ class NearPlayerProcessing(Thread):
         if not realm_alignment:
             self.match_streak = 0
             if time.time() - self.last_match_time >= 1/15 * 4:
-                for tile_type in self.parent.all_found_matches.values():
-                    tile_type.clear()
+                self.parent.clear_all_matches()
                 self.parent.speak_nearby_objects()
             return
         else:
@@ -1257,6 +1355,9 @@ class NearPlayerProcessing(Thread):
         self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
 
         self.was_match = False
+        if not self.parent.game_is_foreground:
+            return
+
         realm_alignment = self.detect_what_realm_in()
         self.handle_realm_alignment(realm_alignment)
         self.last_realm_identified_timer = time.time()
@@ -1267,18 +1368,7 @@ class NearPlayerProcessing(Thread):
             debug_window = cv2.namedWindow("Siralim Access", cv2.WINDOW_KEEPRATIO)
 
         while not self.stop_event.is_set():
-            try:
-                msg: MessageImpl = self.nearby_queue.get(timeout=5)
-            except queue.Empty:
-                # something has gone wrong with getting timely frames
-                return
 
-            self.hang_activity_sender.notify_activity(HangAnnotation({"event": "near_frame_processing"}))
-            if msg is None:
-                return
-            start = time.time()
-            if msg.type is MessageType.NEW_FRAME:
-                self.handle_new_frame(msg)
             try:
                 # we don't block since we must be ready for new incoming frames ^^
                 comm_msg: MessageImpl = self.nearby_comm_deque.pop()
@@ -1292,6 +1382,10 @@ class NearPlayerProcessing(Thread):
                     root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
                 elif comm_msg.type is MessageType.CHECK_WHAT_REALM_IN:
                     pass
+                elif isinstance(comm_msg, Pause):
+                    self.paused = True
+                elif isinstance(comm_msg, Resume):
+                    self.paused = False
 
                 if settings.VIEWER:
                     cv2.imshow("Siralim Access", self.map.img)
@@ -1300,6 +1394,24 @@ class NearPlayerProcessing(Thread):
                         break
             except IndexError:
                 continue
+
+            if self.paused:
+                time.sleep(settings.FPS)
+                continue
+
+            try:
+                msg: MessageImpl = self.nearby_queue.get(timeout=5)
+            except queue.Empty:
+                # something has gone wrong with getting timely frames
+                root.warning("No nearby frame for 5 seconds")
+                return
+
+            self.hang_activity_sender.notify_activity(HangAnnotation({"event": "near_frame_processing"}))
+            if msg is None:
+                return
+            start = time.time()
+            if isinstance(msg, NewFrame):
+                self.handle_new_frame(msg)
             end = time.time()
             latency = end - start
             root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
@@ -1318,6 +1430,9 @@ def init_bot() -> Bot:
             return bot
         except GameMinimizedException:
             root.info("Siralim Ultimate is minimized, waiting")
+            time.sleep(1)
+        except GameNotForegroundException:
+            root.info("Siralim Ultimate is not in foreground, waiting")
             time.sleep(1)
 
 

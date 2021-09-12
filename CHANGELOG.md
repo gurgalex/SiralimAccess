@@ -1,3 +1,7 @@
+#v0.9.25
+# perf
+- Pause object detection, OCR, and frame capture when Siralim Ultimate is minimized and/or in the background
+  - This drops CPU usage to near 0% when not needing to do any analysis
 #v0.9.24
 # feat
 - Story and NPC dialog boxes are now spoken
