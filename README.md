@@ -8,6 +8,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Unique audio sounds for specific items
 - Replaces game font with accessible version (Arial bold)
 - Speaks the currently selected menu item
+- Dialog boxes are spoken such as for the story, NPCs, and realm altars
 
 ## Items sounds
 - Quest items
