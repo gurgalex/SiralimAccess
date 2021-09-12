@@ -853,7 +853,7 @@ class WholeWindowAnalyzer(Thread):
                         self.parent.quest_sprite_long_names.add(sprite.long_name)
 
                 if not quest.supported:
-                    self.parent.audio_system.speak_nonblocking(f"Unsupported quest: {quest.title}")
+                    self.parent.audio_system.speak_blocking(f"Unsupported quest: {quest.title}")
 
         self.parent.current_quests = new_quest_ids
 
