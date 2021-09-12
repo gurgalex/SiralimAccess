@@ -11,6 +11,7 @@ from winrt.windows.globalization import Language
 from winrt.windows.graphics.imaging import *
 from winrt.windows.security.cryptography import CryptographicBuffer
 
+
 class rect:
     def __init__(self, x, y, w, h):
         self.x = x

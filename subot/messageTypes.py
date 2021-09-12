@@ -36,16 +36,24 @@ class NewFrame:
 MessageImpl = Union[NewFrame, ScanForItems]
 
 
-@dataclass()
+@dataclass(frozen=True)
 class Shutdown:
     type: MessageType = MessageType.SHUTDOWN
 
-class ConfigMsg(Enum):
-    WINDOW_DIM = auto()
-    SHUTDOWN = auto()
+
+@dataclass(frozen=True)
+class Pause:
+    pass
 
 
-@dataclass()
+@dataclass(frozen=True)
+class Resume:
+    pass
+
+
+@dataclass(frozen=True)
 class WindowDim:
     mss_dict: dict
-    type: ConfigMsg = ConfigMsg.WINDOW_DIM
+
+
+ConfigMsg = Union[WindowDim, Shutdown, Pause, Resume]
