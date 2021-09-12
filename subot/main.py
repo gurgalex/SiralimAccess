@@ -685,7 +685,6 @@ class Minimized:
 
 FrameType = Union[ArrayLike, Minimized]
 
-
 class WholeWindowGrabber(multiprocessing.Process):
     def __init__(self, out_quests: Queue, outgoing_color_frame_queue: multiprocessing.Queue, screenshot_area: dict,
                  rx_queue: multiprocessing.Queue, hang_notifier: queue.Queue[HangMonitorAlert],
@@ -727,7 +726,7 @@ class WholeWindowGrabber(multiprocessing.Process):
                     end = time.time()
                     took = end - start
                     left = TARGET_WINDOW_CAPTURE_MS - took
-                    time.sleep(max(0, left))
+                    time.sleep(max(0.0, left))
 
                     try:
                         self.activity_notify.notify_activity(HangAnnotation({"data": ""}))
@@ -750,7 +749,12 @@ class WholeWindowAnalyzer(Thread):
     def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker, config: settings.Config, **kwargs) -> None:
         super().__init__(**kwargs)
         self.config = config
-        self.last_selected_next = ""
+        self.last_selected_text: str = ""
+        self.last_dialog_text: str = ""
+        # depends on text length
+        self.duration_idle_green_text: int = 0
+        self.first_idle_on_green_text: float = 0
+        self.has_green_text = False
         self.parent: Bot = parent
         self.incoming_frame_queue: Queue = incoming_frame_queue
         self.out_quests_sprites_queue: Queue = out_quests_queue
@@ -792,6 +796,54 @@ class WholeWindowAnalyzer(Thread):
 
         self.parent.current_quests = new_quest_ids
 
+    def speak_dialog_box(self):
+        mask = detect_dialog_text(self.frame)
+        resize_factor = 2
+        mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor), interpolation=cv2.INTER_LINEAR)
+        ocr_result = recognize_cv2_image(mask)
+
+        try:
+            first_line = ocr_result["lines"][0]
+            first_word = first_line["words"][0]
+            root.debug(f"dialog box: {first_word=}")
+            bbox = first_word["bounding_rect"]
+
+            # health bar text - rect(69, 87, 73, 16), rect(282, 87, 71, 16)
+            # dialog box text - rect(14, 23, 75, 16)
+
+            offset_x = mask.shape[0] * 0.40
+            root.debug(f"{offset_x=}")
+            is_not_dialog_box = bbox.x > offset_x
+            root.debug(f"{is_not_dialog_box=}")
+            if is_not_dialog_box and not self.has_green_text:
+                self.first_idle_on_green_text = time.time()
+                self.last_dialog_text = ""
+                return
+        except IndexError:
+            # no text was found
+            self.last_dialog_text = ""
+            self.first_idle_on_green_text = time.time()
+            if not self.has_green_text:
+                self.parent.audio_system.speak_nonblocking(" ")
+            return
+
+        time_idle_green_text = time.time() - self.first_idle_on_green_text
+        root.debug(f"{time_idle_green_text=}, {self.duration_idle_green_text=}")
+        if time_idle_green_text < self.duration_idle_green_text and self.has_green_text:
+            return
+
+        selected_text = ocr_result["text"]
+        # don't repeat announcing the same or no text at all
+        if selected_text == self.last_dialog_text or selected_text == "":
+            return
+
+        if is_not_dialog_box:
+            return
+        self.last_dialog_text = selected_text
+
+        root.debug(f"dialog box text = {selected_text}")
+        self.parent.audio_system.speak_nonblocking(selected_text)
+
     def speak_selected_menu_item(self):
         mask = detect_green_text(self.frame)
         # remove non-font green pixels
@@ -803,7 +855,11 @@ class WholeWindowAnalyzer(Thread):
 
         no_match = w == 0 or h == 0
         if no_match:
+            self.first_idle_on_green_text = time.time()
+            self.last_selected_text = ""
+            self.has_green_text = False
             return
+        self.has_green_text = True
 
         # padding around font is used to improve OCR output
         padding = 16
@@ -817,17 +873,19 @@ class WholeWindowAnalyzer(Thread):
         roi = mask[y_start:y_end, x_start:x_end]
         # only resize if image capture area likely contains a single section of text (saves CPU)
         if roi.shape[0] < 400 or roi.shape[1] < 400:
-            roi = cv2.resize(roi, (roi.shape[1]*2, roi.shape[0]*2), interpolation=cv2.INTER_NEAREST)
+            roi = cv2.resize(roi, (roi.shape[1]*2, roi.shape[0]*2), interpolation=cv2.INTER_LINEAR)
 
         ocr_result = recognize_cv2_image(roi)
         selected_text = ocr_result["text"]
 
         # don't repeat announcing the same or no text at all
-        if selected_text == self.last_selected_next or selected_text == "":
+        if selected_text == self.last_selected_text or selected_text == "":
             return
 
-        self.last_selected_next = selected_text
+        self.last_selected_text = selected_text
+        self.duration_idle_green_text = max(len(selected_text) / 22.5, 1.0)
         self.parent.audio_system.speak_nonblocking(selected_text)
+        self.first_idle_on_green_text = time.time()
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
@@ -860,6 +918,9 @@ class WholeWindowAnalyzer(Thread):
                 end = time.time()
                 took_ms = math.ceil((end-start)*1000)
                 root.debug(f"ocr took {took_ms}ms")
+
+            if self.config.ocr_read_dialog_boxes:
+                self.speak_dialog_box()
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             current_quests = [quest.title for quest in quests]

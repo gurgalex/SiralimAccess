@@ -122,3 +122,18 @@ def detect_green_text(image) -> np.array:
     img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(img, lower_green, upper_green)
     return mask
+
+
+def detect_dialog_text(frame: np.typing.ArrayLike) -> np.typing.ArrayLike:
+    y_start = int(frame.shape[0] * 0.70)
+    y_end = int(frame.shape[0] * 0.95)
+    x_start = int(frame.shape[1] * 0.01)
+    x_end = int(frame.shape[1] * 0.995)
+    dialog_area = frame[y_start:y_end, x_start:x_end]
+
+    img = cv2.cvtColor(dialog_area, cv2.COLOR_BGR2HLS)
+    sensitivity = 30
+    lower_white = np.array([0, 255 - sensitivity, 0])
+    upper_white = np.array([0, 255, 0])
+    mask = cv2.inRange(img, lower_white, upper_white)
+    return mask
