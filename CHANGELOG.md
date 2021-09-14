@@ -1,3 +1,6 @@
+#v0.9.26
+# fix
+- Spoken text now stops speaking when you exit the menu/dialog box
 #v0.9.25
 # perf
 - Pause object detection, OCR, and frame capture when Siralim Ultimate is minimized and/or in the background
