@@ -930,6 +930,9 @@ class WholeWindowAnalyzer(Thread):
         if no_match:
             self.first_idle_on_green_text = time.time()
             self.last_selected_text = ""
+            dialog_not_present_anymore = self.last_dialog_text == ""
+            if dialog_not_present_anymore:
+                self.parent.audio_system.speak_nonblocking(" ")
             self.has_green_text = False
             return
         self.has_green_text = True
@@ -950,6 +953,9 @@ class WholeWindowAnalyzer(Thread):
 
         ocr_result = recognize_cv2_image(roi)
         selected_text = ocr_result["text"]
+        if selected_text == "":
+            self.parent.audio_system.speak_nonblocking(" ")
+            self.last_selected_text = ""
 
         # don't repeat announcing the same or no text at all
         if selected_text == self.last_selected_text or selected_text == "":
