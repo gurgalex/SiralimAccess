@@ -2,6 +2,10 @@
 
 A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app/1289810/Siralim_Ultimate/) more accessible to visually impaired users.
 
+# Demo
+
+[![Siralim Access Video Demo of Realm Navigation and TTS](https://img.youtube.com/vi/00jdY_b_ra0/maxresdefault.jpg)](https://www.youtube.com/watch?v=00jdY_b_ra0)
+
 
 # Features
 - Sound list screen to familiarize with which sounds are for what
