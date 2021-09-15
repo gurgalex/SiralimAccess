@@ -205,7 +205,6 @@ class AudioSystem:
         self.Speaker = win32com.client.Dispatch("SAPI.SpVoice")
         # don't block the program when speaking. Cancel any pending speaking directions
         self.SVSFlag = 3  # SVSFlagsAsync = 1 + SVSFPurgeBeforeSpeak = 2
-        self.Speaker.Voice = self.Speaker.getVoices('Name=Microsoft Zira Desktop').Item(0)
         self.Speaker.Rate = 5
 
     def play_sound(self, audio_tile: AudioLocation, sound_type: SoundType):
@@ -267,6 +266,9 @@ class AudioSystem:
 
     def speak_nonblocking(self, text):
         self.Speaker.Speak(text, self.SVSFlag)
+
+    def silence(self):
+        self.speak_nonblocking(" ")
 
     def get_available_sounds(self) -> dict[SoundType, SoundMapping]:
         return self.sound_mappings

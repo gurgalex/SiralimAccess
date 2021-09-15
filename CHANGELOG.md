@@ -1,3 +1,9 @@
+#v0.9.26
+# feat
+- The SAPI voice is now controlled by the Windows control panel.
+  - Go to Control Panel -> Speech Recognition -> Text to Speech -> Voice selection
+# fix
+  - dialog boxes and menu selections should now be spoken and stop speaking when closed now
 #v0.9.25
 # perf
 - Pause object detection, OCR, and frame capture when Siralim Ultimate is minimized and/or in the background

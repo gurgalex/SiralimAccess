@@ -816,7 +816,8 @@ class WholeWindowAnalyzer(Thread):
         # depends on text length
         self.duration_idle_green_text: int = 0
         self.first_idle_on_green_text: float = 0
-        self.has_green_text = False
+        self.has_green_text: bool = False
+        self.has_dialog_text: bool = False
         self.parent: Bot = parent
         self.incoming_frame_queue: Queue = incoming_frame_queue
         self.out_quests_sprites_queue: Queue = out_quests_queue
@@ -869,12 +870,17 @@ class WholeWindowAnalyzer(Thread):
         if self.config.ocr_read_dialog_boxes:
             self.speak_dialog_box()
 
+        menu_selection_or_dialog_text_present = self.has_green_text or self.has_dialog_text
+        if not menu_selection_or_dialog_text_present:
+            root.debug("Pauseing due to no menu selection or dialog text present on screen")
+            self.parent.audio_system.silence()
+
+
     def speak_dialog_box(self):
         mask = detect_dialog_text(self.frame)
         resize_factor = 2
         mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor), interpolation=cv2.INTER_LINEAR)
         ocr_result = recognize_cv2_image(mask)
-
         try:
             first_line = ocr_result["lines"][0]
             first_word = first_line["words"][0]
@@ -896,8 +902,10 @@ class WholeWindowAnalyzer(Thread):
             # no text was found
             self.last_dialog_text = ""
             self.first_idle_on_green_text = time.time()
-            if not self.has_green_text:
-                self.parent.audio_system.speak_nonblocking(" ")
+            if not self.has_green_text and not self.has_dialog_text:
+                root.debug("Pause, menu system. both not present")
+                self.parent.audio_system.silence()
+            self.has_dialog_text = False
             return
 
         time_idle_green_text = time.time() - self.first_idle_on_green_text
@@ -915,6 +923,7 @@ class WholeWindowAnalyzer(Thread):
         self.last_dialog_text = selected_text
 
         root.debug(f"dialog box text = {selected_text}")
+        self.has_dialog_text = True
         self.parent.audio_system.speak_nonblocking(selected_text)
 
     def speak_selected_menu_item(self):
@@ -979,7 +988,8 @@ class WholeWindowAnalyzer(Thread):
                     self.paused = True
                     self.parent.clear_all_matches()
                     self.parent.speak_nearby_objects()
-                    self.parent.audio_system.speak_nonblocking(" ")
+                    root.debug("pause. Pause request")
+                    self.parent.audio_system.silence()
                     continue
                 elif isinstance(msg, Resume):
                     self.paused = False
@@ -1330,7 +1340,7 @@ class NearPlayerProcessing(Thread):
             if realm_alignment.realm != self.parent.realm:
                 new_realm = realm_alignment.realm
                 if new_realm in models.UNSUPPORTED_REALMS:
-                    self.parent.audio_system.speak_nonblocking(f"Realm unsupported. {new_realm.realm_name}")
+                    self.parent.audio_system.speak_blocking(f"Realm unsupported. {new_realm.realm_name}")
                 self.parent.realm = realm_alignment.realm
 
                 self.parent.item_hashes = RealmSpriteHasher(floor_tiles=None)
