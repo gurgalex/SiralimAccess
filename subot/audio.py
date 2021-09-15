@@ -268,6 +268,9 @@ class AudioSystem:
     def speak_nonblocking(self, text):
         self.Speaker.Speak(text, self.SVSFlag)
 
+    def silence(self):
+        self.speak_nonblocking(" ")
+
     def get_available_sounds(self) -> dict[SoundType, SoundMapping]:
         return self.sound_mappings
 
