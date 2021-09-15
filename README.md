@@ -29,3 +29,9 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 
 # How to download
 The latest version of the installer can be found [here https://github.com/gurgalex/SiralimAccess/releases/latest](https://github.com/gurgalex/SiralimAccess/releases/latest)
+
+
+# FAQ
+## How to change the voice used?
+The SAPI voice is controlled by the Windows control panel.
+- Control Panel -> Speech Recognition -> Text to Speech -> Voice selection
