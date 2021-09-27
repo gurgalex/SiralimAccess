@@ -972,10 +972,6 @@ class WholeWindowAnalyzer(Thread):
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
         while not self.stop_event.is_set():
-            if not self.parent.game_is_foreground:
-                self.hang_activity_sender.notify_wait()
-                time.sleep(1/settings.FPS)
-                self.paused = True
             try:
                 msg = self.incoming_frame_queue.get(timeout=5)
                 self.hang_activity_sender.notify_activity(HangAnnotation(data={"data": "window analyze"}))
@@ -1000,6 +996,9 @@ class WholeWindowAnalyzer(Thread):
                 # is it empty because stuff is shut down?
                 if self.stop_event.is_set():
                     return
+                if self.paused:
+                    self.hang_activity_sender.notify_wait()
+                    continue
 
                 # something is wrong
                 raise Exception("No new full frame for 5 seconds")
@@ -1009,7 +1008,7 @@ class WholeWindowAnalyzer(Thread):
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
 
-            if self.parent.game_is_foreground:
+            if not self.paused:
                 self.ocr_screen()
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
@@ -1365,7 +1364,7 @@ class NearPlayerProcessing(Thread):
         self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
 
         self.was_match = False
-        if not self.parent.game_is_foreground:
+        if self.paused:
             return
 
         realm_alignment = self.detect_what_realm_in()
@@ -1412,9 +1411,13 @@ class NearPlayerProcessing(Thread):
             try:
                 msg: MessageImpl = self.nearby_queue.get(timeout=5)
             except queue.Empty:
-                # something has gone wrong with getting timely frames
-                root.warning("No nearby frame for 5 seconds")
-                return
+                if self.paused:
+                    self.hang_activity_sender.notify_wait()
+                    pass
+                else: # something has gone wrong with getting timely frames
+                    empty_text = "No nearby frame for 5 seconds"
+                    root.warning(empty_text)
+                    raise Exception(empty_text)
 
             self.hang_activity_sender.notify_activity(HangAnnotation({"event": "near_frame_processing"}))
             if msg is None:
