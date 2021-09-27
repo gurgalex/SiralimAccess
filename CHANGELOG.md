@@ -1,3 +1,7 @@
+# v0.9.27
+# fix
+- Attempt yet another fix for sporadic startup crashes
+
 #v0.9.26
 # feat
 - The SAPI voice is now controlled by the Windows control panel.
