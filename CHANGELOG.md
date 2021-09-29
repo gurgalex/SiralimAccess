@@ -1,3 +1,6 @@
+# v0.9.28
+## feat
+- Speak if the required English language pack is not installed on the system
 # v0.9.27
 # fix
 - Attempt yet another fix for sporadic startup crashes

@@ -24,11 +24,10 @@ from collections import deque, defaultdict
 import queue
 from logging.handlers import QueueHandler, QueueListener
 from multiprocessing import Queue
-from pathlib import Path
 from threading import Thread
 from typing import Optional, Union
 
-from subot import models
+from subot import models, ocr
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert, Shutdown
 
 import cv2
@@ -36,7 +35,7 @@ import numpy as np
 import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
-from subot.ocr import recognize_cv2_image, detect_green_text, detect_dialog_text
+from subot.ocr import detect_green_text, detect_dialog_text, recognize_cv2_image, english_installed
 import win32gui
 import pygame
 import pygame.freetype
@@ -51,7 +50,7 @@ import time
 from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.datatypes import Rect
 from subot.menu import MenuItem, Menu
-from subot.messageTypes import NewFrame, MessageImpl, MessageType, CheckWhatRealmIn, WindowDim, ConfigMsg, ScanForItems, \
+from subot.messageTypes import NewFrame, MessageImpl, MessageType, WindowDim, ScanForItems, \
     Resume, Pause
 from subot.pathfinder.map import TileType, Map, Color, Movement
 
@@ -61,12 +60,12 @@ from subot.hash_image import ImageInfo, RealmSpriteHasher, compute_hash
 
 from dataclasses import dataclass
 
-from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, NPCSprite, OverlaySprite, HashFrameWithFloor, \
+from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, NPCSprite, HashFrameWithFloor, \
     QuestType, ResourceNodeSprite, \
     SpriteTypeLookup, SpriteType, ChestSprite
 
 
-from subot.utils import Point, read_version, PlayerDirection
+from subot.utils import Point, read_version
 import traceback
 
 # sentry annotation for pyinstaller
@@ -1048,6 +1047,7 @@ class NearbyFrameGrabber(multiprocessing.Process):
         self.activity_notify = self.hang_monitor.register_component(threading.current_thread(), 3.0)
 
         TARGET_MS = 1 / settings.FPS
+
         try:
             should_stop = False
             with mss.mss() as sct:
@@ -1434,6 +1434,11 @@ class NearPlayerProcessing(Thread):
 def init_bot() -> Bot:
     config = settings.load_config()
     audio_system = AudioSystem(config)
+    if not english_installed():
+        audio_system.speak_blocking(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
+        root.error(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
+        audio_system.speak_blocking("Shutting down")
+        sys.exit(1)
 
     is_minimized = True
     while is_minimized:

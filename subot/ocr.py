@@ -107,10 +107,35 @@ def blocking_wait(awaitable):
     return asyncio.run(ensure_coroutine(awaitable))
 
 
-def recognize_cv2_image(img, lang="en-US"):
+class LanguageNotInstalledException(Exception):
+    pass
+
+
+class OCR:
+    def __init__(self):
+        lang = Language("en-US")
+        if not OcrEngine.is_language_supported(lang):
+            raise LanguageNotInstalledException("English United States language pack not installed")
+        self.ocr_engine = OcrEngine.try_create_from_language(lang)
+
+
+ENGLISH_NOT_INSTALLED_EXCEPTION = LanguageNotInstalledException("English United States language pack not installed")
+
+
+def language_is_installed(lang: str) -> bool:
     lang = Language(lang)
-    assert (OcrEngine.is_language_supported(lang))
-    eng = OcrEngine.try_create_from_language(lang)
+    return OcrEngine.is_language_supported(lang)
+
+
+def english_installed() -> bool:
+    return language_is_installed("en-US")
+
+
+def recognize_cv2_image(img):
+    language = Language("en-US")
+    if not english_installed:
+        raise ENGLISH_NOT_INSTALLED_EXCEPTION
+    eng = OcrEngine.try_create_from_language(language)
     swbmp = swbmp_from_cv2_image(img)
     return dump_ocrresult(blocking_wait(eng.recognize_async(swbmp)))
 
