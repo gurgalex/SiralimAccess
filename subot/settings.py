@@ -28,9 +28,12 @@ class Config:
     map_viewer: bool = False
     show_ui: bool = True
     whole_window_scanning_frequency: int = 7
+    update_popup_browser: bool = True
 
     ocr_selected_menu_item: bool = True
     ocr_read_dialog_boxes: bool = True
+    read_dialog_key: str = "o"
+    read_menu_entry_key: str = 'm'
 
     master_volume: int = 100
     main_volume: int = 100
@@ -56,11 +59,14 @@ class Config:
             "whole_window_fps": self.whole_window_scanning_frequency,
             "repeat_sound_when_stationary": self.repeat_sound_when_stationary,
             "repeat_sound_seconds": self.required_stationary_seconds,
+            'update_popup_browser': self.update_popup_browser,
         }
 
         ini["OCR"] = {
             "read_selected_menu": self.ocr_selected_menu_item,
             "read_dialog_boxes": self.ocr_read_dialog_boxes,
+            "read_dialog_key": self.read_dialog_key,
+            "read_menu_entry_key": self.read_menu_entry_key,
         }
 
         ini["VOLUME"] = {
@@ -93,6 +99,7 @@ class Config:
         default_config.whole_window_scanning_frequency = general.getfloat("whole_window_fps", fallback=default_config.whole_window_scanning_frequency)
         default_config.repeat_sound_when_stationary = general.getboolean('repeat_sound_when_stationary', fallback=default_config.repeat_sound_when_stationary)
         default_config.required_stationary_seconds = general.getfloat('repeat_sound_seconds', fallback=default_config.required_stationary_seconds)
+        default_config.update_popup_browser = general.getboolean('update_popup_browser', fallback=default_config.update_popup_browser)
 
         volume = ini["VOLUME"]
 
@@ -108,6 +115,9 @@ class Config:
         ocr = ini["OCR"]
         default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)
         default_config.ocr_read_dialog_boxes = ocr.getboolean('read_dialog_boxes', fallback=default_config.ocr_read_dialog_boxes)
+        default_config.read_dialog_key = ocr.get('read_dialog_key', fallback=default_config.read_dialog_key)[0]
+        default_config.read_menu_entry_key = ocr.get('read_menu_entry_key', fallback=default_config.read_menu_entry_key)
+
 
         object_detection = ini["REALM_OBJECT_DETECTION"]
         default_config.detect_objects_through_walls = object_detection.getboolean("detect_objects_through_walls", fallback=default_config.detect_objects_through_walls)

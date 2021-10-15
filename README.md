@@ -8,6 +8,8 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 
 
 # Features
+- Integration with your screen reader of choice (NVDA, JAWS, Window-Eyes, SuperNova, System Access, ZoomText
+)
 - Sound list screen to familiarize with which sounds are for what
 - Unique audio sounds for specific items
 - Replaces game font with accessible version (Arial bold)
@@ -36,6 +38,6 @@ The latest version of the installer can be found [here https://github.com/gurgal
 
 
 # FAQ
-## How to change the voice used?
+## How to change the voice used if not using a screen reader?
 The SAPI voice is controlled by the Windows control panel.
 - Control Panel -> Speech Recognition -> Text to Speech -> Voice selection
