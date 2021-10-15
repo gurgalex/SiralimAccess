@@ -1509,7 +1509,12 @@ class NearPlayerProcessing(Thread):
 
 def version_check(config, audio_system):
     current_version = semantic_version.Version(read_version())
-    resp = requests.get("https://raw.githubusercontent.com/gurgalex/SiralimAccess/main/VERSION")
+    try:
+        resp = requests.get("https://raw.githubusercontent.com/gurgalex/SiralimAccess/main/VERSION")
+    except requests.exceptions.ConnectionError as e:
+        root.info("skipping version check due to connection error")
+        return
+
     if resp.status_code != 200:
         return
     latest_version = semantic_version.Version(resp.text)
