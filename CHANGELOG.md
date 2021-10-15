@@ -1,10 +1,10 @@
 #v0.9.29
 # change
 - Reading NPC dialog boxes must now be done manually with the `o` key. The program will till you if there is a dialog box to read
-  - This is only the case when you have a menu selection such as when talking to the blacksmith
+  - This is only the case when a menu selection such as when talking to the blacksmith is present
   - Story and popup dialog boxes will still be read automatically
 # feat
-- Text to Speech now integrates with your screen reader. If no screen reader is found SAPI will be used as a fallback.
+- Text to Speech now integrates with your screen reader. If no screen reader is found Microsoft Speech API (SAPI) will be used as a fallback.
 - Added keyboard shortcuts to read the dialog box (default o), and reread the selected menu item (default m).
 - An update check is now performed when launched. If you would not like your web browser to open the download page, set `update_popup_browser` to false
 # v0.9.28
