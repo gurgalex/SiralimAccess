@@ -6,6 +6,9 @@ import threading
 import sentry_sdk
 
 from ctypes import windll
+import pynput
+from pynput import keyboard
+from pynput.keyboard import KeyCode
 
 import win32process
 
@@ -234,8 +237,20 @@ def is_foreground_process(pid: int) -> bool:
 
 
 class Bot:
+    def on_release(self, key):
+        root.debug(f"key released: {key}")
+        if key == KeyCode.from_char(self.config.read_dialog_key):
+            self.action_queue.put_nowait('read_dialog')
+        elif key == KeyCode.from_char('m'):
+            self.action_queue.put_nowait('read_menu_entry')
+
+
+    def on_press(self, key):
+        pass
+
     def __init__(self, audio_system: AudioSystem, config: settings.Config):
         # queue to monitor for incoming hang alert
+        self.action_queue = queue.Queue()
         self.config = config
         self.mode: BotMode = BotMode.UNDETERMINED
         self.game_is_foreground: bool = False
@@ -333,6 +348,11 @@ class Bot:
         # This is needed to ensure the pixels match exactly for comparision, otherwhise the grayscale differs slightly
         # https://docs.opencv.org/4.5.1/d4/da8/group__imgcodecs.html
 
+
+
+        self.listener = keyboard.Listener(
+            on_press=self.on_press,
+            on_release=self.on_release)
         # keyboard listener
         self.last_key_pressed = None
 
@@ -580,11 +600,6 @@ class Bot:
         end = time.time()
         root.info(f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.item_hashes)} phashes")
 
-    def on_press(self, key):
-        if control := settings.keyboard_controls.get(key.name):
-            if control in player_direction:
-                self.player_direction = control
-
     def reinit_bot(self, new_full_window_rec: Rect):
         self.su_client_rect = new_full_window_rec
         self.player_position: Rect = Bot.compute_player_position(self.su_client_rect)
@@ -645,6 +660,7 @@ class Bot:
 
     def run(self):
         self.audio_system.speak_nonblocking("Siralim Access has started")
+        self.listener.start()
         if self.config.show_ui:
             self.show_main_menu()
 
@@ -681,6 +697,15 @@ class Bot:
             if iters % every == 0:
                 root.debug(f"FPS: {clock.get_fps()}")
             iters += 1
+
+            try:
+                msg = self.action_queue.get_nowait()
+                if msg == "read_dialog":
+                    self.whole_window_thandle.speak_dialog_box()
+                elif msg == "read_menu_entry":
+                    self.whole_window_thandle.speak_selected_menu_entry()
+            except queue.Empty:
+                pass
 
             if self.config.show_ui:
                 # pygame menu check events
@@ -808,14 +833,14 @@ class WholeWindowGrabber(multiprocessing.Process):
 class WholeWindowAnalyzer(Thread):
     def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker, config: settings.Config, **kwargs) -> None:
         super().__init__(**kwargs)
+        self.repeat_dialog_text: bool = False
         self.paused: bool = False
         self.config = config
         self.last_selected_text: str = ""
         self.last_dialog_text: str = ""
         # depends on text length
-        self.duration_idle_green_text: int = 0
-        self.first_idle_on_green_text: float = 0
-        self.has_green_text: bool = False
+        self.has_menu_entry_text: bool = False
+        self.menu_entry_text_repeat: bool = False
         self.has_dialog_text: bool = False
         self.parent: Bot = parent
         self.incoming_frame_queue: Queue = incoming_frame_queue
@@ -857,25 +882,30 @@ class WholeWindowAnalyzer(Thread):
 
         self.parent.current_quests = new_quest_ids
 
+    def speak_dialog_box(self):
+        print("speak key has been pressed")
+
+        self.parent.audio_system.speak_nonblocking(self.last_dialog_text)
+
     def ocr_screen(self):
         if self.config.ocr_selected_menu_item:
             # menu entry selection is latency sensitive, so we do this first
             start = time.time()
-            self.speak_selected_menu_item()
+            self.read_selected_menu_item()
             end = time.time()
             took_ms = math.ceil((end - start) * 1000)
             root.debug(f"OCR of menu entry took {took_ms}ms")
 
         if self.config.ocr_read_dialog_boxes:
-            self.speak_dialog_box()
+            self.ocr_dialog_box()
 
-        menu_selection_or_dialog_text_present = self.has_green_text or self.has_dialog_text
+        menu_selection_or_dialog_text_present = self.last_selected_text or self.last_dialog_text
         if not menu_selection_or_dialog_text_present:
-            root.debug("Pauseing due to no menu selection or dialog text present on screen")
+            root.debug("Pausing due to no menu selection or dialog text present on screen")
             self.parent.audio_system.silence()
 
 
-    def speak_dialog_box(self):
+    def ocr_dialog_box(self):
         mask = detect_dialog_text(self.frame)
         resize_factor = 2
         mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor), interpolation=cv2.INTER_LINEAR)
@@ -883,8 +913,8 @@ class WholeWindowAnalyzer(Thread):
         try:
             first_line = ocr_result["lines"][0]
             first_word = first_line["words"][0]
-            root.debug(f"dialog box: {first_word=}")
             bbox = first_word["bounding_rect"]
+            root.debug(f"dialog box: {ocr_result['text']}")
 
             # health bar text - rect(69, 87, 73, 16), rect(282, 87, 71, 16)
             # dialog box text - rect(14, 23, 75, 16)
@@ -893,39 +923,37 @@ class WholeWindowAnalyzer(Thread):
             root.debug(f"{offset_x=}")
             is_not_dialog_box = bbox.x > offset_x
             root.debug(f"{is_not_dialog_box=}")
-            if is_not_dialog_box and not self.has_green_text:
-                self.first_idle_on_green_text = time.time()
+            if is_not_dialog_box and not self.has_menu_entry_text:
                 self.last_dialog_text = ""
                 return
         except IndexError:
+            root.debug("no dialog text")
             # no text was found
             self.last_dialog_text = ""
-            self.first_idle_on_green_text = time.time()
-            if not self.has_green_text and not self.has_dialog_text:
+            if not self.has_menu_entry_text and not self.has_dialog_text:
                 root.debug("Pause, menu system. both not present")
                 self.parent.audio_system.silence()
             self.has_dialog_text = False
             return
 
-        time_idle_green_text = time.time() - self.first_idle_on_green_text
-        root.debug(f"{time_idle_green_text=}, {self.duration_idle_green_text=}")
-        if time_idle_green_text < self.duration_idle_green_text and self.has_green_text:
-            return
-
         selected_text = ocr_result["text"]
-        # don't repeat announcing the same or no text at all
-        if selected_text == self.last_dialog_text or selected_text == "":
+        self.repeat_dialog_text = False
+        # don't count no text at all as dialog text
+        if selected_text == "":
+            self.has_dialog_text = False
             return
+        if selected_text == self.last_dialog_text:
+            self.repeat_dialog_text = True
+        self.last_dialog_text = selected_text
 
         if is_not_dialog_box:
             return
-        self.last_dialog_text = selected_text
 
         root.debug(f"dialog box text = {selected_text}")
         self.has_dialog_text = True
-        self.parent.audio_system.speak_nonblocking(selected_text)
 
-    def speak_selected_menu_item(self):
+
+    def read_selected_menu_item(self):
         mask = detect_green_text(self.frame)
         # remove non-font green pixels
         start_blur_time = time.time()
@@ -936,11 +964,9 @@ class WholeWindowAnalyzer(Thread):
 
         no_match = w == 0 or h == 0
         if no_match:
-            self.first_idle_on_green_text = time.time()
             self.last_selected_text = ""
-            self.has_green_text = False
+            self.has_menu_entry_text = False
             return
-        self.has_green_text = True
 
         # padding around font is used to improve OCR output
         padding = 16
@@ -958,15 +984,47 @@ class WholeWindowAnalyzer(Thread):
 
         ocr_result = recognize_cv2_image(roi)
         selected_text = ocr_result["text"]
+        self.menu_entry_text_repeat = False
+
 
         # don't repeat announcing the same or no text at all
-        if selected_text == self.last_selected_text or selected_text == "":
+        if selected_text == "":
+            self.has_menu_entry_text = False
             return
+        elif selected_text == self.last_selected_text:
+            self.menu_entry_text_repeat = True
 
+        self.has_menu_entry_text = True
         self.last_selected_text = selected_text
-        self.duration_idle_green_text = max(len(selected_text) / 22.5, 1.0)
-        self.parent.audio_system.speak_nonblocking(selected_text)
-        self.first_idle_on_green_text = time.time()
+
+        # # SAPI speech rates
+        # # https://stackoverflow.com/a/42819466
+        # SPEECH_RATES = {
+        #     -10: 1.50,
+        #     -9: 1.45,
+        #     -8: 1.40,
+        #     -7: 1.35,
+        #     -6: 1.30,
+        #     -5: 1.25,
+        #     -4: 1.20,
+        #     -3: 1.15,
+        #     -2: 1.10,
+        #     -1: 1.05,
+        #     0: 1.00,
+        #     1: 0.9,
+        #     2: 0.85,
+        #     3: 0.8,
+        #     4: 0.7,
+        #     5: 0.65,
+        #     6: 0.55,
+        #     7: 0.50,
+        #     8: 0.40,
+        #     9: 0.35,
+        #     10: 0.25
+        # }
+
+        # self.last_selected_text = selected_text
+
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
@@ -1009,6 +1067,10 @@ class WholeWindowAnalyzer(Thread):
 
             if not self.paused:
                 self.ocr_screen()
+            if self.has_menu_entry_text and not self.menu_entry_text_repeat:
+                self.speak_selected_menu_entry()
+            if self.last_dialog_text and not self.has_menu_entry_text and not self.repeat_dialog_text:
+                self.speak_dialog_box()
 
             quests = extract_quest_name_from_quest_area(self.gray_frame)
             current_quests = [quest.title for quest in quests]
@@ -1017,8 +1079,17 @@ class WholeWindowAnalyzer(Thread):
             root.debug(f"quest items = {quest_items}")
 
             self.update_quests(quests)
+            self.parent.last_key_pressed = None
 
         root.info("WindowAnalyzer thread shutting down")
+
+    def speak_selected_menu_entry(self):
+        notify_dialog_text = ""
+        if self.has_dialog_text:
+            notify_dialog_text = f"\npress {self.config.read_dialog_key} to here dialog box"
+        menu_text = f"{self.last_selected_text}{notify_dialog_text}"
+        root.info(f"speaking menu text: {menu_text}")
+        self.parent.audio_system.speak_nonblocking(menu_text)
 
 
 class NearbyFrameGrabber(multiprocessing.Process):

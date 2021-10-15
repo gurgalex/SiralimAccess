@@ -205,7 +205,7 @@ class AudioSystem:
         self.Speaker = win32com.client.Dispatch("SAPI.SpVoice")
         # don't block the program when speaking. Cancel any pending speaking directions
         self.SVSFlag = 3  # SVSFlagsAsync = 1 + SVSFPurgeBeforeSpeak = 2
-        self.Speaker.Rate = 5
+        self.Speaker.Rate = self.config.speech_rate
 
     def play_sound(self, audio_tile: AudioLocation, sound_type: SoundType):
         distance_y = audio_tile.distance.y

@@ -1,3 +1,6 @@
+#v0.9.29
+# feat
+- Can adjust the speech rate in the config file under name "speech_rate" with range 0-10. The default value is 5.
 # v0.9.28
 ## feat
 - Speak if the required English language pack is not installed on the system

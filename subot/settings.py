@@ -28,6 +28,8 @@ class Config:
     map_viewer: bool = False
     show_ui: bool = True
     whole_window_scanning_frequency: int = 7
+    speech_rate: int = 5
+    read_dialog_key: str = "o"
 
     ocr_selected_menu_item: bool = True
     ocr_read_dialog_boxes: bool = True
@@ -56,11 +58,13 @@ class Config:
             "whole_window_fps": self.whole_window_scanning_frequency,
             "repeat_sound_when_stationary": self.repeat_sound_when_stationary,
             "repeat_sound_seconds": self.required_stationary_seconds,
+            "speech_rate": self.speech_rate,
         }
 
         ini["OCR"] = {
             "read_selected_menu": self.ocr_selected_menu_item,
             "read_dialog_boxes": self.ocr_read_dialog_boxes,
+            "read_dialog_key": self.read_dialog_key,
         }
 
         ini["VOLUME"] = {
@@ -93,6 +97,7 @@ class Config:
         default_config.whole_window_scanning_frequency = general.getfloat("whole_window_fps", fallback=default_config.whole_window_scanning_frequency)
         default_config.repeat_sound_when_stationary = general.getboolean('repeat_sound_when_stationary', fallback=default_config.repeat_sound_when_stationary)
         default_config.required_stationary_seconds = general.getfloat('repeat_sound_seconds', fallback=default_config.required_stationary_seconds)
+        default_config.speech_rate = general.getint('speech_rate', fallback=default_config.speech_rate)
 
         volume = ini["VOLUME"]
 
@@ -108,6 +113,7 @@ class Config:
         ocr = ini["OCR"]
         default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)
         default_config.ocr_read_dialog_boxes = ocr.getboolean('read_dialog_boxes', fallback=default_config.ocr_read_dialog_boxes)
+        default_config.read_dialog_key = ocr.get('read_dialog_key', fallback=default_config.read_dialog_key)[0]
 
         object_detection = ini["REALM_OBJECT_DETECTION"]
         default_config.detect_objects_through_walls = object_detection.getboolean("detect_objects_through_walls", fallback=default_config.detect_objects_through_walls)
