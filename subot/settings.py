@@ -28,7 +28,6 @@ class Config:
     map_viewer: bool = False
     show_ui: bool = True
     whole_window_scanning_frequency: int = 7
-    speech_rate: int = 5
     read_dialog_key: str = "o"
 
     ocr_selected_menu_item: bool = True
@@ -58,7 +57,6 @@ class Config:
             "whole_window_fps": self.whole_window_scanning_frequency,
             "repeat_sound_when_stationary": self.repeat_sound_when_stationary,
             "repeat_sound_seconds": self.required_stationary_seconds,
-            "speech_rate": self.speech_rate,
         }
 
         ini["OCR"] = {
@@ -97,7 +95,6 @@ class Config:
         default_config.whole_window_scanning_frequency = general.getfloat("whole_window_fps", fallback=default_config.whole_window_scanning_frequency)
         default_config.repeat_sound_when_stationary = general.getboolean('repeat_sound_when_stationary', fallback=default_config.repeat_sound_when_stationary)
         default_config.required_stationary_seconds = general.getfloat('repeat_sound_seconds', fallback=default_config.required_stationary_seconds)
-        default_config.speech_rate = general.getint('speech_rate', fallback=default_config.speech_rate)
 
         volume = ini["VOLUME"]
 

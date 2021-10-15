@@ -883,7 +883,9 @@ class WholeWindowAnalyzer(Thread):
         self.parent.current_quests = new_quest_ids
 
     def speak_dialog_box(self):
-        print("speak key has been pressed")
+        if not self.last_dialog_text:
+            return
+        root.debug("speak dialog action starting")
 
         self.parent.audio_system.speak_nonblocking(self.last_dialog_text)
 
@@ -1088,7 +1090,7 @@ class WholeWindowAnalyzer(Thread):
         if self.has_dialog_text:
             notify_dialog_text = f"\npress {self.config.read_dialog_key} to here dialog box"
         menu_text = f"{self.last_selected_text}{notify_dialog_text}"
-        root.info(f"speaking menu text: {menu_text}")
+        root.debug(f"speaking menu text: {menu_text}")
         self.parent.audio_system.speak_nonblocking(menu_text)
 
 

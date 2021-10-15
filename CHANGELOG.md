@@ -1,6 +1,8 @@
 #v0.9.29
 # feat
-- Can adjust the speech rate in the config file under name "speech_rate" with range 0-10. The default value is 5.
+- Text to Speech now integrates with your screen reader. If no screenreader is found SAPI will be used as a fallback.
+- Added keyboard shortcuts to read the dialog box (default o), and reread the selected menu item (default m).
+
 # v0.9.28
 ## feat
 - Speak if the required English language pack is not installed on the system

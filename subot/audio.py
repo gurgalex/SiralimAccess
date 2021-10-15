@@ -13,6 +13,8 @@ from subot.pathfinder.map import TileType
 from subot.settings import Config
 from subot.utils import Point
 
+from cytolk import tolk
+
 
 @dataclass
 class AudioLocation:
@@ -102,6 +104,7 @@ def volume_from_distance(distance: Point) -> tuple[Left, Right]:
 class AudioSystem:
     def __init__(self, config: Config):
         self.config = config
+        self.silenced: bool = False
         pygame.mixer.set_num_channels(16)
         self.sound_mappings: dict[SoundType, SoundMapping] = {
             SoundType.ALTAR: SoundMapping(
@@ -200,12 +203,10 @@ class AudioSystem:
 
         }
 
-
         # Windows TTS speaker
         self.Speaker = win32com.client.Dispatch("SAPI.SpVoice")
         # don't block the program when speaking. Cancel any pending speaking directions
         self.SVSFlag = 3  # SVSFlagsAsync = 1 + SVSFPurgeBeforeSpeak = 2
-        self.Speaker.Rate = self.config.speech_rate
 
     def play_sound(self, audio_tile: AudioLocation, sound_type: SoundType):
         distance_y = audio_tile.distance.y
@@ -262,13 +263,30 @@ class AudioSystem:
         channel.stop()
 
     def speak_blocking(self, text):
-        self.Speaker.Speak(text)
+        self.silenced = False
+        with tolk.tolk():
+            if tolk.has_speech():
+                tolk.speak(text, interrupt=False)
+            else:
+                self.Speaker.Speak(text)
 
     def speak_nonblocking(self, text):
-        self.Speaker.Speak(text, self.SVSFlag)
+        self.silenced = False
+        with tolk.tolk():
+            if tolk.has_speech():
+                tolk.speak(text, interrupt=True)
+            else:
+                self.Speaker.Speak(text, self.SVSFlag)
 
     def silence(self):
-        self.speak_nonblocking(" ")
+        if self.silenced:
+            return
+        with tolk.tolk():
+            if tolk.has_speech():
+                tolk.silence()
+            else:
+                self.speak_nonblocking(' ')
+        self.silenced = True
 
     def get_available_sounds(self) -> dict[SoundType, SoundMapping]:
         return self.sound_mappings
