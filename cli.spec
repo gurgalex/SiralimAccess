@@ -9,10 +9,18 @@ program_name = config["custom"]["product_name"]
 internal_name = config["custom"]["internal_name"]
 block_cipher = None
 
+from pathlib import Path
+screen_reader_dlls = Path(HOMEPATH).joinpath("cytolk")
+nvda = screen_reader_dlls.joinpath("nvdaControllerClient64.dll")
+saapi = screen_reader_dlls.joinpath("SAAPI64.dll")
+
 
 a = Analysis(['cli.py'],
              pathex=['C:\\Users\\Alex Gurganus\\PycharmProjects\\SiralimUltimateBot'],
-             binaries=[],
+             binaries=[
+             (nvda.as_posix(),'.'),
+             (saapi.as_posix(),'.'),
+             ],
              datas=[
              ('VERSION', '.'),
              ('assets.db', '.'),

@@ -14,7 +14,7 @@ from subot.settings import Config
 from subot.utils import Point
 
 from cytolk import tolk
-
+tolk.try_sapi(False)
 
 @dataclass
 class AudioLocation:
