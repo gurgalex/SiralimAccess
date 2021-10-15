@@ -1,3 +1,7 @@
+# v0.10.1
+## Fix
+- Program no longer crashes if offline when checking for updates
+
 # v0.10.0
 ## change
 - Reading NPC dialog boxes must now be done manually with the `o` key. The program will till you if there is a dialog box to read
