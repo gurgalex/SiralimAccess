@@ -4,6 +4,9 @@ import signal
 import threading
 
 import sentry_sdk
+import requests
+import semantic_version
+import webbrowser
 
 from ctypes import windll
 import pynput
@@ -241,7 +244,7 @@ class Bot:
         root.debug(f"key released: {key}")
         if key == KeyCode.from_char(self.config.read_dialog_key):
             self.action_queue.put_nowait('read_dialog')
-        elif key == KeyCode.from_char('m'):
+        elif key == KeyCode.from_char(self.config.read_menu_entry_key):
             self.action_queue.put_nowait('read_menu_entry')
 
 
@@ -1504,6 +1507,20 @@ class NearPlayerProcessing(Thread):
         root.info(f"{self.name} is shutting down")
 
 
+def version_check(config, audio_system):
+    current_version = semantic_version.Version(read_version())
+    resp = requests.get("https://raw.githubusercontent.com/gurgalex/SiralimAccess/main/VERSION")
+    if resp.status_code != 200:
+        return
+    latest_version = semantic_version.Version(resp.text)
+    if current_version >= latest_version:
+        return
+
+    audio_system.speak_nonblocking(f"new version available. {resp.text}.\n Your version: {current_version}")
+    if config.update_popup_browser:
+        webbrowser.open("https://github.com/gurgalex/SiralimAccess/releases/latest")
+
+
 def init_bot() -> Bot:
     config = settings.load_config()
     audio_system = AudioSystem(config)
@@ -1512,7 +1529,7 @@ def init_bot() -> Bot:
         root.error(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
         audio_system.speak_blocking("Shutting down")
         sys.exit(1)
-
+    version_check(config, audio_system)
     is_minimized = True
     while is_minimized:
         try:
