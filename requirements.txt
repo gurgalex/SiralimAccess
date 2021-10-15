@@ -21,3 +21,4 @@ pynput~=1.7.3
 cytolk~=0.1.7
 future~=0.18.2
 requests~=2.26.0
+semantic-version~=2.8.5
