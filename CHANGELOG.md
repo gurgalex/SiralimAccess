@@ -1,6 +1,7 @@
 # v0.10.2
 ## feat
 - Add nether portal sound and same sound for portal exit
+- Add summoning brazier sound effect (fire crackling)
 
 # v0.10.1
 ## Fix

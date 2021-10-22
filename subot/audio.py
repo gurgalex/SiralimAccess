@@ -36,6 +36,7 @@ class SoundType(enum.Enum):
     REACHABLE_DIRECTION = (auto(), "direction can travel")
     TELEPORTATION_SHRINE = (auto(), "teleportation shrine")
     NETHER_PORTAL = (auto(), "nether portal")
+    SUMMONING = (auto(), 'summoning brazier')
 
     def __init__(self, number, description):
         self.number = number
@@ -60,6 +61,8 @@ class SoundType(enum.Enum):
             return SoundType.TELEPORTATION_SHRINE
         elif f is TileType.NETHER_PORTAL:
             return SoundType.NETHER_PORTAL
+        elif f is TileType.SUMMONING:
+            return SoundType.SUMMONING
         # elif f is TileType.REACHABLE_DIRECTION:
         #     return SoundType.REACHABLE_DIRECTION
         # elif f is TileType.REACHABLE_BLACK:
@@ -185,6 +188,15 @@ class AudioSystem:
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("nether-portal-low.ogg").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("nether-portal-normal.ogg").as_posix()),
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("nether-portal-high.ogg").as_posix()),
+                )
+            ),
+            SoundType.SUMMONING: SoundMapping(
+                channel=pygame.mixer.Channel(8),
+                volume_adj=self.config.summoning_brazier,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("summoning-low.ogg").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("summoning-normal.ogg").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("summoning-high.ogg").as_posix()),
                 )
             ),
             # SoundType.REACHABLE_BLACK: SoundMapping(

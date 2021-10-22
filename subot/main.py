@@ -1321,6 +1321,8 @@ class NearPlayerProcessing(Thread):
             return TileType.CHEST
         elif img_info.long_name == "netherportal":
             return TileType.NETHER_PORTAL
+        elif img_info.long_name == "summoningbrazier":
+            return TileType.SUMMONING
         else:
             return TileType.DECORATION
 

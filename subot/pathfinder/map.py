@@ -78,6 +78,7 @@ class TileType(Enum):
     DEAD_END = (26, Color.tan, "dead end")
     REACHABLE_DIRECTION = (27, Color.peachpuff, "direction")
     NETHER_PORTAL = (28, Color.blue_mid, 'nether portal')
+    SUMMONING = (29, Color.blue_mid, 'summoning brazier')
 
     def __init__(self, num, color: Color, description: str):
         self.num = num
