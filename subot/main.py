@@ -1319,6 +1319,8 @@ class NearPlayerProcessing(Thread):
             return TileType.FLOOR
         elif img_info.sprite_type is SpriteType.CHEST:
             return TileType.CHEST
+        elif img_info.long_name == "netherportal":
+            return TileType.NETHER_PORTAL
         else:
             return TileType.DECORATION
 

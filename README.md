@@ -21,6 +21,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Project items
 - Realm altar
 - NPC
+- Nether portal and portal exits
 - Creature Master
 - Chest
 - Teleportation shrine
