@@ -17,6 +17,8 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Dialog boxes are spoken such as for the story, NPCs, and realm altars
 
 ## Items sounds
+[video of sounds playing](https://youtu.be/2vVCJtCocbA)
+
 - Quest items
 - Project items
 - Realm altar
