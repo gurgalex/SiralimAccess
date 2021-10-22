@@ -20,7 +20,6 @@ class Color(enum.Enum):
     khaki = (140, 230, 240)
     black = (0, 0, 0)
     blue = (255, 0, 0)
-    blue_mid = (237, 149, 100)
     goldenrod = (32, 165, 218)
     gray = (153, 136, 119)
     green = (0, 255, 0)
@@ -77,8 +76,6 @@ class TileType(Enum):
     PASSAGEWAY_EXIT = (25, Color.teal, "passageway enter/exit")
     DEAD_END = (26, Color.tan, "dead end")
     REACHABLE_DIRECTION = (27, Color.peachpuff, "direction")
-    NETHER_PORTAL = (28, Color.blue_mid, 'nether portal')
-    SUMMONING = (29, Color.blue_mid, 'summoning brazier')
 
     def __init__(self, num, color: Color, description: str):
         self.num = num

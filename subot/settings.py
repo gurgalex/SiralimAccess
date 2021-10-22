@@ -39,13 +39,11 @@ class Config:
     main_volume: int = 100
     altar: int = 100
     chest: int = 100
-    nether_portal: int = 100
     npc_master: int = 100
     npc_generic: int = 100
     project_item: int = 100
     quest: int = 100
     teleportation_shrine: int = 100
-    summoning_brazier: int = 100
 
     detect_objects_through_walls: bool = True
 
@@ -75,12 +73,10 @@ class Config:
             "main_volume": self.main_volume,
             "altar": self.altar,
             "chest": self.chest,
-            "nether_portal": self.nether_portal,
             "npc_master": self.npc_master,
             "npc_generic": self.npc_generic,
             "project_item": self.project_item,
             "quest": self.quest,
-            "summoning_brazier": self.summoning_brazier,
             "teleportation_shrine": self.teleportation_shrine,
         }
 
@@ -110,13 +106,11 @@ class Config:
         default_config.master_volume = volume.getint("main_volume", fallback=default_config.master_volume)
         default_config.altar = volume.getint("altar", fallback=default_config.altar)
         default_config.chest = volume.getint("chest", fallback=default_config.chest)
-        default_config.nether_portal = volume.getint('nether_portal', fallback=default_config.nether_portal)
         default_config.npc_master = volume.getint('npc_master', fallback=default_config.npc_master)
         default_config.npc_generic = volume.getint("npc_generic", fallback=default_config.npc_generic)
         default_config.project_item = volume.getint("project_item", fallback=default_config.project_item)
         default_config.quest = volume.getint("quest", fallback=default_config.quest)
         default_config.teleportation_shrine = volume.getint("teleportation_shrine", fallback=default_config.teleportation_shrine)
-        default_config.summoning_brazier = volume.getint('summoning_brazier', fallback=default_config.summoning_brazier)
 
         ocr = ini["OCR"]
         default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)
