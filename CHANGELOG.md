@@ -1,3 +1,6 @@
+# v0.10.3
+# fix
+- Fix broken release by pinning opencv dependency version
 # v0.10.2
 ## feat
 - Add nether portal sound and same sound for portal exit
