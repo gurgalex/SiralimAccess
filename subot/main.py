@@ -113,6 +113,14 @@ class GameNotForegroundException(Exception):
     pass
 
 
+def clear_queue(q: Queue):
+    while not q.empty():
+        try:
+            q.get_nowait()
+        except queue.Empty:
+            break
+
+
 def get_su_client_rect() -> Rect:
     """Returns Rect class of the Siralim Ultimate window. Coordinates are without title bar and borders
     :raises GameNotOpenException if the game is not open
@@ -252,6 +260,7 @@ class Bot:
         pass
 
     def __init__(self, audio_system: AudioSystem, config: settings.Config):
+        self.queue_whole_analyzer_comm_send: queue.Queue = queue.Queue()
         # queue to monitor for incoming hang alert
         self.action_queue = queue.Queue()
         self.config = config
@@ -285,8 +294,7 @@ class Bot:
         self.rx_queue = multiprocessing.Queue(maxsize=10)
         self.tx_window_queue = multiprocessing.Queue(maxsize=10)
 
-
-        self.nearby_send_deque = deque(maxlen=1)
+        self.nearby_send_deque = queue.Queue(maxsize=10)
         self.quest_sprite_long_names: set[str] = set()
 
 
@@ -396,6 +404,7 @@ class Bot:
         self.whole_window_thandle = WholeWindowAnalyzer(name=WholeWindowAnalyzer.__name__,
                                                         incoming_frame_queue=self.color_frame_queue,
                                                         out_quests_queue=self.out_quests,
+                                                        queue_child_comm_send=self.queue_whole_analyzer_comm_send,
                                                         su_client_rect=Rect(x=0, y=0, w=self.mon_full_window["width"],
                                                                             h=self.mon_full_window["height"]),
                                                         parent=self,
@@ -619,6 +628,19 @@ class Bot:
                                  "left": self.su_client_rect.x + self.nearby_rect_mss.x,
                                  "width": self.nearby_rect_mss.w, "height": self.nearby_rect_mss.h}
 
+    def pause_bot(self):
+        if self.paused:
+            return
+        self.paused = True
+        self.queue_whole_analyzer_comm_send.put(Pause())
+        self.nearby_send_deque.put(Pause())
+
+    def resume_bot(self):
+        self.paused = False
+        self.queue_whole_analyzer_comm_send.put(Resume())
+        self.nearby_send_deque.put(Resume())
+        root.info("sent bot resume messages to whole and nearby")
+
     def check_if_window_changed_position(self):
         self.timer = time.time()
         try:
@@ -626,12 +648,9 @@ class Bot:
             prev_forground = self.game_is_foreground == True
             self.game_is_foreground = True
             if self.paused:
-                self.paused = False
-                self.tx_window_queue.put(Resume())
-                self.tx_nearby_process_queue.put(Resume())
+                self.resume_bot()
             if not prev_forground:
-                self.tx_window_queue.put(Resume())
-                self.tx_nearby_process_queue.put(Resume())
+                self.resume_bot()
         except GameNotOpenException:
             self.audio_system.speak_blocking("Siralim Ultimate is no longer open")
             self.stop()
@@ -644,14 +663,11 @@ class Bot:
             self.audio_system.speak_blocking("Shutting down")
             return
         except GameMinimizedException:
-            self.tx_window_queue.put(Pause())
-            self.tx_nearby_process_queue.put(Pause())
-            self.paused = True
+            self.pause_bot()
             return
         except GameNotForegroundException:
             self.game_is_foreground = False
-            self.tx_window_queue.put(Pause())
-            self.tx_nearby_process_queue.put(Pause())
+            self.pause_bot()
             return
 
         if new_su_client_rect != self.su_client_rect:
@@ -687,15 +703,15 @@ class Bot:
             if (time.time() - self.timer) > 1:
                 self.check_if_window_changed_position()
 
-            if self.mode is BotMode.UNDETERMINED:
-                self.nearby_send_deque.append(ScanForItems)
-                if self.realm:
-                    self.mode = BotMode.REALM
-
-            elif self.mode is BotMode.REALM:
-                self.nearby_send_deque.append(ScanForItems)
-            elif self.mode is BotMode.CASTLE:
-                self.nearby_send_deque.append(ScanForItems)
+            if not self.paused:
+                if self.mode is BotMode.UNDETERMINED:
+                    self.nearby_send_deque.put(ScanForItems())
+                    if self.realm:
+                        self.mode = BotMode.REALM
+                elif self.mode is BotMode.REALM:
+                    self.nearby_send_deque.put(ScanForItems())
+                elif self.mode is BotMode.CASTLE:
+                    self.nearby_send_deque.put(ScanForItems())
 
             if iters % every == 0:
                 root.debug(f"FPS: {clock.get_fps()}")
@@ -797,11 +813,9 @@ class WholeWindowGrabber(multiprocessing.Process):
                         elif isinstance(msg, Pause):
                             root.debug("Pausing capture of whole window frames")
                             self.paused = True
-                            self.color_frame_queue.put(Pause(), timeout=1)
                             self.activity_notify.notify_wait()
                         elif isinstance(msg, Resume):
                             root.debug("Resuming capture of whole window frames")
-                            self.color_frame_queue.put(Resume(), timeout=2)
                             self.paused = False
                     except queue.Empty:
                         pass
@@ -834,7 +848,7 @@ class WholeWindowGrabber(multiprocessing.Process):
 
 
 class WholeWindowAnalyzer(Thread):
-    def __init__(self, incoming_frame_queue: Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker, config: settings.Config, **kwargs) -> None:
+    def __init__(self, incoming_frame_queue: Queue, queue_child_comm_send: queue.Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker, config: settings.Config, **kwargs) -> None:
         super().__init__(**kwargs)
         self.repeat_dialog_text: bool = False
         self.paused: bool = False
@@ -847,6 +861,7 @@ class WholeWindowAnalyzer(Thread):
         self.has_dialog_text: bool = False
         self.parent: Bot = parent
         self.incoming_frame_queue: Queue = incoming_frame_queue
+        self.queue_parent_comm_recv = queue_child_comm_send
         self.out_quests_sprites_queue: Queue = out_quests_queue
         self.stop_event = stop_event
         self._hang_monitor = hang_monitor
@@ -1034,6 +1049,29 @@ class WholeWindowAnalyzer(Thread):
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
         while not self.stop_event.is_set():
+
+            try:
+                comm_msg = self.queue_parent_comm_recv.get_nowait()
+                if isinstance(comm_msg, Pause):
+                    self.paused = True
+                    self.hang_activity_sender.notify_wait()
+                    root.info("pause. Pause request")
+                    self.parent.tx_window_queue.put(Pause())
+                    clear_queue(self.incoming_frame_queue)
+                    continue
+
+                elif isinstance(comm_msg, Resume):
+                    self.paused = False
+                    self.parent.tx_window_queue.put(Resume())
+            except queue.Empty:
+                pass
+
+            if self.paused:
+                sleep_duration = 1/self.config.whole_window_scanning_frequency
+                time.sleep(sleep_duration)
+                root.debug(f"main analyzer sleeping for {sleep_duration} seconds")
+                continue
+
             try:
                 msg = self.incoming_frame_queue.get(timeout=5)
                 self.hang_activity_sender.notify_activity(HangAnnotation(data={"data": "window analyze"}))
@@ -1041,16 +1079,6 @@ class WholeWindowAnalyzer(Thread):
                     break
                 if isinstance(msg, Minimized):
                     self.paused = True
-                    continue
-                elif isinstance(msg, Pause):
-                    self.paused = True
-                    self.parent.clear_all_matches()
-                    self.parent.speak_nearby_objects()
-                    root.debug("pause. Pause request")
-                    self.parent.audio_system.silence()
-                    continue
-                elif isinstance(msg, Resume):
-                    self.paused = False
                     continue
 
                 shot = msg
@@ -1070,8 +1098,7 @@ class WholeWindowAnalyzer(Thread):
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
 
-            if not self.paused:
-                self.ocr_screen()
+            self.ocr_screen()
             if self.has_menu_entry_text and not self.menu_entry_text_repeat:
                 self.speak_selected_menu_entry()
             if self.last_dialog_text and not self.has_menu_entry_text and not self.repeat_dialog_text:
@@ -1189,7 +1216,7 @@ class CastleAlignment:
 
 
 class NearPlayerProcessing(Thread):
-    def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: deque, parent: Bot, stop_event: threading.Event,hang_monitor: HangMonitorWorker, **kwargs):
+    def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: queue.Queue, parent: Bot, stop_event: threading.Event,hang_monitor: HangMonitorWorker, **kwargs):
         super().__init__(**kwargs)
 
         self.map = Map(arr=np.zeros((NEARBY_TILES_WH, NEARBY_TILES_WH), dtype='object'))
@@ -1201,7 +1228,7 @@ class NearPlayerProcessing(Thread):
         self.nearby_queue = nearby_frame_queue
 
         # Used for across thread communication
-        self.nearby_comm_deque: deque = nearby_comm_deque
+        self.nearby_comm_deque = nearby_comm_deque
         self.stop_event = stop_event
 
         self.near_frame_color: np.typing.ArrayLike = np.zeros(
@@ -1213,9 +1240,6 @@ class NearPlayerProcessing(Thread):
 
         # The current active quests
         self.active_quests: list[Quest] = []
-
-        # last time a realm was not identified
-        self.last_realm_identified_timer = time.time()
 
         self.was_match: bool = False
         self.match_streak: int = 0
@@ -1443,13 +1467,20 @@ class NearPlayerProcessing(Thread):
         cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGRA2GRAY, dst=self.near_frame_gray)
         self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
 
-        self.was_match = False
         if self.paused:
             return
 
+
         realm_alignment = self.detect_what_realm_in()
         self.handle_realm_alignment(realm_alignment)
-        self.last_realm_identified_timer = time.time()
+
+    def handle_scan_for_item(self):
+        start = time.time()
+        if self.was_match:
+            self.scan_for_items()
+        end = time.time()
+        latency = end - start
+        root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=10.0)
@@ -1460,44 +1491,43 @@ class NearPlayerProcessing(Thread):
 
             try:
                 # we don't block since we must be ready for new incoming frames ^^
-                comm_msg: MessageImpl = self.nearby_comm_deque.pop()
+                comm_msg: MessageImpl = self.nearby_comm_deque.get_nowait()
 
-                if comm_msg.type is MessageType.SCAN_FOR_ITEMS:
-                    start = time.time()
-                    if self.was_match:
-                        self.scan_for_items()
-                    end = time.time()
-                    latency = end - start
-                    root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
-                elif comm_msg.type is MessageType.CHECK_WHAT_REALM_IN:
-                    pass
+                if isinstance(comm_msg, ScanForItems):
+                    self.handle_scan_for_item()
                 elif isinstance(comm_msg, Pause):
                     self.paused = True
+                    self.parent.tx_nearby_process_queue.put(Pause())
+                    self.hang_activity_sender.notify_wait()
+                    self.parent.clear_all_matches()
+                    self.parent.speak_nearby_objects()
+                    clear_queue(self.nearby_queue)
+                    root.debug("paused nearby analysis")
+
                 elif isinstance(comm_msg, Resume):
                     self.paused = False
+                    self.parent.tx_nearby_process_queue.put(Resume())
+                    root.debug("resuming nearby")
 
                 if settings.VIEWER:
                     cv2.imshow("Siralim Access", self.map.img)
                     if cv2.waitKey(1) & 0xFF == ord("q"):
                         cv2.destroyAllWindows()
                         break
-            except IndexError:
-                continue
+            except queue.Empty:
+                pass
 
             if self.paused:
-                time.sleep(settings.FPS)
+                root.debug("sleeping nearby analyzer due to being paused")
+                time.sleep(1/settings.FPS)
                 continue
 
             try:
-                msg: MessageImpl = self.nearby_queue.get(timeout=5)
+                msg: MessageImpl = self.nearby_queue.get(timeout=2)
             except queue.Empty:
-                if self.paused:
-                    self.hang_activity_sender.notify_wait()
-                    pass
-                else: # something has gone wrong with getting timely frames
-                    empty_text = "No nearby frame for 5 seconds"
-                    root.warning(empty_text)
-                    raise Exception(empty_text)
+                empty_text = "No nearby frame for 2 seconds"
+                root.warning(empty_text)
+                raise Exception(empty_text)
 
             self.hang_activity_sender.notify_activity(HangAnnotation({"event": "near_frame_processing"}))
             if msg is None:
