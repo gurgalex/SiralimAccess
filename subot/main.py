@@ -249,6 +249,8 @@ def is_foreground_process(pid: int) -> bool:
 
 class Bot:
     def on_release(self, key):
+        if self.paused:
+            return
         root.debug(f"key released: {key}")
         if key == KeyCode.from_char(self.config.read_dialog_key):
             self.action_queue.put_nowait('read_dialog')
