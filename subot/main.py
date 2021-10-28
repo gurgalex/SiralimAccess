@@ -15,6 +15,10 @@ from pynput.keyboard import KeyCode
 
 import win32process
 
+from subot import models, ocr
+from subot.summoning import OcrSummoningSystem
+from subot.trait_info import TraitData, Creature, CreatureLimited
+
 user32 = windll.user32
 def set_dpi_aware():
     # makes functions return real pixel numbers instead of scaled values
@@ -33,7 +37,6 @@ from multiprocessing import Queue
 from threading import Thread
 from typing import Optional, Union
 
-from subot import models, ocr
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert, Shutdown
 
 import cv2
@@ -41,7 +44,8 @@ import numpy as np
 import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
-from subot.ocr import detect_green_text, detect_dialog_text, recognize_cv2_image, english_installed
+from subot.ocr import detect_green_text, detect_dialog_text, recognize_cv2_image, english_installed, detect_title, \
+    detect_white_text, OCRMode
 import win32gui
 import pygame
 import pygame.freetype
@@ -199,7 +203,7 @@ def extract_quest_name_from_quest_area(gray_frame: np.typing.ArrayLike) -> list[
     # see if any lines match a quest title
     with Session() as session:
         for line_info in text["lines"]:
-            line_text = line_info["text"]
+            line_text = line_info["merged_text"]
             if quest_obj := session.query(Quest).filter_by(title_first_line=line_text).first():
                 quests.append(quest_obj)
     return quests
@@ -256,6 +260,10 @@ class Bot:
             self.action_queue.put_nowait('read_dialog')
         elif key == KeyCode.from_char(self.config.read_menu_entry_key):
             self.action_queue.put_nowait('read_menu_entry')
+        elif key == KeyCode.from_char('v'):
+            self.action_queue.put_nowait('read_all_info')
+        elif key == KeyCode.from_char('c'):
+            self.action_queue.put_nowait('copy_all_info')
 
 
     def on_press(self, key):
@@ -669,6 +677,8 @@ class Bot:
             return
         except GameNotForegroundException:
             self.game_is_foreground = False
+            if not self.paused:
+                self.audio_system.silence()
             self.pause_bot()
             return
 
@@ -722,9 +732,14 @@ class Bot:
             try:
                 msg = self.action_queue.get_nowait()
                 if msg == "read_dialog":
-                    self.whole_window_thandle.speak_dialog_box()
+                    # self.whole_window_thandle.speak_dialog_box()
+                    self.whole_window_thandle.speak_interaction_info()
                 elif msg == "read_menu_entry":
                     self.whole_window_thandle.speak_selected_menu_entry()
+                elif msg == "read_all_info":
+                    self.whole_window_thandle.speak_all_info()
+                elif msg == "copy_all_info":
+                    self.whole_window_thandle.copy_all_info()
             except queue.Empty:
                 pass
 
@@ -852,6 +867,7 @@ class WholeWindowGrabber(multiprocessing.Process):
 class WholeWindowAnalyzer(Thread):
     def __init__(self, incoming_frame_queue: Queue, queue_child_comm_send: queue.Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker, config: settings.Config, **kwargs) -> None:
         super().__init__(**kwargs)
+        self.creature_data = TraitData()
         self.repeat_dialog_text: bool = False
         self.paused: bool = False
         self.config = config
@@ -872,6 +888,10 @@ class WholeWindowAnalyzer(Thread):
         self.frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w, 3), dtype="uint8")
         self.gray_frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
                                                         dtype="uint8")
+        self.creature: Optional[Creature] = None
+        self.prev_creature: Optional[Creature] = None
+        self.ocr_mode: OCRMode = OCRMode.UNKNOWN
+        self.ocr_system: Optional[OcrSummoningSystem] = None
 
     def update_quests(self, new_quests: list[Quest]):
         if len(new_quests) == 0:
@@ -909,23 +929,57 @@ class WholeWindowAnalyzer(Thread):
 
         self.parent.audio_system.speak_nonblocking(self.last_dialog_text)
 
+    def ocr_title(self):
+        mask = detect_title(self.frame)
+        resize_factor = 2
+        mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor), interpolation=cv2.INTER_LINEAR)
+        ocr_result = recognize_cv2_image(mask)
+        detected_system = OCRMode.UNKNOWN
+        try:
+            first_line: str = ocr_result["lines"][0]['text']
+            root.debug(f"title: {first_line}")
+            if first_line.startswith("Select a creature to summon"):
+                detected_system = OCRMode.SUMMON
+        except IndexError:
+            pass
+
+        if detected_system != self.ocr_mode:
+            root.debug(f"new ocr system: {detected_system}")
+            if detected_system is OCRMode.SUMMON:
+                self.ocr_system = OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config)
+            elif detected_system is OCRMode.UNKNOWN:
+                self.ocr_mode = OCRMode.UNKNOWN
+                self.ocr_system = None
+        self.ocr_mode = detected_system
+
+    def speak_interaction_info(self):
+        if not self.ocr_system:
+            self.speak_dialog_box()
+        elif isinstance(self.ocr_system, OcrSummoningSystem):
+            self.ocr_system.speak_interaction()
+
     def ocr_screen(self):
-        if self.config.ocr_selected_menu_item:
-            # menu entry selection is latency sensitive, so we do this first
-            start = time.time()
-            self.read_selected_menu_item()
-            end = time.time()
-            took_ms = math.ceil((end - start) * 1000)
-            root.debug(f"OCR of menu entry took {took_ms}ms")
+        self.ocr_title()
+        if self.ocr_mode is OCRMode.SUMMON:
+            self.ocr_system.ocr(self.frame, self.gray_frame)
+            self.ocr_system.speak_auto()
+            return
+        elif self.ocr_mode is OCRMode.UNKNOWN:
+            if self.config.ocr_selected_menu_item:
+                # menu entry selection is latency sensitive, so we do this first
+                start = time.time()
+                self.read_selected_menu_item()
+                end = time.time()
+                took_ms = math.ceil((end - start) * 1000)
+                root.debug(f"OCR of menu entry took {took_ms}ms")
 
-        if self.config.ocr_read_dialog_boxes:
-            self.ocr_dialog_box()
+            if self.config.ocr_read_dialog_boxes:
+                self.ocr_dialog_box()
 
-        menu_selection_or_dialog_text_present = self.last_selected_text or self.last_dialog_text
-        if not menu_selection_or_dialog_text_present:
-            root.debug("Pausing due to no menu selection or dialog text present on screen")
-            self.parent.audio_system.silence()
-
+            menu_selection_or_dialog_text_present = self.last_selected_text or self.last_dialog_text
+            if not menu_selection_or_dialog_text_present:
+                root.debug("Pausing due to no menu selection or dialog text present on screen")
+                self.parent.audio_system.silence()
 
     def ocr_dialog_box(self):
         mask = detect_dialog_text(self.frame)
@@ -958,7 +1012,7 @@ class WholeWindowAnalyzer(Thread):
             self.has_dialog_text = False
             return
 
-        selected_text = ocr_result["text"]
+        selected_text = ocr_result["merged_text"]
         self.repeat_dialog_text = False
         # don't count no text at all as dialog text
         if selected_text == "":
@@ -1005,7 +1059,7 @@ class WholeWindowAnalyzer(Thread):
             roi = cv2.resize(roi, (roi.shape[1]*2, roi.shape[0]*2), interpolation=cv2.INTER_LINEAR)
 
         ocr_result = recognize_cv2_image(roi)
-        selected_text = ocr_result["text"]
+        selected_text = ocr_result["merged_text"]
         self.menu_entry_text_repeat = False
 
 
@@ -1125,6 +1179,13 @@ class WholeWindowAnalyzer(Thread):
         root.debug(f"speaking menu text: {menu_text}")
         self.parent.audio_system.speak_nonblocking(menu_text)
 
+    def speak_all_info(self):
+        if isinstance(self.ocr_system, OcrSummoningSystem):
+            self.ocr_system.speak_detailed()
+
+    def copy_all_info(self):
+        if isinstance(self.ocr_system, OcrSummoningSystem):
+            self.ocr_system.copy_detailed_text()
 
 class NearbyFrameGrabber(multiprocessing.Process):
     def __init__(self, nearby_queue: multiprocessing.Queue, rx_parent: multiprocessing.Queue,

@@ -11,6 +11,14 @@ from winrt.windows.globalization import Language
 from winrt.windows.graphics.imaging import *
 from winrt.windows.security.cryptography import CryptographicBuffer
 
+from enum import Enum, auto
+
+
+class OCRMode(Enum):
+    SUMMON = auto()
+    UNKNOWN = auto()
+    INSPECT = auto()
+
 
 class rect:
     def __init__(self, x, y, w, h):
@@ -76,9 +84,21 @@ def dump_ocrline(line):
         'merged_text': ' '.join(map(lambda x: x['text'], merged))
     }
 
+LINE_MULTIPLIER = 16
+
+def l2r_sort(item: dict):
+    y_pos = item['merged_words'][0]['bounding_rect'].y
+    x_pos = item['merged_words'][0]['bounding_rect'].x
+
+    nearest_line = LINE_MULTIPLIER * round(y_pos/LINE_MULTIPLIER)
+
+    return nearest_line + x_pos/99999
+
 
 def dump_ocrresult(ocrresult):
     lines = list(map(dump_ocrline, ocrresult.lines))
+    lines = sorted(lines, key=l2r_sort)
+
     return {
         'text': ocrresult.text,
         # 'text_angle': ocrresult.text_angle.value if ocrresult.text_angle else None,
@@ -140,13 +160,50 @@ def recognize_cv2_image(img):
     return dump_ocrresult(blocking_wait(eng.recognize_async(swbmp)))
 
 
-def detect_green_text(image) -> np.array:
+def detect_green_text(image: np.typing.ArrayLike, x_start: float = 0.0, x_end: float = 1.0, y_start: float = 0.0, y_end: float = 1.0) -> np.array:
     """Using a source image of RGB color, extract highlighted menu items which are a green color"""
     lower_green = np.array([60, 50, 100])
     upper_green = np.array([60, 255, 255])
 
-    img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    y_start = int(image.shape[0] * y_start)
+    y_end = int(image.shape[0] * y_end)
+    x_start = int(image.shape[1] * x_start)
+    x_end = int(image.shape[1] * x_end)
+
+    roi = image[y_start:y_end, x_start:x_end]
+    img = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(img, lower_green, upper_green)
+    return mask
+
+
+def detect_white_text(frame: np.typing.ArrayLike, x_start, x_end, y_start, y_end) -> np.typing.ArrayLike:
+    y_start = int(frame.shape[0] * y_start)
+    y_end = int(frame.shape[0] * y_end)
+    x_start = int(frame.shape[1] * x_start)
+    x_end = int(frame.shape[1] * x_end)
+
+    text_area = frame[y_start:y_end, x_start:x_end]
+
+    img = cv2.cvtColor(text_area, cv2.COLOR_BGR2HLS)
+    sensitivity = 30
+    lower_white = np.array([0, 255 - sensitivity, 0])
+    upper_white = np.array([0, 255, 0])
+    mask = cv2.inRange(img, lower_white, upper_white)
+    return mask
+
+
+def detect_title(frame: np.typing.ArrayLike) -> np.typing.ArrayLike:
+    y_start = 0
+    y_end = int(frame.shape[0] * 0.1)
+    x_start = int(frame.shape[1] * 0.00)
+    x_end = int(frame.shape[1] * 0.995)
+    title_area = frame[y_start:y_end, x_start:x_end]
+
+    img = cv2.cvtColor(title_area, cv2.COLOR_BGR2HLS)
+    sensitivity = 30
+    lower_white = np.array([0, 255 - sensitivity, 0])
+    upper_white = np.array([0, 255, 0])
+    mask = cv2.inRange(img, lower_white, upper_white)
     return mask
 
 
