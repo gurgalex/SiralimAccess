@@ -50,7 +50,7 @@ class Config:
     detect_objects_through_walls: bool = True
 
     # repeat detected object sounds. If false, stops playing the sound if play has not moved
-    repeat_sound_when_stationary: bool = True
+    repeat_sound_when_stationary: bool = False
     required_stationary_seconds: float = 0.5
 
     def save_config(self, path: Path):
