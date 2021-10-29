@@ -2,31 +2,6 @@ import os
 import sys
 import signal
 import threading
-
-import sentry_sdk
-import requests
-import semantic_version
-import webbrowser
-
-from ctypes import windll
-import pynput
-from pynput import keyboard
-from pynput.keyboard import KeyCode
-
-import win32process
-
-from subot import models, ocr
-from subot.summoning import OcrSummoningSystem
-from subot.trait_info import TraitData, Creature, CreatureLimited
-
-user32 = windll.user32
-def set_dpi_aware():
-    # makes functions return real pixel numbers instead of scaled values
-    user32.SetProcessDPIAware()
-
-set_dpi_aware()
-
-
 import enum
 import logging
 import multiprocessing
@@ -37,6 +12,20 @@ from multiprocessing import Queue
 from threading import Thread
 from typing import Optional, Union
 
+import sentry_sdk
+import requests
+import semantic_version
+import webbrowser
+
+from ctypes import windll
+from pynput import keyboard
+from pynput.keyboard import KeyCode
+
+import win32process
+
+from subot import models, ocr
+from subot.summoning import OcrSummoningSystem
+from subot.trait_info import TraitData, Creature, CreatureLimited
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert, Shutdown
 
 import cv2
@@ -44,16 +33,10 @@ import numpy as np
 import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
-from subot.ocr import detect_green_text, detect_dialog_text, recognize_cv2_image, english_installed, detect_title, \
-    detect_white_text, OCRMode
+from subot.ocr import detect_green_text, detect_dialog_text, english_installed, detect_title, OCRMode, OCR
 import win32gui
 import pygame
 import pygame.freetype
-pygame.mixer.init()
-pygame.freetype.init()
-pygame.display.init()
-
-os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
 import math
 import time
 
@@ -77,6 +60,24 @@ from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLo
 
 from subot.utils import Point, read_version
 import traceback
+
+
+user32 = windll.user32
+
+
+def set_dpi_aware():
+    # makes functions return real pixel numbers instead of scaled values
+    user32.SetProcessDPIAware()
+
+
+set_dpi_aware()
+
+
+pygame.mixer.init()
+pygame.freetype.init()
+pygame.display.init()
+
+os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
 
 # sentry annotation for pyinstaller
 def before_send(event, hint):
@@ -186,27 +187,6 @@ class AssetGridLoc:
         return Point(x=self.x, y=self.y)
 
 
-def extract_quest_name_from_quest_area(gray_frame: np.typing.ArrayLike) -> list[Quest]:
-    """
-
-    :param gray_frame: greyscale full-windowed frame that the bot captured
-    :return: List of quests that appeared in the quest area. an empty list is returned if no quests were found
-    """
-    quests: list[Quest] = []
-    y_text_dim = int(gray_frame.shape[0] * 0.33)
-    x_text_dim = int(gray_frame.shape[1] * 0.33)
-    quest_area = gray_frame[:y_text_dim, -x_text_dim:]
-    thresh, threshold_white = cv2.threshold(quest_area, 215, 255, cv2.THRESH_BINARY_INV)
-
-    text = recognize_cv2_image(threshold_white)
-
-    # see if any lines match a quest title
-    with Session() as session:
-        for line_info in text["lines"]:
-            line_text = line_info["merged_text"]
-            if quest_obj := session.query(Quest).filter_by(title_first_line=line_text).first():
-                quests.append(quest_obj)
-    return quests
 
 
 class GridType(enum.Enum):
@@ -538,9 +518,9 @@ class Bot:
 
         # the player is always in the center of the window of the game
         # offset
-        #######xxxxx###
-        #######xxCxx###
-        #######xxxxx###
+        # #######xxxxx###
+        # #######xxCxx###
+        # #######xxxxx###
 
         return Rect(x=round(client_dimensions.w / 2), y=round(client_dimensions.h / 2),
                     w=TILE_SIZE, h=TILE_SIZE)
@@ -890,8 +870,9 @@ class WholeWindowAnalyzer(Thread):
                                                         dtype="uint8")
         self.creature: Optional[Creature] = None
         self.prev_creature: Optional[Creature] = None
+        self.ocr_engine: OCR = OCR()
         self.ocr_mode: OCRMode = OCRMode.UNKNOWN
-        self.ocr_system: Optional[OcrSummoningSystem] = None
+        self.ocr_ui_system: Optional[OcrSummoningSystem] = None
         self.quest_frame_scanning_interval: int = self.config.whole_window_scanning_frequency
         self.frames_since_last_scan: int = 0
 
@@ -935,10 +916,10 @@ class WholeWindowAnalyzer(Thread):
         mask = detect_title(self.frame)
         resize_factor = 2
         mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor), interpolation=cv2.INTER_LINEAR)
-        ocr_result = recognize_cv2_image(mask)
+        ocr_result = self.ocr_engine.recognize_cv2_image(mask)
         detected_system = OCRMode.UNKNOWN
         try:
-            first_line: str = ocr_result["lines"][0]['text']
+            first_line: str = ocr_result.lines[0].text
             root.debug(f"title: {first_line}")
             if first_line.startswith("Select a creature to summon"):
                 detected_system = OCRMode.SUMMON
@@ -948,23 +929,23 @@ class WholeWindowAnalyzer(Thread):
         if detected_system != self.ocr_mode:
             root.debug(f"new ocr system: {detected_system}")
             if detected_system is OCRMode.SUMMON:
-                self.ocr_system = OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config)
+                self.ocr_ui_system = OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config, self.ocr_engine)
             elif detected_system is OCRMode.UNKNOWN:
                 self.ocr_mode = OCRMode.UNKNOWN
-                self.ocr_system = None
+                self.ocr_ui_system = None
         self.ocr_mode = detected_system
 
     def speak_interaction_info(self):
-        if not self.ocr_system:
+        if not self.ocr_ui_system:
             self.speak_dialog_box()
-        elif isinstance(self.ocr_system, OcrSummoningSystem):
-            self.ocr_system.speak_interaction()
+        elif isinstance(self.ocr_ui_system, OcrSummoningSystem):
+            self.ocr_ui_system.speak_interaction()
 
     def ocr_screen(self):
         self.ocr_title()
         if self.ocr_mode is OCRMode.SUMMON:
-            self.ocr_system.ocr(self.frame, self.gray_frame)
-            self.ocr_system.speak_auto()
+            self.ocr_ui_system.ocr(self.frame, self.gray_frame)
+            self.ocr_ui_system.speak_auto()
             return
         elif self.ocr_mode is OCRMode.UNKNOWN:
             if self.config.ocr_selected_menu_item:
@@ -987,12 +968,12 @@ class WholeWindowAnalyzer(Thread):
         mask = detect_dialog_text(self.frame)
         resize_factor = 2
         mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor), interpolation=cv2.INTER_LINEAR)
-        ocr_result = recognize_cv2_image(mask)
+        ocr_result = self.ocr_engine.recognize_cv2_image(mask)
         try:
-            first_line = ocr_result["lines"][0]
-            first_word = first_line["words"][0]
-            bbox = first_word["bounding_rect"]
-            root.debug(f"dialog box: {ocr_result['text']}")
+            first_line = ocr_result.lines[0]
+            first_word = first_line.words[0]
+            bbox = first_word.bounding_rect
+            root.debug(f"dialog box: {ocr_result.text}")
 
             # health bar text - rect(69, 87, 73, 16), rect(282, 87, 71, 16)
             # dialog box text - rect(14, 23, 75, 16)
@@ -1014,7 +995,7 @@ class WholeWindowAnalyzer(Thread):
             self.has_dialog_text = False
             return
 
-        selected_text = ocr_result["merged_text"]
+        selected_text = ocr_result.merged_text
         self.repeat_dialog_text = False
         # don't count no text at all as dialog text
         if selected_text == "":
@@ -1060,8 +1041,8 @@ class WholeWindowAnalyzer(Thread):
         if roi.shape[0] < 400 or roi.shape[1] < 400:
             roi = cv2.resize(roi, (roi.shape[1]*2, roi.shape[0]*2), interpolation=cv2.INTER_LINEAR)
 
-        ocr_result = recognize_cv2_image(roi)
-        selected_text = ocr_result["merged_text"]
+        ocr_result = self.ocr_engine.recognize_cv2_image(roi)
+        selected_text = ocr_result.merged_text
         self.menu_entry_text_repeat = False
 
 
@@ -1103,6 +1084,27 @@ class WholeWindowAnalyzer(Thread):
 
         # self.last_selected_text = selected_text
 
+    def extract_quest_name_from_quest_area(self, gray_frame: np.typing.ArrayLike) -> list[Quest]:
+        """
+
+        :param gray_frame: greyscale full-windowed frame that the bot captured
+        :return: List of quests that appeared in the quest area. an empty list is returned if no quests were found
+        """
+        quests: list[Quest] = []
+        y_text_dim = int(gray_frame.shape[0] * 0.33)
+        x_text_dim = int(gray_frame.shape[1] * 0.33)
+        quest_area = gray_frame[:y_text_dim, -x_text_dim:]
+        thresh, threshold_white = cv2.threshold(quest_area, 215, 255, cv2.THRESH_BINARY_INV)
+
+        text = self.ocr_engine.recognize_cv2_image(threshold_white)
+
+        # see if any lines match a quest title
+        with Session() as session:
+            for line_info in text.lines:
+                line_text = line_info.merged_text
+                if quest_obj := session.query(Quest).filter_by(title_first_line=line_text).first():
+                    quests.append(quest_obj)
+        return quests
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
@@ -1165,7 +1167,7 @@ class WholeWindowAnalyzer(Thread):
 
             if self.frames_since_last_scan >= self.quest_frame_scanning_interval:
                 self.frames_since_last_scan = 0
-                quests = extract_quest_name_from_quest_area(self.gray_frame)
+                quests = self.extract_quest_name_from_quest_area(self.gray_frame)
                 current_quests = [quest.title for quest in quests]
                 quest_items = [sprite.long_name for quest in quests for sprite in quest.sprites]
                 root.debug(f"quests = {current_quests}")
@@ -1185,12 +1187,12 @@ class WholeWindowAnalyzer(Thread):
         self.parent.audio_system.speak_nonblocking(menu_text)
 
     def speak_all_info(self):
-        if isinstance(self.ocr_system, OcrSummoningSystem):
-            self.ocr_system.speak_detailed()
+        if isinstance(self.ocr_ui_system, OcrSummoningSystem):
+            self.ocr_ui_system.speak_detailed()
 
     def copy_all_info(self):
-        if isinstance(self.ocr_system, OcrSummoningSystem):
-            self.ocr_system.copy_detailed_text()
+        if isinstance(self.ocr_ui_system, OcrSummoningSystem):
+            self.ocr_ui_system.copy_detailed_text()
 
 class NearbyFrameGrabber(multiprocessing.Process):
     def __init__(self, nearby_queue: multiprocessing.Queue, rx_parent: multiprocessing.Queue,

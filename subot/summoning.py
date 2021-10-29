@@ -3,7 +3,7 @@ from typing import Optional
 
 import cv2
 
-from subot.ocr import detect_green_text, recognize_cv2_image, detect_white_text
+from subot.ocr import detect_green_text, detect_white_text, OCR
 from subot.audio import AudioSystem
 from subot.settings import Config
 from subot.trait_info import Creature, CreatureInfo, TraitData, CreatureLimited
@@ -16,27 +16,19 @@ root = getLogger()
 class OcrSummoningSystem:
     """System active when summoning screen is open
     Discarded when closed
-    Todo: integrate with windowanalyszer.
-    if ocrmode == summoning
-    self.scanning_system = OCRSummoningSystem()
-    self.scanning_system.scan(frame, gray_frame)
-    self.scanning_system.speak_results()
-
-    # on change of system
-    silence old audio
-    self.scanning_system = NewSystem()
 
     """
-    def __init__(self, creature_data: TraitData, audio_system: AudioSystem, config: Config):
+    def __init__(self, creature_data: TraitData, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
 
         self.prev_creature: Optional[CreatureInfo] = None
         self.creature: Optional[CreatureInfo] = None
         self.creature_data = creature_data
         self.audio_system: AudioSystem = audio_system
         self.program_config = config
+        self.ocr_engine = ocr_engine
 
     def ocr(self, frame: np.typing.ArrayLike, gray_frame: np.typing.ArrayLike):
-        self.ocr_summoning(frame, gray_frame)
+        self._ocr_summoning(frame, gray_frame)
 
     def speak_auto(self) -> Optional[str]:
         """Text spoken without any user interaction"""
@@ -95,10 +87,10 @@ trait description: {self.creature.trait_description}
 
     def _manual_ocr(self, frame, gray_frame, creature_name: str) -> Optional[CreatureInfo]:
         mask_trait_name = detect_white_text(frame, x_start=0.5, x_end=1.0, y_start=0.5, y_end=0.6)
-        trait_name_results = recognize_cv2_image(mask_trait_name)
+        trait_name_results = self.ocr_engine.recognize_cv2_image(mask_trait_name)
         trait_name = None
         try:
-            trait_name = trait_name_results['lines'][0]["merged_text"].lower()
+            trait_name = trait_name_results.lines[0]["merged_text"].lower()
             creature = self.creature_data.by_trait_name(trait_name)
             root.debug(f"identified creature by trait: {creature.name}")
             return creature
@@ -117,13 +109,13 @@ trait description: {self.creature.trait_description}
 
         resize_factor = 2
         trait_mask_resized = cv2.resize(trait_and_text_area, (trait_and_text_area.shape[1] * resize_factor, trait_and_text_area.shape[0] * resize_factor),
-                                interpolation=cv2.INTER_LINEAR)
-        ocr_trait_area_results = recognize_cv2_image(trait_mask_resized)
-        if ocr_trait_area_results['merged_text']:
+                                        interpolation=cv2.INTER_LINEAR)
+        ocr_trait_area_results = self.ocr_engine.recognize_cv2_image(trait_mask_resized)
+        if ocr_trait_area_results.merged_text:
             try:
-                lines = ocr_trait_area_results['lines']
+                lines = ocr_trait_area_results.lines
 
-                print(ocr_trait_area_results["merged_text"])
+                root.debug(ocr_trait_area_results.merged_text)
                 trait_desc = ' '.join(line["merged_text"] for line in lines[1:])
                 return CreatureLimited(name=creature_name, trait=trait_name, trait_description=trait_desc)
 
@@ -131,10 +123,10 @@ trait description: {self.creature.trait_description}
                 root.info("no trait info even with manual OCR")
                 return None
 
-    def ocr_summoning(self, frame: np.typing.ArrayLike, gray_frame: np.typing.ArrayLike) -> Optional[CreatureInfo]:
+    def _ocr_summoning(self, frame: np.typing.ArrayLike, gray_frame: np.typing.ArrayLike):
         creature_name_mask = detect_green_text(frame, y_start=0.0, y_end=1, x_start=0.05, x_end=0.4)
-        ocr_result_creature_name = recognize_cv2_image(creature_name_mask)
-        creature_name = ocr_result_creature_name['merged_text']
+        ocr_result_creature_name = self.ocr_engine.recognize_cv2_image(creature_name_mask)
+        creature_name = ocr_result_creature_name.merged_text
         self.prev_creature = copy.deepcopy(self.creature)
         self.creature = None
 

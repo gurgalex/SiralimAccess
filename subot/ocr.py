@@ -2,6 +2,8 @@ from __future__ import annotations
 import asyncio
 import base64
 import copy
+from dataclasses import dataclass
+from typing import Optional
 
 import cv2
 import numpy as np
@@ -19,8 +21,9 @@ class OCRMode(Enum):
     UNKNOWN = auto()
     INSPECT = auto()
 
+# Modified from https://gist.github.com/dantmnf/23f060278585d6243ffd9b0c538beab2
 
-class rect:
+class Rect:
     def __init__(self, x, y, w, h):
         self.x = x
         self.y = y
@@ -43,28 +46,31 @@ class rect:
         self.height = value - self.y
 
 
-def dump_rect(rtrect: winrt.windows.foundation.Rect):
-    return rect(rtrect.x, rtrect.y, rtrect.width, rtrect.height)
+def dump_rect(rtrect: winrt.windows.foundation.Rect) -> Rect:
+    return Rect(rtrect.x, rtrect.y, rtrect.width, rtrect.height)
 
 
-def dump_ocrword(word):
-    return {
-        'bounding_rect': dump_rect(word.bounding_rect),
-        'text': word.text
-    }
+@dataclass
+class WordWithBounding:
+    bounding_rect: Rect
+    text: str
 
 
-def merge_words(words):
+def dump_ocrword(word) -> WordWithBounding:
+    return WordWithBounding(bounding_rect=dump_rect(word.bounding_rect), text=word.text)
+
+
+def merge_words(words: list[WordWithBounding]) -> list[WordWithBounding]:
     if len(words) == 0:
         return words
     new_words = [copy.deepcopy(words[0])]
     words = words[1:]
     for word in words:
         lastnewword = new_words[-1]
-        lastnewwordrect = new_words[-1]['bounding_rect']
-        wordrect = word['bounding_rect']
-        if len(word['text']) == 1 and wordrect.x - lastnewwordrect.right() <= wordrect.width * 0.2:
-            lastnewword['text'] += word['text']
+        lastnewwordrect = new_words[-1].bounding_rect
+        wordrect = word.bounding_rect
+        if len(word.text) == 1 and wordrect.x - lastnewwordrect.right() <= wordrect.width * 0.2:
+            lastnewword.text += word.text
             lastnewwordrect.x = min((wordrect.x, lastnewwordrect.x))
             lastnewwordrect.y = min((wordrect.y, lastnewwordrect.y))
             lastnewwordrect.set_right(max((wordrect.right(), lastnewwordrect.right())))
@@ -74,40 +80,55 @@ def merge_words(words):
     return new_words
 
 
-def dump_ocrline(line):
+@dataclass(frozen=True, eq=True)
+class OcrLine:
+    text: str
+    words: list[WordWithBounding]
+    merged_words: list[WordWithBounding]
+    merged_text: str
+
+
+def dump_ocrline(line) -> OcrLine:
     words = list(map(dump_ocrword, line.words))
     merged = merge_words(words)
-    return {
-        'text': line.text,
-        'words': words,
-        'merged_words': merged,
-        'merged_text': ' '.join(map(lambda x: x['text'], merged))
-    }
+    joined_text = ' '.join([word.text for word in merged])
+    return OcrLine(text=line.text,
+                   words=words,
+                   merged_words=merged,
+                   merged_text=joined_text,
+                   )
+
 
 LINE_MULTIPLIER = 16
 
-def l2r_sort(item: dict):
-    y_pos = item['merged_words'][0]['bounding_rect'].y
-    x_pos = item['merged_words'][0]['bounding_rect'].x
+
+def l2r_sort(item: OcrLine):
+    y_pos = item.merged_words[0].bounding_rect.y
+    x_pos = item.merged_words[0].bounding_rect.x
 
     nearest_line = LINE_MULTIPLIER * round(y_pos/LINE_MULTIPLIER)
 
     return nearest_line + x_pos/99999
 
 
-def dump_ocrresult(ocrresult):
+@dataclass(frozen=True, eq=True)
+class OCRResult:
+    text: str
+    lines: list[OcrLine]
+    merged_text: str
+
+
+def dump_ocrresult(ocrresult) -> OCRResult:
     lines = list(map(dump_ocrline, ocrresult.lines))
     lines = sorted(lines, key=l2r_sort)
+    joined_lines = ' '.join(line.merged_text for line in lines)
+    text = joined_lines
+    merged_text = joined_lines
 
-    return {
-        'text': ocrresult.text,
-        # 'text_angle': ocrresult.text_angle.value if ocrresult.text_angle else None,
-        'lines': lines,
-        'merged_text': ' '.join(map(lambda x: x['merged_text'], lines))
-    }
+    return OCRResult(text=text, lines=lines, merged_text=merged_text)
 
 
-def ibuffer(s):
+def ibuffer(s: bytes):
     """create WinRT IBuffer instance from a bytes-like object"""
     return CryptographicBuffer.decode_from_base64_string(base64.b64encode(s).decode('ascii'))
 
@@ -131,15 +152,30 @@ class LanguageNotInstalledException(Exception):
     pass
 
 
+ENGLISH_NOT_INSTALLED_EXCEPTION = LanguageNotInstalledException("English United States language pack not installed")
+
+
+@dataclass(frozen=True, eq=True)
+class OCRResultSimple:
+    text: str
+    lines: list[str]
+
+
 class OCR:
     def __init__(self):
         lang = Language("en-US")
         if not OcrEngine.is_language_supported(lang):
-            raise LanguageNotInstalledException("English United States language pack not installed")
+            raise ENGLISH_NOT_INSTALLED_EXCEPTION
         self.ocr_engine = OcrEngine.try_create_from_language(lang)
+        self.results: Optional[OCRResult] = None
 
+    def recognize_cv2_image(self, frame: np.typing.ArrayLike) -> OCRResult:
+        swbmp = swbmp_from_cv2_image(frame)
+        unprocessed_results = blocking_wait(self.ocr_engine.recognize_async(swbmp))
+        results = dump_ocrresult(unprocessed_results)
+        self.results = results
 
-ENGLISH_NOT_INSTALLED_EXCEPTION = LanguageNotInstalledException("English United States language pack not installed")
+        return results
 
 
 def language_is_installed(lang: str) -> bool:
@@ -151,16 +187,7 @@ def english_installed() -> bool:
     return language_is_installed("en-US")
 
 
-def recognize_cv2_image(img):
-    language = Language("en-US")
-    if not english_installed:
-        raise ENGLISH_NOT_INSTALLED_EXCEPTION
-    eng = OcrEngine.try_create_from_language(language)
-    swbmp = swbmp_from_cv2_image(img)
-    return dump_ocrresult(blocking_wait(eng.recognize_async(swbmp)))
-
-
-def detect_green_text(image: np.typing.ArrayLike, x_start: float = 0.0, x_end: float = 1.0, y_start: float = 0.0, y_end: float = 1.0) -> np.array:
+def detect_green_text(image: np.typing.ArrayLike, x_start: float = 0.0, x_end: float = 1.0, y_start: float = 0.0, y_end: float = 1.0) -> np.typing.ArrayLike:
     """Using a source image of RGB color, extract highlighted menu items which are a green color"""
     lower_green = np.array([60, 50, 100])
     upper_green = np.array([60, 255, 255])
