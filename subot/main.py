@@ -892,6 +892,8 @@ class WholeWindowAnalyzer(Thread):
         self.prev_creature: Optional[Creature] = None
         self.ocr_mode: OCRMode = OCRMode.UNKNOWN
         self.ocr_system: Optional[OcrSummoningSystem] = None
+        self.quest_frame_scanning_interval: int = self.config.whole_window_scanning_frequency
+        self.frames_since_last_scan: int = 0
 
     def update_quests(self, new_quests: list[Quest]):
         if len(new_quests) == 0:
@@ -1153,6 +1155,7 @@ class WholeWindowAnalyzer(Thread):
 
             self.frame = np.asarray(shot)
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
+            self.frames_since_last_scan += 1
 
             self.ocr_screen()
             if self.has_menu_entry_text and not self.menu_entry_text_repeat:
@@ -1160,13 +1163,15 @@ class WholeWindowAnalyzer(Thread):
             if self.last_dialog_text and not self.has_menu_entry_text and not self.repeat_dialog_text:
                 self.speak_dialog_box()
 
-            quests = extract_quest_name_from_quest_area(self.gray_frame)
-            current_quests = [quest.title for quest in quests]
-            quest_items = [sprite.long_name for quest in quests for sprite in quest.sprites]
-            root.debug(f"quests = {current_quests}")
-            root.debug(f"quest items = {quest_items}")
+            if self.frames_since_last_scan >= self.quest_frame_scanning_interval:
+                self.frames_since_last_scan = 0
+                quests = extract_quest_name_from_quest_area(self.gray_frame)
+                current_quests = [quest.title for quest in quests]
+                quest_items = [sprite.long_name for quest in quests for sprite in quest.sprites]
+                root.debug(f"quests = {current_quests}")
+                root.debug(f"quest items = {quest_items}")
 
-            self.update_quests(quests)
+                self.update_quests(quests)
             self.parent.last_key_pressed = None
 
         root.info("WindowAnalyzer thread shutting down")
