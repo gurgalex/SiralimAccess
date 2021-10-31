@@ -24,6 +24,7 @@ a = Analysis(['cli.py'],
              datas=[
              ('VERSION', '.'),
              ('assets.db', '.'),
+             ('subot/creatures.csv', 'subot'),
              ('resources/audio', 'resources/audio'),
              ('resources/custom_assets/NPCs/Castle', 'resources/custom_assets/NPCs/Castle'),
              ],

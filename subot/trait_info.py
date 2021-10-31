@@ -1,18 +1,10 @@
 import csv
-from pathlib import Path
-
-
-# file = Path("../compendium-traits.csv")
 
 from importlib import resources
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Union
 
-trait_file = resources.open_text("subot", "compendium-traits.csv")
-creature_file = resources.open_text("subot", "creatures.csv")
 
-
-from dataclasses import field
 
 @dataclass(eq=True, frozen=True)
 class CreatureLimited:
@@ -44,11 +36,12 @@ CreatureInfo = Union[Creature, CreatureLimited]
 class TraitData:
     def __init__(self):
         self.data_creature: dict[str, Creature] = dict()
-        for row in csv.DictReader(creature_file):
-            row.pop("battle_sprite")
-            row.pop("total")
-            creature = Creature(**row)
-            self.data_creature[row["name"].lower()] = creature
+        with resources.open_text("subot", "creatures.csv") as creature_file:
+            for row in csv.DictReader(creature_file):
+                row.pop("battle_sprite")
+                row.pop("total")
+                creature = Creature(**row)
+                self.data_creature[row["name"].lower()] = creature
         self.data_by_trait_name = dict()
 
         for creature in self.data_creature.values():
@@ -61,23 +54,3 @@ class TraitData:
     def by_trait_name(self, trait: str) -> Creature:
         lower_trait = trait.lower()
         return self.data_by_trait_name[lower_trait]
-
-
-if __name__ == "__main__":
-    t = TraitData()
-
-    new_trait_csv = []
-    for row in csv.DictReader(trait_file):
-        try:
-            creature = t.by_trait_name(row["Trait Name"])
-            row["Creature"] = creature.name
-        except KeyError:
-            pass
-        new_trait_csv.append(row)
-    keys = new_trait_csv[0].keys()
-    with open('trait_compendium_full_creature_name.csv', "w+", newline='') as f:
-        dict_writer = csv.DictWriter(f, keys, quoting=csv.QUOTE_ALL)
-        dict_writer.writeheader()
-        dict_writer.writerows(new_trait_csv)
-
-
