@@ -24,8 +24,11 @@ from pynput.keyboard import KeyCode
 import win32process
 
 from subot import models, ocr
-from subot.summoning import OcrSummoningSystem
-from subot.trait_info import TraitData, Creature, CreatureLimited
+from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
+from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
+from subot.ui_areas.creatures_display import OCRCreaturesDisplaySystem
+from subot.ui_areas.summoning import OcrSummoningSystem
+from subot.trait_info import TraitData, Creature
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert, Shutdown
 
 import cv2
@@ -34,6 +37,7 @@ import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
 from subot.ocr import detect_green_text, detect_dialog_text, english_installed, detect_title, OCRMode, OCR
+from subot.ui_areas.ui_ocr_types import OCR_UI_SYSTEMS
 import win32gui
 import pygame
 import pygame.freetype
@@ -43,7 +47,7 @@ import time
 from subot.audio import AudioSystem, AudioLocation, SoundType
 from subot.datatypes import Rect
 from subot.menu import MenuItem, Menu
-from subot.messageTypes import NewFrame, MessageImpl, MessageType, WindowDim, ScanForItems, \
+from subot.messageTypes import NewFrame, MessageImpl, WindowDim, ScanForItems, \
     Resume, Pause
 from subot.pathfinder.map import TileType, Map, Color, Movement
 
@@ -91,7 +95,7 @@ def before_send(event, hint):
 TILE_SIZE = 32
 NEARBY_TILES_WH: int = 8 * 2 + 1
 
-title = "Siralim Access"
+title_window_access = "Siralim Access"
 
 
 class GameNotOpenException(Exception):
@@ -712,7 +716,6 @@ class Bot:
             try:
                 msg = self.action_queue.get_nowait()
                 if msg == "read_dialog":
-                    # self.whole_window_thandle.speak_dialog_box()
                     self.whole_window_thandle.speak_interaction_info()
                 elif msg == "read_menu_entry":
                     self.whole_window_thandle.speak_selected_menu_entry()
@@ -868,11 +871,9 @@ class WholeWindowAnalyzer(Thread):
         self.frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w, 3), dtype="uint8")
         self.gray_frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
                                                         dtype="uint8")
-        self.creature: Optional[Creature] = None
-        self.prev_creature: Optional[Creature] = None
         self.ocr_engine: OCR = OCR()
         self.ocr_mode: OCRMode = OCRMode.UNKNOWN
-        self.ocr_ui_system: Optional[OcrSummoningSystem] = None
+        self.ocr_ui_system: Optional[OCR_UI_SYSTEMS] = None
         self.quest_frame_scanning_interval: int = self.config.whole_window_scanning_frequency
         self.frames_since_last_scan: int = 0
 
@@ -908,7 +909,7 @@ class WholeWindowAnalyzer(Thread):
     def speak_dialog_box(self):
         if not self.last_dialog_text:
             return
-        root.debug("speak dialog action starting")
+        root.debug(f"Speaking dialog text: {self.last_dialog_text}")
 
         self.parent.audio_system.speak_nonblocking(self.last_dialog_text)
 
@@ -919,10 +920,18 @@ class WholeWindowAnalyzer(Thread):
         ocr_result = self.ocr_engine.recognize_cv2_image(mask)
         detected_system = OCRMode.UNKNOWN
         try:
-            first_line: str = ocr_result.lines[0].text
-            root.debug(f"title: {first_line}")
-            if first_line.startswith("Select a creature to summon"):
+            title = ocr_result.merged_text
+            root.debug(f"title: {title}")
+            if title.startswith("Select a creature to summon"):
                 detected_system = OCRMode.SUMMON
+            elif title.startswith("Creatures"):
+                detected_system = OCRMode.CREATURES_DISPLAY
+            elif title.startswith("Choose the Avatar"):
+                detected_system = OCRMode.SELECT_GODFORGE_AVATAR
+            elif title.startswith("Choose the creature whose position"):
+                detected_system = OCRMode.CREATURE_REORDER_SELECT
+            elif title.startswith("Choose a creature to swap"):
+                detected_system = OCRMode.CREATURE_REORDER_WITH
         except IndexError:
             pass
 
@@ -930,9 +939,17 @@ class WholeWindowAnalyzer(Thread):
             root.debug(f"new ocr system: {detected_system}")
             if detected_system is OCRMode.SUMMON:
                 self.ocr_ui_system = OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config, self.ocr_engine)
+            elif detected_system is OCRMode.CREATURES_DISPLAY:
+                self.ocr_ui_system = OCRCreaturesDisplaySystem(self.creature_data, self.parent.audio_system, self.config, self.ocr_engine)
             elif detected_system is OCRMode.UNKNOWN:
                 self.ocr_mode = OCRMode.UNKNOWN
                 self.ocr_ui_system = None
+            elif detected_system is OCRMode.SELECT_GODFORGE_AVATAR:
+                self.ocr_ui_system = OCRGodForgeSelectSystem(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
+            elif detected_system is OCRMode.CREATURE_REORDER_SELECT:
+                self.ocr_ui_system = OCRCreatureRecorderSelectFirst(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
+            elif detected_system is OCRMode.CREATURE_REORDER_WITH:
+                self.ocr_ui_system = OCRCreatureRecorderSwapWith(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
         self.ocr_mode = detected_system
 
     def speak_interaction_info(self):
@@ -943,10 +960,19 @@ class WholeWindowAnalyzer(Thread):
 
     def ocr_screen(self):
         self.ocr_title()
-        if self.ocr_mode is OCRMode.SUMMON:
+        if self.ocr_mode is OCRMode.SUMMON or self.ocr_mode is OCRMode.CREATURES_DISPLAY:
             self.ocr_ui_system.ocr(self.frame, self.gray_frame)
             self.ocr_ui_system.speak_auto()
             return
+        elif self.ocr_mode == OCRMode.SELECT_GODFORGE_AVATAR:
+            self.ocr_ui_system.ocr(self.frame)
+            self.ocr_ui_system.speak_auto()
+        elif self.ocr_mode == OCRMode.CREATURE_REORDER_SELECT:
+            self.ocr_ui_system.ocr(self.frame)
+            self.ocr_ui_system.speak_auto()
+        elif self.ocr_mode == OCRMode.CREATURE_REORDER_WITH:
+            self.ocr_ui_system.ocr(self.frame)
+            self.ocr_ui_system.speak_auto()
         elif self.ocr_mode is OCRMode.UNKNOWN:
             if self.config.ocr_selected_menu_item:
                 # menu entry selection is latency sensitive, so we do this first
@@ -958,6 +984,12 @@ class WholeWindowAnalyzer(Thread):
 
             if self.config.ocr_read_dialog_boxes:
                 self.ocr_dialog_box()
+
+            if self.has_menu_entry_text and not self.menu_entry_text_repeat:
+                self.speak_selected_menu_entry()
+            if self.last_dialog_text and not self.has_menu_entry_text and not self.repeat_dialog_text:
+                self.speak_dialog_box()
+
 
             menu_selection_or_dialog_text_present = self.last_selected_text or self.last_dialog_text
             if not menu_selection_or_dialog_text_present:
@@ -1155,15 +1187,11 @@ class WholeWindowAnalyzer(Thread):
             if shot is None:
                 break
 
-            self.frame = np.asarray(shot)
+            self.frame = np.asarray(shot)[:,:, :3]
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
             self.frames_since_last_scan += 1
 
             self.ocr_screen()
-            if self.has_menu_entry_text and not self.menu_entry_text_repeat:
-                self.speak_selected_menu_entry()
-            if self.last_dialog_text and not self.has_menu_entry_text and not self.repeat_dialog_text:
-                self.speak_dialog_box()
 
             if self.frames_since_last_scan >= self.quest_frame_scanning_interval:
                 self.frames_since_last_scan = 0
@@ -1193,6 +1221,7 @@ class WholeWindowAnalyzer(Thread):
     def copy_all_info(self):
         if isinstance(self.ocr_ui_system, OcrSummoningSystem):
             self.ocr_ui_system.copy_detailed_text()
+
 
 class NearbyFrameGrabber(multiprocessing.Process):
     def __init__(self, nearby_queue: multiprocessing.Queue, rx_parent: multiprocessing.Queue,
@@ -1593,9 +1622,9 @@ class NearPlayerProcessing(Thread):
                 continue
 
             try:
-                msg: MessageImpl = self.nearby_queue.get(timeout=2)
+                msg: MessageImpl = self.nearby_queue.get(timeout=5)
             except queue.Empty:
-                empty_text = "No nearby frame for 2 seconds"
+                empty_text = "No nearby frame for 5 seconds"
                 root.warning(empty_text)
                 raise Exception(empty_text)
 

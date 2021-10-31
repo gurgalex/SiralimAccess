@@ -20,6 +20,10 @@ class OCRMode(Enum):
     SUMMON = auto()
     UNKNOWN = auto()
     INSPECT = auto()
+    CREATURES_DISPLAY = auto()
+    SELECT_GODFORGE_AVATAR = auto()
+    CREATURE_REORDER_SELECT = auto()
+    CREATURE_REORDER_WITH = auto()
 
 # Modified from https://gist.github.com/dantmnf/23f060278585d6243ffd9b0c538beab2
 
@@ -106,9 +110,9 @@ def l2r_sort(item: OcrLine):
     y_pos = item.merged_words[0].bounding_rect.y
     x_pos = item.merged_words[0].bounding_rect.x
 
-    nearest_line = LINE_MULTIPLIER * round(y_pos/LINE_MULTIPLIER)
+    nearest_line = LINE_MULTIPLIER * round(y_pos / LINE_MULTIPLIER)
 
-    return nearest_line + x_pos/99999
+    return nearest_line + x_pos / 99999
 
 
 @dataclass(frozen=True, eq=True)
@@ -187,7 +191,8 @@ def english_installed() -> bool:
     return language_is_installed("en-US")
 
 
-def detect_green_text(image: np.typing.ArrayLike, x_start: float = 0.0, x_end: float = 1.0, y_start: float = 0.0, y_end: float = 1.0) -> np.typing.ArrayLike:
+def detect_green_text(image: np.typing.ArrayLike, x_start: float = 0.0, x_end: float = 1.0, y_start: float = 0.0,
+                      y_end: float = 1.0) -> np.typing.ArrayLike:
     """Using a source image of RGB color, extract highlighted menu items which are a green color"""
     lower_green = np.array([60, 50, 100])
     upper_green = np.array([60, 255, 255])
@@ -203,7 +208,8 @@ def detect_green_text(image: np.typing.ArrayLike, x_start: float = 0.0, x_end: f
     return mask
 
 
-def detect_white_text(frame: np.typing.ArrayLike, x_start, x_end, y_start, y_end) -> np.typing.ArrayLike:
+def detect_white_text(frame: np.typing.ArrayLike, x_start, x_end, y_start, y_end, resize_factor: int = 1,
+                      sensitivity: int = 30) -> np.typing.ArrayLike:
     y_start = int(frame.shape[0] * y_start)
     y_end = int(frame.shape[0] * y_end)
     x_start = int(frame.shape[1] * x_start)
@@ -211,8 +217,11 @@ def detect_white_text(frame: np.typing.ArrayLike, x_start, x_end, y_start, y_end
 
     text_area = frame[y_start:y_end, x_start:x_end]
 
+    if resize_factor > 1:
+        text_area = cv2.resize(text_area, (text_area.shape[1] * resize_factor, text_area.shape[0] * resize_factor),
+                               interpolation=cv2.INTER_LINEAR)
+
     img = cv2.cvtColor(text_area, cv2.COLOR_BGR2HLS)
-    sensitivity = 30
     lower_white = np.array([0, 255 - sensitivity, 0])
     upper_white = np.array([0, 255, 0])
     mask = cv2.inRange(img, lower_white, upper_white)
