@@ -32,7 +32,9 @@ class Config:
 
     ocr_selected_menu_item: bool = True
     ocr_read_dialog_boxes: bool = True
-    read_dialog_key: str = "o"
+    read_secondary_key: str = "o"
+    read_all_info_key: str = "v"
+    copy_all_info_key: str = "c"
     read_menu_entry_key: str = 'm'
 
     master_volume: int = 100
@@ -50,7 +52,7 @@ class Config:
     detect_objects_through_walls: bool = True
 
     # repeat detected object sounds. If false, stops playing the sound if play has not moved
-    repeat_sound_when_stationary: bool = True
+    repeat_sound_when_stationary: bool = False
     required_stationary_seconds: float = 0.5
 
     def save_config(self, path: Path):
@@ -66,8 +68,9 @@ class Config:
 
         ini["OCR"] = {
             "read_selected_menu": self.ocr_selected_menu_item,
-            "read_dialog_boxes": self.ocr_read_dialog_boxes,
-            "read_dialog_key": self.read_dialog_key,
+            "read_secondary_key": self.read_secondary_key,
+            "read_all_info_key": self.read_all_info_key,
+            "copy_all_info_key": self.copy_all_info_key,
             "read_menu_entry_key": self.read_menu_entry_key,
         }
 
@@ -120,10 +123,11 @@ class Config:
 
         ocr = ini["OCR"]
         default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)
-        default_config.ocr_read_dialog_boxes = ocr.getboolean('read_dialog_boxes', fallback=default_config.ocr_read_dialog_boxes)
-        default_config.read_dialog_key = ocr.get('read_dialog_key', fallback=default_config.read_dialog_key)[0]
+        default_config.ocr_read_dialog_boxes = ocr.getboolean('read_dialog_boxes', fallback=default_config.read_secondary_key)
+        default_config.read_secondary_key = ocr.get('read_secondary_key', fallback=default_config.read_secondary_key)
+        default_config.read_all_info_key = ocr.get("read_all_info_key", fallback=default_config.read_all_info_key)
+        default_config.copy_all_info_key = ocr.get("copy_all_info_key", fallback=default_config.copy_all_info_key)
         default_config.read_menu_entry_key = ocr.get('read_menu_entry_key', fallback=default_config.read_menu_entry_key)
-
 
         object_detection = ini["REALM_OBJECT_DETECTION"]
         default_config.detect_objects_through_walls = object_detection.getboolean("detect_objects_through_walls", fallback=default_config.detect_objects_through_walls)
