@@ -1,3 +1,21 @@
+# v0.11.0
+## feat
+- Certain UI Screens now give more helpful output
+  - Summoning Brazier - Reads current creature, read trait + description, copy all creature info to clipboard
+  - Creatures screen - Now tells what creature number is being interacted with for example Creature 1 Trait(s)
+  - GodForge select - Tells what creature is being selected to GodForge
+  - Reorder Creatures - Tells what creature you are selecting, and which number to swap it with
+
+## perf
+- CPU usage should be ~15-20% lower due to only scanning quests every second
+
+## fix
+- Better, Faster, Stronger, Dead quest. Phase Folk killed now works (typo in quest name)
+- Key presses are no longer read when Siralim Ultimate is the active window
+
+## Change
+- Default to not repeat sounds when stationary for new installations. Delete config.ini or set `repeat_sound_when_stationary` to false.
+
 # v0.10.3
 # fix
 - Fix broken release by pinning opencv dependency version
