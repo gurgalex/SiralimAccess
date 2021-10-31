@@ -35,7 +35,7 @@ class OcrSummoningSystem:
         if not self.creature:
             return
         text = self.creature.name
-        hint_text = f".\nPress {self.program_config.read_dialog_key} to hear trait and trait description. Press {'v'} to hear all available info, press {'c'} to copy all available info to clipboard"
+        hint_text = f".\nPress {self.program_config.read_secondary_key} to hear trait and trait description. Press {'v'} to hear all available info, press {'c'} to copy all available info to clipboard"
         if self.creature != self.prev_creature:
             combined_text = f"{text} {hint_text}"
             self.audio_system.speak_nonblocking(combined_text)

@@ -235,20 +235,27 @@ def is_foreground_process(pid: int) -> bool:
     return pid == active_pid
 
 
+class ActionType(enum.Enum):
+    """Actions to control Siralim Access (usually invoked by keyboard keys"""
+    READ_SECONDARY_INFO = auto()
+    REREAD_AUTO_TEXT = auto()
+    READ_ALL_INFO = auto()
+    COPY_ALL_INFO = auto()
+
+
 class Bot:
     def on_release(self, key):
         if self.paused:
             return
         root.debug(f"key released: {key}")
-        if key == KeyCode.from_char(self.config.read_dialog_key):
-            self.action_queue.put_nowait('read_dialog')
+        if key == KeyCode.from_char(self.config.read_secondary_key):
+            self.action_queue.put_nowait(ActionType.READ_SECONDARY_INFO)
         elif key == KeyCode.from_char(self.config.read_menu_entry_key):
-            self.action_queue.put_nowait('read_menu_entry')
-        elif key == KeyCode.from_char('v'):
-            self.action_queue.put_nowait('read_all_info')
-        elif key == KeyCode.from_char('c'):
-            self.action_queue.put_nowait('copy_all_info')
-
+            self.action_queue.put_nowait(ActionType.REREAD_AUTO_TEXT)
+        elif key == KeyCode.from_char(self.config.read_all_info_key):
+            self.action_queue.put_nowait(ActionType.READ_ALL_INFO)
+        elif key == KeyCode.from_char(self.config.copy_all_info_key):
+            self.action_queue.put_nowait(ActionType.COPY_ALL_INFO)
 
     def on_press(self, key):
         pass
@@ -284,7 +291,7 @@ class Bot:
         self.out_quests: multiprocessing.Queue = multiprocessing.Queue()
         self.rx_color_nearby_queue = multiprocessing.Queue(maxsize=1)
 
-        # queues for communicaitng with WindowGrabber and NearbyGrabber
+        # queues for communicating with WindowGrabber and NearbyGrabber
         self.rx_queue = multiprocessing.Queue(maxsize=10)
         self.tx_window_queue = multiprocessing.Queue(maxsize=10)
 
@@ -486,7 +493,6 @@ class Bot:
         self.update()
         self.speak_menu_name()
         self.speak_menu_entry_name()
-
 
     def stop(self):
         self.window_framegrabber_phandle.terminate()
@@ -715,13 +721,13 @@ class Bot:
 
             try:
                 msg = self.action_queue.get_nowait()
-                if msg == "read_dialog":
+                if msg is ActionType.READ_SECONDARY_INFO:
                     self.whole_window_thandle.speak_interaction_info()
-                elif msg == "read_menu_entry":
+                elif msg is ActionType.REREAD_AUTO_TEXT:
                     self.whole_window_thandle.speak_selected_menu_entry()
-                elif msg == "read_all_info":
+                elif msg is ActionType.READ_ALL_INFO:
                     self.whole_window_thandle.speak_all_info()
-                elif msg == "copy_all_info":
+                elif msg is ActionType.COPY_ALL_INFO:
                     self.whole_window_thandle.copy_all_info()
             except queue.Empty:
                 pass
@@ -1209,7 +1215,7 @@ class WholeWindowAnalyzer(Thread):
     def speak_selected_menu_entry(self):
         notify_dialog_text = ""
         if self.has_dialog_text:
-            notify_dialog_text = f"\npress {self.config.read_dialog_key} to here dialog box"
+            notify_dialog_text = f"\npress {self.config.read_secondary_key} to here dialog box"
         menu_text = f"{self.last_selected_text}{notify_dialog_text}"
         root.debug(f"speaking menu text: {menu_text}")
         self.parent.audio_system.speak_nonblocking(menu_text)

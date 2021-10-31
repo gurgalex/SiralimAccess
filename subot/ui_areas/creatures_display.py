@@ -32,7 +32,7 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
         return ""
         # todo: help text for each menu option if additional text info
         if self.menu_text == "Creature Sheet":
-            return f".\nPress {self.program_config.read_dialog_key} to hear creature name. Press {'v'} to hear all available info, press {'c'} to copy all available info to clipboard"
+            return f".\nPress {self.program_config.read_secondary_key} to hear creature name. Press {self.program_config.read_all_info_key} to hear all available info, press {self.program_config.copy_all_info_key} to copy all available info to clipboard"
         return ""
 
     def ocr(self, frame: np.typing.ArrayLike, gray_frame: np.typing.ArrayLike):
