@@ -1,3 +1,7 @@
+# v0.11.1
+## fix
+- fix rapid repeat audio of realm object detection
+
 # v0.11.0
 ## feat
 - Certain UI Screens now give more helpful output
