@@ -1568,6 +1568,9 @@ class NearPlayerProcessing(Thread):
         if settings.DEBUG:
             self.near_frame_color = self.near_frame_color.copy()
 
+        # reset if the frame is matched to a realm tileset on every frame (also controls sound clearing)
+        self.was_match = False
+
         # make grayscale version
         cv2.cvtColor(self.near_frame_color, cv2.COLOR_BGRA2GRAY, dst=self.near_frame_gray)
         self.grid_near_rect = Bot.default_grid_rect(self.parent.nearby_rect_mss)
