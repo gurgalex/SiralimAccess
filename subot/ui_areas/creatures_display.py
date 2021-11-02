@@ -1,5 +1,5 @@
 from typing import Optional
-from subot.ocr import detect_green_text, detect_white_text, OCR
+from subot.ocr import detect_green_text, detect_white_text, OCR, detect_dialog_text
 from subot.audio import AudioSystem
 from subot.settings import Config
 from subot.trait_info import Creature, CreatureInfo, TraitData, CreatureLimited
@@ -27,6 +27,8 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
         self.creature_position: Optional[int] = None
         self.prev_creature_position: Optional[int] = None
         self.ocr_engine = ocr_engine
+        self.current_dialog_text: str = ""
+        self.previous_dialog_text: str = ""
 
     def help_text(self) -> str:
         return ""
@@ -37,6 +39,8 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
 
     def ocr(self, frame: np.typing.ArrayLike, gray_frame: np.typing.ArrayLike):
         self._ocr_creature(frame, gray_frame)
+        self.previous_dialog_text = self.current_dialog_text
+        self.current_dialog_text = detect_dialog_text(frame, gray_frame, self.ocr_engine)
 
     def creature_text(self) -> str:
         menu_item = self.menu_text
@@ -50,8 +54,19 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
         else:
             return ""
 
+    def _should_speak_dialog(self) -> bool:
+        if not self.current_dialog_text:
+            return False
+        if self.current_dialog_text == self.previous_dialog_text:
+            return False
+        return True
+
     def speak_auto(self) -> Optional[str]:
         """Text spoken without any user interaction"""
+        if self._should_speak_dialog():
+            text = self.current_dialog_text
+            self.audio_system.speak_nonblocking(text)
+            return text
         if not self.menu_text:
             return
         text = self.creature_text()

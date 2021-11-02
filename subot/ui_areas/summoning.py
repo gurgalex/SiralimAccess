@@ -90,7 +90,7 @@ trait description: {self.creature.trait_description}
         trait_name_results = self.ocr_engine.recognize_cv2_image(mask_trait_name)
         trait_name = None
         try:
-            trait_name = trait_name_results.lines[0]["merged_text"].lower()
+            trait_name = trait_name_results.lines[0].merged_text.lower()
             creature = self.creature_data.by_trait_name(trait_name)
             root.debug(f"identified creature by trait: {creature.name}")
             return creature
@@ -116,7 +116,7 @@ trait description: {self.creature.trait_description}
                 lines = ocr_trait_area_results.lines
 
                 root.debug(ocr_trait_area_results.merged_text)
-                trait_desc = ' '.join(line["merged_text"] for line in lines[1:])
+                trait_desc = ' '.join(line.merged_text for line in lines[1:])
                 return CreatureLimited(name=creature_name, trait=trait_name, trait_description=trait_desc)
 
             except IndexError:

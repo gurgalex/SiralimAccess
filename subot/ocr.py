@@ -5,25 +5,22 @@ import copy
 from dataclasses import dataclass
 from typing import Optional
 
+import time
+import math
+
 import cv2
 import numpy as np
 import numpy.typing
+from numpy.typing import NDArray
 from winrt.windows.media.ocr import OcrEngine
 from winrt.windows.globalization import Language
 from winrt.windows.graphics.imaging import *
 from winrt.windows.security.cryptography import CryptographicBuffer
 
-from enum import Enum, auto
+from logging import getLogger
 
+root = getLogger()
 
-class OCRMode(Enum):
-    SUMMON = auto()
-    UNKNOWN = auto()
-    INSPECT = auto()
-    CREATURES_DISPLAY = auto()
-    SELECT_GODFORGE_AVATAR = auto()
-    CREATURE_REORDER_SELECT = auto()
-    CREATURE_REORDER_WITH = auto()
 
 # Modified from https://gist.github.com/dantmnf/23f060278585d6243ffd9b0c538beab2
 
@@ -243,16 +240,66 @@ def detect_title(frame: np.typing.ArrayLike) -> np.typing.ArrayLike:
     return mask
 
 
-def detect_dialog_text(frame: np.typing.ArrayLike) -> np.typing.ArrayLike:
-    y_start = int(frame.shape[0] * 0.70)
-    y_end = int(frame.shape[0] * 0.95)
-    x_start = int(frame.shape[1] * 0.01)
-    x_end = int(frame.shape[1] * 0.995)
+def timeit(func):
+    def wrap_timer(*args, **kwargs):
+        t1 = time.time()
+        value = func(*args, **kwargs)
+        t2 = time.time()
+        took = t2 - t1
+        print(f"{func.__name__!r} took {math.ceil(took * 1000)}ms")
+        return value
+
+    return wrap_timer
+
+
+def detect_dialog_text(frame: NDArray, gray_frame: NDArray, ocr_engine: OCR) -> Optional[str]:
+    """detect dialog text from frame
+
+    :param gray_frame BGR whole window frame
+    :param ocr_engine: engine that can perform OCR on image
+    """
+    y_start = int(gray_frame.shape[0] * 0.70)
+    y_end = int(gray_frame.shape[0] * 0.95)
+    x_start = int(gray_frame.shape[1] * 0.01)
+    x_end = int(gray_frame.shape[1] * 0.995)
     dialog_area = frame[y_start:y_end, x_start:x_end]
+    # output = np.ones(dialog_area.shape, dtype='uint8')
+    # output[dialog_area > 180] = 255
+    # mask = output
 
     img = cv2.cvtColor(dialog_area, cv2.COLOR_BGR2HLS)
     sensitivity = 30
     lower_white = np.array([0, 255 - sensitivity, 0])
     upper_white = np.array([0, 255, 0])
     mask = cv2.inRange(img, lower_white, upper_white)
-    return mask
+
+    # resize_factor = 2
+    # mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor),
+    #                   interpolation=cv2.INTER_LINEAR)
+    ocr_result = ocr_engine.recognize_cv2_image(mask)
+    try:
+        first_line = ocr_result.lines[0]
+        first_word = first_line.words[0]
+        bbox = first_word.bounding_rect
+        root.debug(f"dialog box: {ocr_result.text}")
+
+        # health bar text - rect(69, 87, 73, 16), rect(282, 87, 71, 16)
+        # dialog box text - rect(14, 23, 75, 16)
+
+        offset_x = mask.shape[0] * 0.40
+        root.debug(f"{offset_x=}")
+        is_not_dialog_box = bbox.x > offset_x
+        root.debug(f"{is_not_dialog_box=}")
+        if is_not_dialog_box:
+            return None
+        return ocr_result.merged_text
+        # if is_not_dialog_box and not self.has_menu_entry_text:
+        #     return
+    except IndexError:
+        root.debug("no dialog text")
+        return None
+        # no text was found
+        if not self.has_menu_entry_text and not self.has_dialog_text and not self.quest_text:
+            root.info("Pause, menu system. both not present")
+            self.audio_system.silence()
+        return

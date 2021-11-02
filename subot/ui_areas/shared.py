@@ -25,7 +25,10 @@ def detect_creature_party_selection(frame: np.typing.ArrayLike) -> Optional[int]
     cnts = cv2.findContours(combined_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contours, hierarchy = cnts
     if contours:
-        first = contours[1][0][0][0]
+        try:
+            first = contours[1][0][0][0]
+        except IndexError:
+            return None
         split_divider = frame.shape[1] // 6
         creature_pos = round((first / split_divider) + 1)
         return creature_pos
