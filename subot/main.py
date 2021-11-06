@@ -930,14 +930,14 @@ class WholeWindowAnalyzer(Thread):
                 detected_system = OCRCreatureRecorderSwapWith(audio_system=self.parent.audio_system,
                                                               config=self.config, ocr_engine=self.ocr_engine)
             elif step_type := _realm_select_step(title):
-                root.info(f"realm step - {step_type} {title}")
+                root.debug(f"realm step - {step_type} {title}")
                 detected_system = OCRRealmSelect(audio_system=self.parent.audio_system, config=self.config,
                                                  ocr_engine=self.ocr_engine, step=step_type)
         except IndexError:
             pass
 
         if detected_system.mode != self.ocr_ui_system.mode or self.ocr_ui_system.step != detected_system.step:
-            root.info(f"new ocr system: {detected_system.mode}, {self.ocr_ui_system.mode}")
+            root.debug(f"new ocr system: {detected_system.mode}, {self.ocr_ui_system.mode}")
             # silence prior system output to prepare for next system
             self.parent.audio_system.silence()
             self.ocr_ui_system = detected_system
