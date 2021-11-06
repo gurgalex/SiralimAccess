@@ -10,16 +10,20 @@ from subot.trait_info import Creature, CreatureInfo, TraitData, CreatureLimited
 import numpy as np
 import pyclip as clip
 from logging import getLogger
+
+from subot.ui_areas.base import FrameInfo, OCRMode, SpeakAuto
+
 root = getLogger()
 
 
-class OcrSummoningSystem:
+class OcrSummoningSystem(SpeakAuto):
     """System active when summoning screen is open
     Discarded when closed
 
     """
-    def __init__(self, creature_data: TraitData, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
+    mode = OCRMode.SUMMON
 
+    def __init__(self, creature_data: TraitData, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
         self.prev_creature: Optional[CreatureInfo] = None
         self.creature: Optional[CreatureInfo] = None
         self.creature_data = creature_data
@@ -27,8 +31,8 @@ class OcrSummoningSystem:
         self.program_config = config
         self.ocr_engine = ocr_engine
 
-    def ocr(self, frame: np.typing.ArrayLike, gray_frame: np.typing.ArrayLike):
-        self._ocr_summoning(frame, gray_frame)
+    def ocr(self, parent: FrameInfo):
+        self._ocr_summoning(parent.frame, parent.gray_frame)
 
     def speak_auto(self) -> Optional[str]:
         """Text spoken without any user interaction"""
@@ -43,6 +47,12 @@ class OcrSummoningSystem:
 
     def speak_interaction(self) -> str:
         """Speaks text which requires a summary key press"""
+        if not self.creature:
+            text = "Unable to read creature text"
+            root.info(text)
+            self.audio_system.speak_nonblocking(text)
+            return text
+
         text = f"trait: {self.creature.trait}\n Description: {self.creature.trait_description}"
         self.audio_system.speak_nonblocking(text)
         return text

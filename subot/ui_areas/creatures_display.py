@@ -7,7 +7,7 @@ import numpy as np
 import pyclip as clip
 from logging import getLogger
 
-from subot.ui_areas.base import SpeakAuto
+from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode
 from subot.ui_areas.shared import detect_creature_party_selection
 
 root = getLogger()
@@ -18,6 +18,8 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
     Discarded when closed
 
     """
+    mode = OCRMode.CREATURES_DISPLAY
+
     def __init__(self, creature_data: TraitData, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
 
         self.prev_menu_text: Optional[str] = None
@@ -37,10 +39,10 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
             return f".\nPress {self.program_config.read_secondary_key} to hear creature name. Press {self.program_config.read_all_info_key} to hear all available info, press {self.program_config.copy_all_info_key} to copy all available info to clipboard"
         return ""
 
-    def ocr(self, frame: np.typing.ArrayLike, gray_frame: np.typing.ArrayLike):
-        self._ocr_creature(frame, gray_frame)
+    def ocr(self, parent: FrameInfo):
+        self._ocr_creature(parent.frame, parent.gray_frame)
         self.previous_dialog_text = self.current_dialog_text
-        self.current_dialog_text = detect_dialog_text(frame, gray_frame, self.ocr_engine)
+        self.current_dialog_text = detect_dialog_text(parent.frame, parent.gray_frame, self.ocr_engine)
 
     def creature_text(self) -> str:
         menu_item = self.menu_text

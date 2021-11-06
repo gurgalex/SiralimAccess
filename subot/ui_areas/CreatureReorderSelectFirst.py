@@ -1,6 +1,6 @@
 from typing import Optional
 
-from .base  import SpeakAuto
+from .base import SpeakAuto, FrameInfo, OCRMode
 from .shared import detect_creature_party_selection
 from subot.audio import AudioSystem
 from subot.ocr import OCR
@@ -9,6 +9,8 @@ import numpy
 
 
 class OCRCreatureRecorderSelectFirst(SpeakAuto):
+    mode = OCRMode.CREATURE_REORDER_SELECT
+
     def __init__(self, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
         self.auto_text: str = ""
         self.audio_system = audio_system
@@ -17,9 +19,9 @@ class OCRCreatureRecorderSelectFirst(SpeakAuto):
         self.prev_creature_pos: Optional[int] = None
         self.creature_pos: Optional[int] = None
 
-    def ocr(self, frame: numpy.typing.ArrayLike):
+    def ocr(self, parent: FrameInfo):
         self.prev_creature_pos = self.creature_pos
-        self.creature_pos = detect_creature_party_selection(frame)
+        self.creature_pos = detect_creature_party_selection(parent.frame)
 
     def speak_auto(self):
         if self.creature_pos != self.prev_creature_pos:
@@ -28,6 +30,8 @@ class OCRCreatureRecorderSelectFirst(SpeakAuto):
 
 
 class OCRCreatureRecorderSwapWith(SpeakAuto):
+    mode = OCRMode.CREATURE_REORDER_WITH
+
     def __init__(self, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
         self.auto_text: str = ""
         self.audio_system = audio_system
@@ -36,9 +40,9 @@ class OCRCreatureRecorderSwapWith(SpeakAuto):
         self.prev_creature_pos: Optional[int] = None
         self.creature_pos: Optional[int] = None
 
-    def ocr(self, frame: numpy.typing.ArrayLike):
+    def ocr(self, parent: FrameInfo):
         self.prev_creature_pos = self.creature_pos
-        self.creature_pos = detect_creature_party_selection(frame)
+        self.creature_pos = detect_creature_party_selection(parent.frame)
 
     def speak_auto(self):
         if self.creature_pos != self.prev_creature_pos:

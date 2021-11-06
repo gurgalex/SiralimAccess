@@ -10,14 +10,16 @@ from subot.audio import AudioSystem
 from subot.models import Quest, QuestType, ChestSprite, ResourceNodeSprite, NPCSprite
 from subot.ocr import OCR, detect_dialog_text, detect_green_text
 from subot.settings import Config, Session
-from subot.ui_areas.base import SpeakAuto
+from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode
 import numpy as np
 
 import logging
+
 root = logging.getLogger()
 
 
 class OcrUnknownArea(SpeakAuto):
+    mode = OCRMode.UNKNOWN
     QUEST_SCANNING_INTERVAL: float = 1.0
 
     def __init__(self, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
@@ -36,10 +38,10 @@ class OcrUnknownArea(SpeakAuto):
         self.last_quest_scan: Optional[float] = None
         self.silenced: bool = True
 
-    def ocr(self, frame: NDArray, gray_frame: NDArray):
+    def ocr(self, parent: FrameInfo):
         if not self.last_quest_scan or (time.time() - self.last_quest_scan) >= OcrUnknownArea.QUEST_SCANNING_INTERVAL:
             t1 = time.time()
-            quests = self.extract_quest_name_from_quest_area(gray_frame)
+            quests = self.extract_quest_name_from_quest_area(parent.gray_frame)
             current_quests = [quest.title for quest in quests]
             quest_items = [sprite.long_name for quest in quests for sprite in quest.sprites]
             root.debug(f"quests = {current_quests}")
@@ -51,8 +53,8 @@ class OcrUnknownArea(SpeakAuto):
             root.debug(f"quest scanning took {math.ceil(total * 1000)}ms")
             self.last_quest_scan = time.time()
 
-        self.ocr_dialog_box(frame, gray_frame)
-        self.read_selected_menu_item(frame)
+        self.ocr_dialog_box(parent.frame, parent.gray_frame)
+        self.read_selected_menu_item(parent.frame)
 
     def _should_speak_dialog(self) -> bool:
         if not self.current_dialog_text:
@@ -77,7 +79,7 @@ class OcrUnknownArea(SpeakAuto):
         if self._should_speak_menu_selection():
             help_text = self.gen_help_text()
             text = f"{self.current_selected_text} {help_text}"
-            root.info(f"{self.current_dialog_text=}")
+            root.debug(f"{self.current_dialog_text=}")
             self.audio_system.speak_nonblocking(text)
             self.silenced = False
 

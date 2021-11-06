@@ -189,7 +189,7 @@ def english_installed() -> bool:
 
 
 def detect_green_text(image: np.typing.ArrayLike, x_start: float = 0.0, x_end: float = 1.0, y_start: float = 0.0,
-                      y_end: float = 1.0) -> np.typing.ArrayLike:
+                      y_end: float = 1.0) -> NDArray:
     """Using a source image of RGB color, extract highlighted menu items which are a green color"""
     lower_green = np.array([60, 50, 100])
     upper_green = np.array([60, 255, 255])

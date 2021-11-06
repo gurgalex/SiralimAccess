@@ -28,6 +28,7 @@ from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectF
 from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
 from subot.ui_areas.OcrUnknownArea import OcrUnknownArea
 from subot.ui_areas.creatures_display import OCRCreaturesDisplaySystem
+from subot.ui_areas.realm_select import OCRRealmSelect, SelectStep
 from subot.ui_areas.summoning import OcrSummoningSystem
 from subot.trait_info import TraitData, Creature
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert, Shutdown
@@ -38,7 +39,8 @@ import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
 from subot.ocr import detect_green_text, detect_dialog_text, english_installed, detect_title, OCR
-from subot.ui_areas.ui_ocr_types import OCR_UI_SYSTEMS, OCRMode
+from subot.ui_areas.ui_ocr_types import OCR_UI_SYSTEMS
+from subot.ui_areas.base import OCRMode
 import win32gui
 import pygame
 import pygame.freetype
@@ -239,6 +241,7 @@ class ActionType(enum.Enum):
     REREAD_AUTO_TEXT = auto()
     READ_ALL_INFO = auto()
     COPY_ALL_INFO = auto()
+    HELP = auto()
 
 
 class Bot:
@@ -254,6 +257,8 @@ class Bot:
             self.action_queue.put_nowait(ActionType.READ_ALL_INFO)
         elif key == KeyCode.from_char(self.config.copy_all_info_key):
             self.action_queue.put_nowait(ActionType.COPY_ALL_INFO)
+        elif key == KeyCode.from_char('?'):
+            self.action_queue.put_nowait(ActionType.HELP)
 
     def on_press(self, key):
         pass
@@ -851,6 +856,15 @@ class WholeWindowGrabber(multiprocessing.Process):
         except KeyboardInterrupt:
             self.color_frame_queue.put(None, timeout=10)
 
+def _realm_select_step(title: str) -> Optional[SelectStep]:
+    if title.startswith("Choose a Realm Depth"):
+        return SelectStep.DEPTH
+    elif title.startswith("Set the Realm Insta"):
+        return SelectStep.INSTABILITY
+    elif title.startswith("Choose a Realm Type"):
+        return SelectStep.REALM
+    else:
+        return None
 
 class WholeWindowAnalyzer(Thread):
     def __init__(self, incoming_frame_queue: Queue, queue_child_comm_send: queue.Queue, out_quests_queue: Queue,
@@ -893,46 +907,44 @@ class WholeWindowAnalyzer(Thread):
         mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor),
                           interpolation=cv2.INTER_LINEAR)
         ocr_result = self.ocr_engine.recognize_cv2_image(mask)
-        detected_system = OCRMode.UNKNOWN
+        detected_system = OcrUnknownArea(audio_system=self.parent.audio_system, config=self.config,
+                                            ocr_engine=self.ocr_engine)
         try:
             title = ocr_result.merged_text
             root.debug(f"title: {title}")
             if title.startswith("Select a creature to summon"):
-                detected_system = OCRMode.SUMMON
-            elif title.startswith("Creatures"):
-                detected_system = OCRMode.CREATURES_DISPLAY
-            elif title.startswith("Choose the Avatar"):
-                detected_system = OCRMode.SELECT_GODFORGE_AVATAR
-            elif title.startswith("Choose the creature whose position"):
-                detected_system = OCRMode.CREATURE_REORDER_SELECT
-            elif title.startswith("Choose a creature to swap"):
-                detected_system = OCRMode.CREATURE_REORDER_WITH
-            else:
-                detected_system = OCRMode.UNKNOWN
-        except IndexError:
-            print("INDEXERROR")
-
-        if detected_system != self.ocr_mode:
-            root.debug(f"new ocr system: {detected_system}")
-            if detected_system is OCRMode.SUMMON:
-                self.ocr_ui_system = OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config,
+                detected_system = OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config,
                                                         self.ocr_engine)
-            elif detected_system is OCRMode.CREATURES_DISPLAY:
-                self.ocr_ui_system = OCRCreaturesDisplaySystem(self.creature_data, self.parent.audio_system,
+
+            elif title.startswith("Creatures"):
+                detected_system = OCRCreaturesDisplaySystem(self.creature_data, self.parent.audio_system,
                                                                self.config, self.ocr_engine)
-            elif detected_system is OCRMode.UNKNOWN:
-                self.ocr_mode = OCRMode.UNKNOWN
-                self.ocr_ui_system = OcrUnknownArea(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
-            elif detected_system is OCRMode.SELECT_GODFORGE_AVATAR:
-                self.ocr_ui_system = OCRGodForgeSelectSystem(audio_system=self.parent.audio_system, config=self.config,
+            elif title.startswith("Choose the Avatar"):
+                detected_system = OCRGodForgeSelectSystem(audio_system=self.parent.audio_system, config=self.config,
                                                              ocr_engine=self.ocr_engine)
-            elif detected_system is OCRMode.CREATURE_REORDER_SELECT:
-                self.ocr_ui_system = OCRCreatureRecorderSelectFirst(audio_system=self.parent.audio_system,
-                                                                    config=self.config, ocr_engine=self.ocr_engine)
-            elif detected_system is OCRMode.CREATURE_REORDER_WITH:
-                self.ocr_ui_system = OCRCreatureRecorderSwapWith(audio_system=self.parent.audio_system,
-                                                                 config=self.config, ocr_engine=self.ocr_engine)
-        self.ocr_mode = detected_system
+
+            elif title.startswith("Choose the creature whose position"):
+                detected_system = OCRCreatureRecorderSelectFirst(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
+
+            elif title.startswith("Choose a creature to swap"):
+                detected_system = OCRCreatureRecorderSwapWith(audio_system=self.parent.audio_system,
+                                                              config=self.config, ocr_engine=self.ocr_engine)
+            elif step_type := _realm_select_step(title):
+                root.info(f"realm step - {step_type} {title}")
+                detected_system = OCRRealmSelect(audio_system=self.parent.audio_system, config=self.config,
+                                                 ocr_engine=self.ocr_engine, step=step_type)
+        except IndexError:
+            pass
+
+        if detected_system.mode != self.ocr_ui_system.mode or self.ocr_ui_system.step != detected_system.step:
+            root.info(f"new ocr system: {detected_system.mode}, {self.ocr_ui_system.mode}")
+            # silence prior system output to prepare for next system
+            self.parent.audio_system.silence()
+            self.ocr_ui_system = detected_system
+        else:
+            pass
+
+        self.ocr_mode = self.ocr_ui_system.mode
 
     def speak_interaction_info(self):
         if not self.ocr_ui_system:
@@ -941,27 +953,15 @@ class WholeWindowAnalyzer(Thread):
             self.ocr_ui_system.speak_interaction()
         elif isinstance(self.ocr_ui_system, OcrUnknownArea):
             self.ocr_ui_system.speak_interaction()
+        elif isinstance(self.ocr_ui_system, OCRRealmSelect):
+            self.ocr_ui_system.speak_interaction()
 
     def ocr_screen(self):
         self.ocr_title()
-        if self.ocr_mode is OCRMode.SUMMON or self.ocr_mode is OCRMode.CREATURES_DISPLAY:
-            self.ocr_ui_system.ocr(self.frame, self.gray_frame)
-            self.ocr_ui_system.speak_auto()
-            return
-        elif self.ocr_mode == OCRMode.SELECT_GODFORGE_AVATAR:
-            self.ocr_ui_system.ocr(self.frame)
-            self.ocr_ui_system.speak_auto()
-        elif self.ocr_mode == OCRMode.CREATURE_REORDER_SELECT:
-            self.ocr_ui_system.ocr(self.frame)
-            self.ocr_ui_system.speak_auto()
-        elif self.ocr_mode == OCRMode.CREATURE_REORDER_WITH:
-            self.ocr_ui_system.ocr(self.frame)
-            self.ocr_ui_system.speak_auto()
-        elif self.ocr_mode is OCRMode.UNKNOWN:
-            self.ocr_ui_system.ocr(self.frame, self.gray_frame)
-            self.ocr_ui_system.speak_auto()
+        self.ocr_ui_system.ocr(self)
+        self.ocr_ui_system.speak_auto()
+        if self.ocr_ui_system.mode is OCRMode.UNKNOWN:
             self.parent.quest_sprite_long_names = self.ocr_ui_system.get_quest_items()
-            return
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
@@ -1024,6 +1024,8 @@ class WholeWindowAnalyzer(Thread):
     def speak_all_info(self):
         if isinstance(self.ocr_ui_system, OcrSummoningSystem):
             self.ocr_ui_system.speak_detailed()
+        elif isinstance(self.ocr_ui_system, OCRRealmSelect):
+            self.ocr_ui_system.speak_all_info()
 
     def copy_all_info(self):
         if isinstance(self.ocr_ui_system, OcrSummoningSystem):
