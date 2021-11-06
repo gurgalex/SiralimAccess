@@ -899,7 +899,7 @@ class WholeWindowAnalyzer(Thread):
         self.ocr_ui_system: OCR_UI_SYSTEMS = OcrUnknownArea(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
         self.quest_frame_scanning_interval: int = self.config.whole_window_scanning_frequency
         self.frames_since_last_scan: int = 0
-
+        self.got_first_frame: bool = False
 
     def ocr_title(self):
         mask = detect_title(self.frame)
@@ -989,8 +989,12 @@ class WholeWindowAnalyzer(Thread):
                 root.debug(f"main analyzer sleeping for {sleep_duration} seconds")
                 continue
 
+            if self.got_first_frame:
+                timeout = 5
+            else:
+                timeout = 30
             try:
-                msg = self.incoming_frame_queue.get(timeout=5)
+                msg = self.incoming_frame_queue.get(timeout=timeout)
                 self.hang_activity_sender.notify_activity(HangAnnotation(data={"data": "window analyze"}))
                 if msg is None:
                     break
@@ -1008,13 +1012,14 @@ class WholeWindowAnalyzer(Thread):
                     continue
 
                 # something is wrong
-                raise Exception("No new full frame for 5 seconds")
+                raise Exception(f"No new full frame for {timeout} seconds")
             if shot is None:
                 break
 
             self.frame = np.asarray(shot)[:, :, :3]
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
             self.frames_since_last_scan += 1
+            self.got_first_frame = True
 
             self.ocr_screen()
             continue
@@ -1153,6 +1158,7 @@ class NearPlayerProcessing(Thread):
         self.match_streak: int = 0
         self.last_match_time: float = time.time()
         self.paused: bool = False
+        self.got_first_frame = False
 
     def bfs_near(self) -> Optional[FloorInfo]:
         DIRECTIONS: list[Movement] = [Movement(x=1, y=0), Movement(x=-1, y=0), Movement(x=0, y=1), Movement(x=0, y=-1)]
@@ -1369,6 +1375,7 @@ class NearPlayerProcessing(Thread):
                 print(f"new item hashes = {len(self.parent.item_hashes)}")
 
     def handle_new_frame(self, data: NewFrame):
+        self.got_first_frame = True
         self.near_frame_color = data.frame
         if settings.DEBUG:
             self.near_frame_color = self.near_frame_color.copy()
@@ -1434,10 +1441,14 @@ class NearPlayerProcessing(Thread):
                 time.sleep(1 / settings.FPS)
                 continue
 
+            if self.got_first_frame:
+                timeout = 5
+            else:
+                timeout = 30
             try:
-                msg: MessageImpl = self.nearby_queue.get(timeout=5)
+                msg: MessageImpl = self.nearby_queue.get(timeout=timeout)
             except queue.Empty:
-                empty_text = "No nearby frame for 5 seconds"
+                empty_text = f"No nearby frame for {timeout} seconds"
                 root.warning(empty_text)
                 raise Exception(empty_text)
 
