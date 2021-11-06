@@ -26,7 +26,9 @@ import win32process
 from subot import models, ocr
 from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
 from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
+from subot.ui_areas.OcrUnknownArea import OcrUnknownArea
 from subot.ui_areas.creatures_display import OCRCreaturesDisplaySystem
+from subot.ui_areas.realm_select import OCRRealmSelect, SelectStep
 from subot.ui_areas.summoning import OcrSummoningSystem
 from subot.trait_info import TraitData, Creature
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert, Shutdown
@@ -36,8 +38,9 @@ import numpy as np
 import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
-from subot.ocr import detect_green_text, detect_dialog_text, english_installed, detect_title, OCRMode, OCR
+from subot.ocr import detect_green_text, detect_dialog_text, english_installed, detect_title, OCR
 from subot.ui_areas.ui_ocr_types import OCR_UI_SYSTEMS
+from subot.ui_areas.base import OCRMode
 import win32gui
 import pygame
 import pygame.freetype
@@ -61,10 +64,8 @@ from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLo
     QuestType, ResourceNodeSprite, \
     SpriteTypeLookup, SpriteType, ChestSprite
 
-
 from subot.utils import Point, read_version
 import traceback
-
 
 user32 = windll.user32
 
@@ -76,12 +77,12 @@ def set_dpi_aware():
 
 set_dpi_aware()
 
-
 pygame.mixer.init()
 pygame.freetype.init()
 pygame.display.init()
 
 os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
+
 
 # sentry annotation for pyinstaller
 def before_send(event, hint):
@@ -180,7 +181,6 @@ class BotMode(Enum):
     MINIMIZED = auto()
 
 
-
 @dataclass(frozen=True)
 class AssetGridLoc:
     """Tile coordinate relative to player + game asset name on map"""
@@ -189,8 +189,6 @@ class AssetGridLoc:
 
     def point(self) -> Point:
         return Point(x=self.x, y=self.y)
-
-
 
 
 class GridType(enum.Enum):
@@ -220,10 +218,12 @@ listener.start()
 
 player_direction = {GameControl.UP, GameControl.DOWN, GameControl.LEFT, GameControl.RIGHT}
 
+
 @dataclass(frozen=True, eq=True)
 class FloorInfo:
     realm: Optional[Realm]
     long_name: str
+
 
 def is_foreground_process(pid: int) -> bool:
     hwnd = win32gui.GetForegroundWindow()
@@ -241,6 +241,7 @@ class ActionType(enum.Enum):
     REREAD_AUTO_TEXT = auto()
     READ_ALL_INFO = auto()
     COPY_ALL_INFO = auto()
+    HELP = auto()
 
 
 class Bot:
@@ -256,6 +257,8 @@ class Bot:
             self.action_queue.put_nowait(ActionType.READ_ALL_INFO)
         elif key == KeyCode.from_char(self.config.copy_all_info_key):
             self.action_queue.put_nowait(ActionType.COPY_ALL_INFO)
+        elif key == KeyCode.from_char('?'):
+            self.action_queue.put_nowait(ActionType.HELP)
 
     def on_press(self, key):
         pass
@@ -275,9 +278,9 @@ class Bot:
         self.hang_alert_queue = multiprocessing.Queue()
         self.hang_control_send = multiprocessing.Queue()
         self.hang_monitor_controller = HangMonitorWorker(daemon=True,
-                                                         hang_notify_queue=self.hang_alert_queue, control_port=self.hang_control_send)
+                                                         hang_notify_queue=self.hang_alert_queue,
+                                                         control_port=self.hang_control_send)
         self.hang_monitor_controller.start()
-
 
         self.current_quests: set[int] = set()
         self.timer = None
@@ -297,7 +300,6 @@ class Bot:
 
         self.nearby_send_deque = queue.Queue(maxsize=10)
         self.quest_sprite_long_names: set[str] = set()
-
 
         # Used to analyze the SU window
         try:
@@ -359,8 +361,6 @@ class Bot:
         # Note: images must be read as unchanged when converting to grayscale since IM_READ_GRAYSCALE has platform specific conversion methods and difers from cv2.cv2.BGR2GRAy's implementation in cvtcolor
         # This is needed to ensure the pixels match exactly for comparision, otherwhise the grayscale differs slightly
         # https://docs.opencv.org/4.5.1/d4/da8/group__imgcodecs.html
-
-
 
         self.listener = keyboard.Listener(
             on_press=self.on_press,
@@ -426,7 +426,8 @@ class Bot:
             self.screen.fill(Color.black.rgb())
 
             self.current_menu = self.generate_main_menu()
-            self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title, fgcolor=Color.white.rgb())
+            self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title,
+                                                            fgcolor=Color.white.rgb())
         signal.signal(signal.SIGINT, self.stop_signal)
 
     def clear_all_matches(self):
@@ -438,13 +439,14 @@ class Bot:
                          entries=[
                              MenuItem("sound list", self.show_submenu),
                              MenuItem("quit", self.stop),
-        ])
+                         ])
         return main_menu
 
     def show_main_menu(self):
         main_menu = self.generate_main_menu()
         self.current_menu = main_menu
-        self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title, fgcolor=Color.white.rgb())
+        self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title,
+                                                        fgcolor=Color.white.rgb())
 
         self.update()
         self.speak_menu_name()
@@ -468,13 +470,13 @@ class Bot:
         self.screen.fill(Color.black.rgb())
 
         menu_name_surface, rect = self.game_font.render(self.current_menu.title, fgcolor=Color.white.rgb())
-        self.screen.blit(menu_name_surface, dest=(32,32))
+        self.screen.blit(menu_name_surface, dest=(32, 32))
 
-        self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title, fgcolor=Color.white.rgb())
+        self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title,
+                                                        fgcolor=Color.white.rgb())
 
         text_rect = self.font_surface.get_rect(center=(self.game_size[0] / 2, self.game_size[1] / 2))
         self.screen.blit(self.font_surface, dest=text_rect)
-
 
         text_rect = self.font_surface.get_rect(center=(self.game_size[0] / 2, self.game_size[1] / 2))
         self.screen.blit(self.font_surface, dest=text_rect)
@@ -483,10 +485,11 @@ class Bot:
     def play_submenu_sound(self, sound_type: SoundType):
         self.audio_system.play_sound_demo(sound_type, play_for_seconds=0.75)
 
-
     def show_submenu(self):
         sounds = self.audio_system.get_available_sounds()
-        menu_entries = [MenuItem(title=sound_type.description, fn=self.play_submenu_sound, data={'sound_type': sound_type}) for sound_type in sounds.keys()]
+        menu_entries = [
+            MenuItem(title=sound_type.description, fn=self.play_submenu_sound, data={'sound_type': sound_type}) for
+            sound_type in sounds.keys()]
         menu_entries.append(MenuItem("return to main Menu", self.show_main_menu))
         submenu = Menu(title="Sound List", entries=menu_entries)
         self.current_menu = submenu
@@ -510,9 +513,6 @@ class Bot:
         self.stop()
         self.audio_system.speak_blocking("bot manual shutdown started")
         sys.exit(1)
-
-
-
 
     @staticmethod
     def default_grid_rect(mss_rect: Rect) -> Rect:
@@ -572,7 +572,7 @@ class Bot:
         pixel_offset_x = round(self.su_client_rect.w / 2) % TILE_SIZE
         pixel_offset_y = round(self.su_client_rect.h / 2) % TILE_SIZE
         return Rect(
-            x=pixel_offset_x + ( self.player_position_tile.x - NEARBY_TILES_WH // 2) * TILE_SIZE,
+            x=pixel_offset_x + (self.player_position_tile.x - NEARBY_TILES_WH // 2) * TILE_SIZE,
             y=pixel_offset_y + (self.player_position_tile.y - NEARBY_TILES_WH // 2) * TILE_SIZE,
             w=TILE_SIZE * NEARBY_TILES_WH,
             h=TILE_SIZE * NEARBY_TILES_WH,
@@ -595,7 +595,8 @@ class Bot:
                     for floor_tile in floor.frames:
                         floor_ids.append(floor_tile.id)
 
-            realm_phashes_query = session.query(HashFrameWithFloor.phash, Sprite.short_name, Sprite.long_name, SpriteTypeLookup.name) \
+            realm_phashes_query = session.query(HashFrameWithFloor.phash, Sprite.short_name, Sprite.long_name,
+                                                SpriteTypeLookup.name) \
                 .join(SpriteFrame, SpriteFrame.id == HashFrameWithFloor.sprite_frame_id) \
                 .join(Sprite, Sprite.id == SpriteFrame.sprite_id) \
                 .join(SpriteTypeLookup, SpriteTypeLookup.id == Sprite.type_id) \
@@ -724,11 +725,13 @@ class Bot:
                 if msg is ActionType.READ_SECONDARY_INFO:
                     self.whole_window_thandle.speak_interaction_info()
                 elif msg is ActionType.REREAD_AUTO_TEXT:
-                    self.whole_window_thandle.speak_selected_menu_entry()
+                    self.whole_window_thandle.ocr_ui_system.speak_auto()
                 elif msg is ActionType.READ_ALL_INFO:
                     self.whole_window_thandle.speak_all_info()
                 elif msg is ActionType.COPY_ALL_INFO:
                     self.whole_window_thandle.copy_all_info()
+                elif msg is ActionType.HELP:
+                    root.debug("got help request")
             except queue.Empty:
                 pass
 
@@ -779,6 +782,7 @@ class Minimized:
 
 
 FrameType = Union[ArrayLike, Minimized]
+
 
 class WholeWindowGrabber(multiprocessing.Process):
     def __init__(self, out_quests: Queue, outgoing_color_frame_queue: multiprocessing.Queue, screenshot_area: dict,
@@ -852,9 +856,20 @@ class WholeWindowGrabber(multiprocessing.Process):
         except KeyboardInterrupt:
             self.color_frame_queue.put(None, timeout=10)
 
+def _realm_select_step(title: str) -> Optional[SelectStep]:
+    if title.startswith("Choose a Realm Depth"):
+        return SelectStep.DEPTH
+    elif title.startswith("Set the Realm Insta"):
+        return SelectStep.INSTABILITY
+    elif title.startswith("Choose a Realm Type"):
+        return SelectStep.REALM
+    else:
+        return None
 
 class WholeWindowAnalyzer(Thread):
-    def __init__(self, incoming_frame_queue: Queue, queue_child_comm_send: queue.Queue, out_quests_queue: Queue, su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker, config: settings.Config, **kwargs) -> None:
+    def __init__(self, incoming_frame_queue: Queue, queue_child_comm_send: queue.Queue, out_quests_queue: Queue,
+                 su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker,
+                 config: settings.Config, **kwargs) -> None:
         super().__init__(**kwargs)
         self.creature_data = TraitData()
         self.repeat_dialog_text: bool = False
@@ -874,275 +889,79 @@ class WholeWindowAnalyzer(Thread):
         self._hang_monitor = hang_monitor
         self.hang_activity_sender: Optional[HangMonitorChan] = None
 
-        self.frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w, 3), dtype="uint8")
-        self.gray_frame: np.typing.ArrayLike = np.zeros(shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
-                                                        dtype="uint8")
+        self.frame: np.typing.ArrayLike = np.zeros(
+            shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w, 3), dtype="uint8")
+        self.gray_frame: np.typing.ArrayLike = np.zeros(
+            shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
+            dtype="uint8")
         self.ocr_engine: OCR = OCR()
         self.ocr_mode: OCRMode = OCRMode.UNKNOWN
-        self.ocr_ui_system: Optional[OCR_UI_SYSTEMS] = None
+        self.ocr_ui_system: OCR_UI_SYSTEMS = OcrUnknownArea(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
         self.quest_frame_scanning_interval: int = self.config.whole_window_scanning_frequency
         self.frames_since_last_scan: int = 0
-
-    def update_quests(self, new_quests: list[Quest]):
-        if len(new_quests) == 0:
-            return
-
-        new_quest_ids = set()
-        for quest in new_quests:
-            new_quest_ids.add(quest.id)
-
-        if new_quest_ids == self.parent.current_quests:
-            return
-
-        self.parent.quest_sprite_long_names.clear()
-        with Session() as session:
-            for quest in new_quests:
-                if quest.quest_type == QuestType.rescue:
-                    self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(NPCSprite).all())
-                elif quest.quest_type == QuestType.resource_node:
-                    self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(ResourceNodeSprite).all())
-                elif quest.quest_type == QuestType.cursed_chest:
-                    self.parent.quest_sprite_long_names = set(sprite.long_name for sprite in session.query(ChestSprite).filter(ChestSprite.realm_id.is_not(None)).all())
-                else:
-                    for sprite in quest.sprites:
-                        self.parent.quest_sprite_long_names.add(sprite.long_name)
-
-                if not quest.supported:
-                    self.parent.audio_system.speak_blocking(f"Unsupported quest: {quest.title}")
-
-        self.parent.current_quests = new_quest_ids
-
-    def speak_dialog_box(self):
-        if not self.last_dialog_text:
-            return
-        root.debug(f"Speaking dialog text: {self.last_dialog_text}")
-
-        self.parent.audio_system.speak_nonblocking(self.last_dialog_text)
+        self.got_first_frame: bool = False
 
     def ocr_title(self):
         mask = detect_title(self.frame)
         resize_factor = 2
-        mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor), interpolation=cv2.INTER_LINEAR)
+        mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor),
+                          interpolation=cv2.INTER_LINEAR)
         ocr_result = self.ocr_engine.recognize_cv2_image(mask)
-        detected_system = OCRMode.UNKNOWN
+        detected_system = OcrUnknownArea(audio_system=self.parent.audio_system, config=self.config,
+                                            ocr_engine=self.ocr_engine)
         try:
             title = ocr_result.merged_text
             root.debug(f"title: {title}")
             if title.startswith("Select a creature to summon"):
-                detected_system = OCRMode.SUMMON
+                detected_system = OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config,
+                                                        self.ocr_engine)
+
             elif title.startswith("Creatures"):
-                detected_system = OCRMode.CREATURES_DISPLAY
+                detected_system = OCRCreaturesDisplaySystem(self.creature_data, self.parent.audio_system,
+                                                               self.config, self.ocr_engine)
             elif title.startswith("Choose the Avatar"):
-                detected_system = OCRMode.SELECT_GODFORGE_AVATAR
+                detected_system = OCRGodForgeSelectSystem(audio_system=self.parent.audio_system, config=self.config,
+                                                             ocr_engine=self.ocr_engine)
+
             elif title.startswith("Choose the creature whose position"):
-                detected_system = OCRMode.CREATURE_REORDER_SELECT
+                detected_system = OCRCreatureRecorderSelectFirst(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
+
             elif title.startswith("Choose a creature to swap"):
-                detected_system = OCRMode.CREATURE_REORDER_WITH
+                detected_system = OCRCreatureRecorderSwapWith(audio_system=self.parent.audio_system,
+                                                              config=self.config, ocr_engine=self.ocr_engine)
+            elif step_type := _realm_select_step(title):
+                root.debug(f"realm step - {step_type} {title}")
+                detected_system = OCRRealmSelect(audio_system=self.parent.audio_system, config=self.config,
+                                                 ocr_engine=self.ocr_engine, step=step_type)
         except IndexError:
             pass
 
-        if detected_system != self.ocr_mode:
-            root.debug(f"new ocr system: {detected_system}")
-            if detected_system is OCRMode.SUMMON:
-                self.ocr_ui_system = OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config, self.ocr_engine)
-            elif detected_system is OCRMode.CREATURES_DISPLAY:
-                self.ocr_ui_system = OCRCreaturesDisplaySystem(self.creature_data, self.parent.audio_system, self.config, self.ocr_engine)
-            elif detected_system is OCRMode.UNKNOWN:
-                self.ocr_mode = OCRMode.UNKNOWN
-                self.ocr_ui_system = None
-            elif detected_system is OCRMode.SELECT_GODFORGE_AVATAR:
-                self.ocr_ui_system = OCRGodForgeSelectSystem(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
-            elif detected_system is OCRMode.CREATURE_REORDER_SELECT:
-                self.ocr_ui_system = OCRCreatureRecorderSelectFirst(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
-            elif detected_system is OCRMode.CREATURE_REORDER_WITH:
-                self.ocr_ui_system = OCRCreatureRecorderSwapWith(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
-        self.ocr_mode = detected_system
+        if detected_system.mode != self.ocr_ui_system.mode or self.ocr_ui_system.step != detected_system.step:
+            root.debug(f"new ocr system: {detected_system.mode}, {self.ocr_ui_system.mode}")
+            # silence prior system output to prepare for next system
+            self.parent.audio_system.silence()
+            self.ocr_ui_system = detected_system
+        else:
+            pass
+
+        self.ocr_mode = self.ocr_ui_system.mode
 
     def speak_interaction_info(self):
         if not self.ocr_ui_system:
-            self.speak_dialog_box()
+            return
         elif isinstance(self.ocr_ui_system, OcrSummoningSystem):
+            self.ocr_ui_system.speak_interaction()
+        elif isinstance(self.ocr_ui_system, OcrUnknownArea):
+            self.ocr_ui_system.speak_interaction()
+        elif isinstance(self.ocr_ui_system, OCRRealmSelect):
             self.ocr_ui_system.speak_interaction()
 
     def ocr_screen(self):
         self.ocr_title()
-        if self.ocr_mode is OCRMode.SUMMON or self.ocr_mode is OCRMode.CREATURES_DISPLAY:
-            self.ocr_ui_system.ocr(self.frame, self.gray_frame)
-            self.ocr_ui_system.speak_auto()
-            return
-        elif self.ocr_mode == OCRMode.SELECT_GODFORGE_AVATAR:
-            self.ocr_ui_system.ocr(self.frame)
-            self.ocr_ui_system.speak_auto()
-        elif self.ocr_mode == OCRMode.CREATURE_REORDER_SELECT:
-            self.ocr_ui_system.ocr(self.frame)
-            self.ocr_ui_system.speak_auto()
-        elif self.ocr_mode == OCRMode.CREATURE_REORDER_WITH:
-            self.ocr_ui_system.ocr(self.frame)
-            self.ocr_ui_system.speak_auto()
-        elif self.ocr_mode is OCRMode.UNKNOWN:
-            if self.config.ocr_selected_menu_item:
-                # menu entry selection is latency sensitive, so we do this first
-                start = time.time()
-                self.read_selected_menu_item()
-                end = time.time()
-                took_ms = math.ceil((end - start) * 1000)
-                root.debug(f"OCR of menu entry took {took_ms}ms")
-
-            if self.config.ocr_read_dialog_boxes:
-                self.ocr_dialog_box()
-
-            if self.has_menu_entry_text and not self.menu_entry_text_repeat:
-                self.speak_selected_menu_entry()
-            if self.last_dialog_text and not self.has_menu_entry_text and not self.repeat_dialog_text:
-                self.speak_dialog_box()
-
-
-            menu_selection_or_dialog_text_present = self.last_selected_text or self.last_dialog_text
-            if not menu_selection_or_dialog_text_present:
-                root.debug("Pausing due to no menu selection or dialog text present on screen")
-                self.parent.audio_system.silence()
-
-    def ocr_dialog_box(self):
-        mask = detect_dialog_text(self.frame)
-        resize_factor = 2
-        mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor), interpolation=cv2.INTER_LINEAR)
-        ocr_result = self.ocr_engine.recognize_cv2_image(mask)
-        try:
-            first_line = ocr_result.lines[0]
-            first_word = first_line.words[0]
-            bbox = first_word.bounding_rect
-            root.debug(f"dialog box: {ocr_result.text}")
-
-            # health bar text - rect(69, 87, 73, 16), rect(282, 87, 71, 16)
-            # dialog box text - rect(14, 23, 75, 16)
-
-            offset_x = mask.shape[0] * 0.40
-            root.debug(f"{offset_x=}")
-            is_not_dialog_box = bbox.x > offset_x
-            root.debug(f"{is_not_dialog_box=}")
-            if is_not_dialog_box and not self.has_menu_entry_text:
-                self.last_dialog_text = ""
-                return
-        except IndexError:
-            root.debug("no dialog text")
-            # no text was found
-            self.last_dialog_text = ""
-            if not self.has_menu_entry_text and not self.has_dialog_text:
-                root.debug("Pause, menu system. both not present")
-                self.parent.audio_system.silence()
-            self.has_dialog_text = False
-            return
-
-        selected_text = ocr_result.merged_text
-        self.repeat_dialog_text = False
-        # don't count no text at all as dialog text
-        if selected_text == "":
-            self.has_dialog_text = False
-            return
-        if selected_text == self.last_dialog_text:
-            self.repeat_dialog_text = True
-        self.last_dialog_text = selected_text
-
-        if is_not_dialog_box:
-            return
-
-        root.debug(f"dialog box text = {selected_text}")
-        self.has_dialog_text = True
-
-
-    def read_selected_menu_item(self):
-        mask = detect_green_text(self.frame)
-        # remove non-font green pixels
-        start_blur_time = time.time()
-        blurred = cv2.medianBlur(mask, 3)
-        end_blur_time = time.time()
-        root.debug(f"blurring took {math.ceil((end_blur_time-start_blur_time)*1000)}ms")
-        x,y,w,h = cv2.boundingRect(blurred)
-
-        no_match = w == 0 or h == 0
-        if no_match:
-            self.last_selected_text = ""
-            self.has_menu_entry_text = False
-            return
-
-        # padding around font is used to improve OCR output
-        padding = 16
-
-        # don't go out of bounds
-        y_start = max(y-padding, 0)
-        y_end = min(y + h + padding, mask.shape[0])
-        x_start = max(x-padding, 0)
-        x_end = min(x + w + padding,mask.shape[1])
-
-        roi = mask[y_start:y_end, x_start:x_end]
-        # only resize if image capture area likely contains a single section of text (saves CPU)
-        if roi.shape[0] < 400 or roi.shape[1] < 400:
-            roi = cv2.resize(roi, (roi.shape[1]*2, roi.shape[0]*2), interpolation=cv2.INTER_LINEAR)
-
-        ocr_result = self.ocr_engine.recognize_cv2_image(roi)
-        selected_text = ocr_result.merged_text
-        self.menu_entry_text_repeat = False
-
-
-        # don't repeat announcing the same or no text at all
-        if selected_text == "":
-            self.has_menu_entry_text = False
-            return
-        elif selected_text == self.last_selected_text:
-            self.menu_entry_text_repeat = True
-
-        self.has_menu_entry_text = True
-        self.last_selected_text = selected_text
-
-        # # SAPI speech rates
-        # # https://stackoverflow.com/a/42819466
-        # SPEECH_RATES = {
-        #     -10: 1.50,
-        #     -9: 1.45,
-        #     -8: 1.40,
-        #     -7: 1.35,
-        #     -6: 1.30,
-        #     -5: 1.25,
-        #     -4: 1.20,
-        #     -3: 1.15,
-        #     -2: 1.10,
-        #     -1: 1.05,
-        #     0: 1.00,
-        #     1: 0.9,
-        #     2: 0.85,
-        #     3: 0.8,
-        #     4: 0.7,
-        #     5: 0.65,
-        #     6: 0.55,
-        #     7: 0.50,
-        #     8: 0.40,
-        #     9: 0.35,
-        #     10: 0.25
-        # }
-
-        # self.last_selected_text = selected_text
-
-    def extract_quest_name_from_quest_area(self, gray_frame: np.typing.ArrayLike) -> list[Quest]:
-        """
-
-        :param gray_frame: greyscale full-windowed frame that the bot captured
-        :return: List of quests that appeared in the quest area. an empty list is returned if no quests were found
-        """
-        quests: list[Quest] = []
-        y_text_dim = int(gray_frame.shape[0] * 0.33)
-        x_text_dim = int(gray_frame.shape[1] * 0.33)
-        quest_area = gray_frame[:y_text_dim, -x_text_dim:]
-        thresh, threshold_white = cv2.threshold(quest_area, 215, 255, cv2.THRESH_BINARY_INV)
-
-        text = self.ocr_engine.recognize_cv2_image(threshold_white)
-
-        # see if any lines match a quest title
-        with Session() as session:
-            for line_info in text.lines:
-                line_text = line_info.merged_text
-                if quest_obj := session.query(Quest).filter_by(title_first_line=line_text).first():
-                    quests.append(quest_obj)
-        return quests
+        self.ocr_ui_system.ocr(self)
+        self.ocr_ui_system.speak_auto()
+        if self.ocr_ui_system.mode is OCRMode.UNKNOWN:
+            self.parent.quest_sprite_long_names = self.ocr_ui_system.get_quest_items()
 
     def run(self):
         self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
@@ -1165,13 +984,17 @@ class WholeWindowAnalyzer(Thread):
                 pass
 
             if self.paused:
-                sleep_duration = 1/self.config.whole_window_scanning_frequency
+                sleep_duration = 1 / self.config.whole_window_scanning_frequency
                 time.sleep(sleep_duration)
                 root.debug(f"main analyzer sleeping for {sleep_duration} seconds")
                 continue
 
+            if self.got_first_frame:
+                timeout = 5
+            else:
+                timeout = 30
             try:
-                msg = self.incoming_frame_queue.get(timeout=5)
+                msg = self.incoming_frame_queue.get(timeout=timeout)
                 self.hang_activity_sender.notify_activity(HangAnnotation(data={"data": "window analyze"}))
                 if msg is None:
                     break
@@ -1189,40 +1012,25 @@ class WholeWindowAnalyzer(Thread):
                     continue
 
                 # something is wrong
-                raise Exception("No new full frame for 5 seconds")
+                raise Exception(f"No new full frame for {timeout} seconds")
             if shot is None:
                 break
 
-            self.frame = np.asarray(shot)[:,:, :3]
+            self.frame = np.asarray(shot)[:, :, :3]
             cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
             self.frames_since_last_scan += 1
+            self.got_first_frame = True
 
             self.ocr_screen()
-
-            if self.frames_since_last_scan >= self.quest_frame_scanning_interval:
-                self.frames_since_last_scan = 0
-                quests = self.extract_quest_name_from_quest_area(self.gray_frame)
-                current_quests = [quest.title for quest in quests]
-                quest_items = [sprite.long_name for quest in quests for sprite in quest.sprites]
-                root.debug(f"quests = {current_quests}")
-                root.debug(f"quest items = {quest_items}")
-
-                self.update_quests(quests)
-            self.parent.last_key_pressed = None
+            continue
 
         root.info("WindowAnalyzer thread shutting down")
-
-    def speak_selected_menu_entry(self):
-        notify_dialog_text = ""
-        if self.has_dialog_text:
-            notify_dialog_text = f"\npress {self.config.read_secondary_key} to here dialog box"
-        menu_text = f"{self.last_selected_text}{notify_dialog_text}"
-        root.debug(f"speaking menu text: {menu_text}")
-        self.parent.audio_system.speak_nonblocking(menu_text)
 
     def speak_all_info(self):
         if isinstance(self.ocr_ui_system, OcrSummoningSystem):
             self.ocr_ui_system.speak_detailed()
+        elif isinstance(self.ocr_ui_system, OCRRealmSelect):
+            self.ocr_ui_system.speak_all_info()
 
     def copy_all_info(self):
         if isinstance(self.ocr_ui_system, OcrSummoningSystem):
@@ -1243,7 +1051,6 @@ class NearbyFrameGrabber(multiprocessing.Process):
         self.hang_control: Optional[queue.Queue] = None
         self.activity_notify: Optional[HangMonitorChan] = None
         self.paused: bool = False
-
 
     def run(self):
         """Screenshots the area defined as nearby the player. no more than 8x8 tiles (256pxx256px)
@@ -1321,7 +1128,8 @@ class CastleAlignment:
 
 
 class NearPlayerProcessing(Thread):
-    def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: queue.Queue, parent: Bot, stop_event: threading.Event,hang_monitor: HangMonitorWorker, **kwargs):
+    def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: queue.Queue, parent: Bot,
+                 stop_event: threading.Event, hang_monitor: HangMonitorWorker, **kwargs):
         super().__init__(**kwargs)
 
         self.map = Map(arr=np.zeros((NEARBY_TILES_WH, NEARBY_TILES_WH), dtype='object'))
@@ -1350,6 +1158,7 @@ class NearPlayerProcessing(Thread):
         self.match_streak: int = 0
         self.last_match_time: float = time.time()
         self.paused: bool = False
+        self.got_first_frame = False
 
     def bfs_near(self) -> Optional[FloorInfo]:
         DIRECTIONS: list[Movement] = [Movement(x=1, y=0), Movement(x=-1, y=0), Movement(x=0, y=1), Movement(x=0, y=-1)]
@@ -1359,7 +1168,8 @@ class NearPlayerProcessing(Thread):
         x_tiles = self.grid_near_rect.w // TILE_SIZE
         y_tiles = self.grid_near_rect.h // TILE_SIZE
 
-        center = Point(x=x_tiles // 2, y=y_tiles//2)
+        center = Point(x=x_tiles // 2, y=y_tiles // 2)
+
         def can_visit(point: Point, marked: set[Point]) -> bool:
             if point in marked:
                 return False
@@ -1465,7 +1275,7 @@ class NearPlayerProcessing(Thread):
 
         self.map.clear()
         self.map.player_direction = self.parent.player_direction
-        self.map.set_center(Point(x=self.grid_near_rect.w//TILE_SIZE//2, y=self.grid_near_rect.h//TILE_SIZE//2))
+        self.map.set_center(Point(x=self.grid_near_rect.w // TILE_SIZE // 2, y=self.grid_near_rect.h // TILE_SIZE // 2))
 
         for row in range(0, self.grid_near_rect.w, TILE_SIZE):
             for col in range(0, self.grid_near_rect.h, TILE_SIZE):
@@ -1476,7 +1286,7 @@ class NearPlayerProcessing(Thread):
                     x=self.parent.nearby_tile_top_left.x + row // TILE_SIZE - self.parent.player_position_tile.x,
                     y=self.parent.nearby_tile_top_left.y + col // TILE_SIZE - self.parent.player_position_tile.y,
                 )
-                if asset_location.point() == Point(0,0):
+                if asset_location.point() == Point(0, 0):
                     self.map.set(asset_location.point(), TileType.PLAYER)
                     continue
 
@@ -1485,7 +1295,8 @@ class NearPlayerProcessing(Thread):
 
                     tile_type = self.identify_type(img_info, asset_location)
                     if not self.exclude_from_debug(img_info):
-                        root.debug(f"matched: {img_info.long_name} - asset location = {asset_location.point()}, {tile_type}")
+                        root.debug(
+                            f"matched: {img_info.long_name} - asset location = {asset_location.point()}, {tile_type}")
                     if settings.DEBUG:
                         self.draw_debug(start_point, end_point, tile_type, "")
                     self.parent.all_found_matches[tile_type].append(asset_location)
@@ -1511,13 +1322,13 @@ class NearPlayerProcessing(Thread):
             pass
 
         end = time.time()
-        root.debug(f"reachable took {(end-start)*1000}ms to complete")
+        root.debug(f"reachable took {(end - start) * 1000}ms to complete")
         self.parent.speak_nearby_objects()
 
     def handle_realm_alignment(self, realm_alignment: Optional[Union[RealmAlignment, CastleAlignment]]):
         if not realm_alignment:
             self.match_streak = 0
-            if time.time() - self.last_match_time >= 1/15 * 4:
+            if time.time() - self.last_match_time >= 1 / 15 * 4:
                 self.parent.clear_all_matches()
                 self.parent.speak_nearby_objects()
             return
@@ -1564,6 +1375,7 @@ class NearPlayerProcessing(Thread):
                 print(f"new item hashes = {len(self.parent.item_hashes)}")
 
     def handle_new_frame(self, data: NewFrame):
+        self.got_first_frame = True
         self.near_frame_color = data.frame
         if settings.DEBUG:
             self.near_frame_color = self.near_frame_color.copy()
@@ -1577,7 +1389,6 @@ class NearPlayerProcessing(Thread):
 
         if self.paused:
             return
-
 
         realm_alignment = self.detect_what_realm_in()
         self.handle_realm_alignment(realm_alignment)
@@ -1627,13 +1438,17 @@ class NearPlayerProcessing(Thread):
 
             if self.paused:
                 root.debug("sleeping nearby analyzer due to being paused")
-                time.sleep(1/settings.FPS)
+                time.sleep(1 / settings.FPS)
                 continue
 
+            if self.got_first_frame:
+                timeout = 5
+            else:
+                timeout = 30
             try:
-                msg: MessageImpl = self.nearby_queue.get(timeout=5)
+                msg: MessageImpl = self.nearby_queue.get(timeout=timeout)
             except queue.Empty:
-                empty_text = "No nearby frame for 5 seconds"
+                empty_text = f"No nearby frame for {timeout} seconds"
                 root.warning(empty_text)
                 raise Exception(empty_text)
 

@@ -1,3 +1,13 @@
+# v0.11.2
+## fix
+- Crash when Creatures screen would pop up a dialog box
+- Crash on summoning screen if no existing trait or creature name was found
+- Fix for mod crashing with low-end computers taking long to startup new processes
+
+## features
+- Add more dedicated UI screens
+  - Teleportation Shrine Realm Select UI
+
 # v0.11.1
 ## fix
 - fix rapid repeat audio of realm object detection

@@ -1,5 +1,5 @@
 from typing import Optional
-from subot.ocr import detect_green_text, detect_white_text, OCR
+from subot.ocr import detect_green_text, detect_white_text, OCR, detect_dialog_text
 from subot.audio import AudioSystem
 from subot.settings import Config
 from subot.trait_info import Creature, CreatureInfo, TraitData, CreatureLimited
@@ -7,7 +7,7 @@ import numpy as np
 import pyclip as clip
 from logging import getLogger
 
-from subot.ui_areas.base import SpeakAuto
+from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode
 from subot.ui_areas.shared import detect_creature_party_selection
 
 root = getLogger()
@@ -18,6 +18,8 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
     Discarded when closed
 
     """
+    mode = OCRMode.CREATURES_DISPLAY
+
     def __init__(self, creature_data: TraitData, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
 
         self.prev_menu_text: Optional[str] = None
@@ -27,6 +29,8 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
         self.creature_position: Optional[int] = None
         self.prev_creature_position: Optional[int] = None
         self.ocr_engine = ocr_engine
+        self.current_dialog_text: str = ""
+        self.previous_dialog_text: str = ""
 
     def help_text(self) -> str:
         return ""
@@ -35,8 +39,10 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
             return f".\nPress {self.program_config.read_secondary_key} to hear creature name. Press {self.program_config.read_all_info_key} to hear all available info, press {self.program_config.copy_all_info_key} to copy all available info to clipboard"
         return ""
 
-    def ocr(self, frame: np.typing.ArrayLike, gray_frame: np.typing.ArrayLike):
-        self._ocr_creature(frame, gray_frame)
+    def ocr(self, parent: FrameInfo):
+        self._ocr_creature(parent.frame, parent.gray_frame)
+        self.previous_dialog_text = self.current_dialog_text
+        self.current_dialog_text = detect_dialog_text(parent.frame, parent.gray_frame, self.ocr_engine)
 
     def creature_text(self) -> str:
         menu_item = self.menu_text
@@ -50,8 +56,19 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
         else:
             return ""
 
+    def _should_speak_dialog(self) -> bool:
+        if not self.current_dialog_text:
+            return False
+        if self.current_dialog_text == self.previous_dialog_text:
+            return False
+        return True
+
     def speak_auto(self) -> Optional[str]:
         """Text spoken without any user interaction"""
+        if self._should_speak_dialog():
+            text = self.current_dialog_text
+            self.audio_system.speak_nonblocking(text)
+            return text
         if not self.menu_text:
             return
         text = self.creature_text()
