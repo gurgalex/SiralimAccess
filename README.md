@@ -25,6 +25,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
   - Creatures screen (know which creature's traits, artifact, spell gems are being configured)
   - Reorder creature screen
   - GodForge avatar select
+  - Teleportation Shrine realm select
 
 ## Item sounds
 [video of sounds playing](https://youtu.be/2vVCJtCocbA)
