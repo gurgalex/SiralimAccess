@@ -248,6 +248,12 @@ class ActionType(enum.Enum):
     HELP = auto()
     SCREENSHOT = auto()
     SILENCE = auto()
+    OPEN_CONFIG_LOCATION = auto()
+    FORCE_OCR = auto()
+
+
+def open_config_file():
+    os.startfile(settings.config_file_path(), 'edit')
 
 
 class Bot:
@@ -267,6 +273,10 @@ class Bot:
             self.action_queue.put_nowait(ActionType.HELP)
         elif key == KeyCode.from_char("P"):
             self.action_queue.put_nowait(ActionType.SCREENSHOT)
+        elif key == KeyCode.from_char(self.config.open_config_key):
+            self.action_queue.put_nowait(ActionType.OPEN_CONFIG_LOCATION)
+        elif key == KeyCode.from_char("O"):
+            self.action_queue.put_nowait(ActionType.FORCE_OCR)
 
     def on_press(self, key):
         pass
@@ -743,6 +753,10 @@ class Bot:
                     self.whole_window_thandle.speak_help()
                 elif msg is ActionType.SILENCE:
                     self.audio_system.silence()
+                elif msg is ActionType.OPEN_CONFIG_LOCATION:
+                    open_config_file()
+                elif msg is ActionType.FORCE_OCR:
+                    self.whole_window_thandle.force_ocr()
                 elif msg is ActionType.SCREENSHOT:
 
 
@@ -1105,6 +1119,12 @@ class WholeWindowAnalyzer(Thread):
     def copy_all_info(self):
         try:
             self.ocr_ui_system.copy_detailed_text()
+        except AttributeError:
+            pass
+
+    def force_ocr(self):
+        try:
+            self.ocr_ui_system.force_ocr_content(self.gray_frame)
         except AttributeError:
             pass
 

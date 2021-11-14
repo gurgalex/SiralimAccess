@@ -6,8 +6,9 @@ import cv2
 from numpy.typing import NDArray
 
 from subot.models import Quest, QuestType, ChestSprite, ResourceNodeSprite, NPCSprite
-from subot.ocr import OCR, detect_dialog_text, detect_green_text
+from subot.ocr import OCR, detect_dialog_text, detect_green_text, OCRResult
 from subot.settings import Config, Session
+from subot.ui_areas.CodexGeneric import detect_any_text
 from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode, SpeakCapability
 import numpy as np
 
@@ -19,6 +20,7 @@ root = logging.getLogger()
 class OcrUnknownArea(SpeakAuto):
     mode = OCRMode.UNKNOWN
     QUEST_SCANNING_INTERVAL: float = 1.0
+    RESIZE_FACTOR: int = 2
 
     def __init__(self, audio_system: SpeakCapability, config: Config, ocr_engine: OCR):
         super().__init__(ocr_engine, config, audio_system)
@@ -26,6 +28,7 @@ class OcrUnknownArea(SpeakAuto):
         self.current_dialog_text: str = ""
         self.previous_selected_text: str = ""
         self.current_selected_text: str = ""
+        self.current_selected_text_result: Optional[OCRResult] = None
         self.quest_sprite_long_names: set[str] = set()
         self.current_quests: list[Quest] = []
         self.current_quest_ids: set[int] = set()
@@ -50,7 +53,7 @@ class OcrUnknownArea(SpeakAuto):
             self.last_quest_scan = time.time()
 
         self.ocr_dialog_box(parent.frame, parent.gray_frame)
-        self.read_selected_menu_item(parent.frame)
+        self.ocr_selected_menu_item(parent.frame)
 
     def _should_speak_dialog(self) -> bool:
         if not self.current_dialog_text:
@@ -85,6 +88,19 @@ class OcrUnknownArea(SpeakAuto):
             self.current_dialog_text = ""
             self.audio_system.silence()
             self.silenced = True
+
+    def force_ocr_content(self, gray_frame: NDArray):
+        """Force OCR of side content right of green menu select text"""
+        if not self.current_selected_text_result:
+            return
+
+        last_word_rect = self.current_selected_text_result.lines[0].words[-1].bounding_rect
+        last_word_rect_end_x_pos: int = (last_word_rect.x + last_word_rect.width) * self.RESIZE_FACTOR
+        x_start = last_word_rect_end_x_pos / gray_frame.shape[1] / self.RESIZE_FACTOR
+        if x_start >= 1:
+            return
+        forced_side_result = detect_any_text(gray_frame, self.ocr_engine, x_start=x_start, x_end=1.00, y_start=0.00, y_end=1.0)
+        self.audio_system.speak_nonblocking(forced_side_result.merged_text)
 
     def get_quest_items(self) -> set[str]:
         return self.quest_sprite_long_names
@@ -150,7 +166,7 @@ class OcrUnknownArea(SpeakAuto):
 
         root.debug(f"dialog box text = '{dialog_result}'")
 
-    def read_selected_menu_item(self, frame: NDArray):
+    def ocr_selected_menu_item(self, frame: NDArray):
         self.previous_selected_text = self.current_selected_text
         self.current_selected_text = ""
         mask = detect_green_text(frame)
@@ -177,7 +193,7 @@ class OcrUnknownArea(SpeakAuto):
         roi = mask[y_start:y_end, x_start:x_end]
         # only resize if image capture area likely contains a single section of text (saves CPU)
         if roi.shape[0] < 400 or roi.shape[1] < 400:
-            roi = cv2.resize(roi, (roi.shape[1] * 2, roi.shape[0] * 2), interpolation=cv2.INTER_LINEAR)
+            roi = cv2.resize(roi, (roi.shape[1] * self.RESIZE_FACTOR, roi.shape[0] * self.RESIZE_FACTOR), interpolation=cv2.INTER_LINEAR)
 
         ocr_result = self.ocr_engine.recognize_cv2_image(roi)
         selected_text = ocr_result.merged_text
@@ -189,6 +205,7 @@ class OcrUnknownArea(SpeakAuto):
         elif selected_text == self.current_selected_text:
             self.menu_entry_text_repeat = True
 
+        self.current_selected_text_result = ocr_result
         self.current_selected_text = selected_text
 
     def extract_quest_name_from_quest_area(self, gray_frame: np.typing.ArrayLike) -> list[Quest]:

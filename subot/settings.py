@@ -29,6 +29,7 @@ class Config:
     show_ui: bool = True
     whole_window_scanning_frequency: int = 7
     update_popup_browser: bool = True
+    open_config_key: str = "C"
 
     ocr_selected_menu_item: bool = True
     ocr_read_dialog_boxes: bool = True
@@ -64,6 +65,7 @@ class Config:
             "repeat_sound_when_stationary": self.repeat_sound_when_stationary,
             "repeat_sound_seconds": self.required_stationary_seconds,
             'update_popup_browser': self.update_popup_browser,
+            'open_config_key': self.open_config_key
         }
 
         ini["OCR"] = {
@@ -107,6 +109,7 @@ class Config:
         default_config.repeat_sound_when_stationary = general.getboolean('repeat_sound_when_stationary', fallback=default_config.repeat_sound_when_stationary)
         default_config.required_stationary_seconds = general.getfloat('repeat_sound_seconds', fallback=default_config.required_stationary_seconds)
         default_config.update_popup_browser = general.getboolean('update_popup_browser', fallback=default_config.update_popup_browser)
+        default_config.open_config_key = general.get('open_config_key', fallback=default_config.open_config_key)
 
         volume = ini["VOLUME"]
 
@@ -136,9 +139,13 @@ class Config:
         return default_config
 
 
+def config_file_path() -> Path:
+    return Path(os.path.expandvars("%LOCALAPPDATA%")).joinpath("SiralimAccess").joinpath("config.ini")
+
+
 def load_config() -> Config:
 
-    config_path = Path(os.path.expandvars("%LOCALAPPDATA%")).joinpath("SiralimAccess").joinpath("config.ini")
+    config_path = config_file_path()
     if config_path.exists():
         config = Config.from_ini(config_path)
     else:

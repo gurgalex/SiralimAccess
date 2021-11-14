@@ -31,7 +31,7 @@ class SpeakCapability(Protocol):
     def speak_nonblocking(self, text: str):
         """Don't block thread speaking"""
 
-    def silence(self, text: str):
+    def silence(self):
         """Silence any currently TTS output"""
 
 

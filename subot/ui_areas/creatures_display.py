@@ -1,10 +1,14 @@
 from typing import Optional
-from subot.ocr import detect_green_text, detect_white_text, OCR, detect_dialog_text
+
+from numpy.typing import NDArray
+
+from subot.ocr import detect_green_text, detect_white_text, OCR, detect_dialog_text, OCRResult
 from subot.settings import Config
 import numpy as np
 import pyclip as clip
 from logging import getLogger
 
+from subot.ui_areas.CodexGeneric import detect_any_text
 from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode, SpeakCapability
 from subot.ui_areas.shared import detect_creature_party_selection
 
@@ -22,6 +26,7 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
 
         super().__init__(ocr_engine, config, audio_system)
         self.prev_menu_text: Optional[str] = None
+        self.auto_text_result: Optional[OCRResult] = None
         self.auto_text: Optional[str] = None
         self.creature_position: Optional[int] = None
         self.prev_creature_position: Optional[int] = None
@@ -59,6 +64,19 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
         if self.current_dialog_text == self.previous_dialog_text:
             return False
         return True
+
+    def force_ocr_content(self, gray_frame: NDArray):
+        """Force OCR of side content right of green menu select text"""
+        if not self.auto_text_result:
+            return
+
+        last_word_rect = self.auto_text_result.lines[0].words[-1].bounding_rect
+        last_word_rect_end_x_pos: int = (last_word_rect.x + last_word_rect.width)
+        x_start = last_word_rect_end_x_pos / gray_frame.shape[1]
+        if x_start >= 1:
+            return
+        forced_side_result = detect_any_text(gray_frame, self.ocr_engine, x_start=x_start, x_end=1.00, y_start=0.00, y_end=1.0)
+        self.audio_system.speak_nonblocking(forced_side_result.merged_text)
 
     def speak_auto(self) -> Optional[str]:
         """Text spoken without any user interaction"""
@@ -100,6 +118,7 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
         selected_menu_mask = detect_green_text(frame, y_start=0.0, y_end=0.70, x_start=0.05, x_end=0.4)
         selected_menu_item = self.ocr_engine.recognize_cv2_image(selected_menu_mask)
         self.prev_menu_text = self.auto_text
+        self.auto_text_result = selected_menu_item
         self.auto_text = None
 
         try:
