@@ -1,3 +1,7 @@
+# v0.12.1
+## fix
+- reintroduce check for English US language pack
+
 # v0.12.0
 ## change
 - help text is now only spoken whenever a UI screen is opened/reopened. Press ? to hear it again at any time

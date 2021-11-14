@@ -26,7 +26,7 @@ from pynput.keyboard import KeyCode
 import win32process
 from winrt.windows.media.ocr import OcrResult
 
-from subot import models
+from subot import models, ocr
 from subot.ui_areas.CodexGeneric import CodexGeneric
 from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
 from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
@@ -939,6 +939,12 @@ class WholeWindowAnalyzer(Thread):
             shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
             dtype="uint8")
         self.ocr_engine: OCR = OCR()
+        if not self.ocr_engine.english_installed():
+            self.parent.audio_system.speak_blocking(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
+            root.error(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
+            self.parent.audio_system.speak_blocking("Shutting down")
+            sys.exit(1)
+
         self.ocr_mode: OCRMode = OCRMode.UNKNOWN
         self.ocr_ui_system: OCR_UI_SYSTEMS = OcrUnknownArea(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
         self.quest_frame_scanning_interval: int = self.config.whole_window_scanning_frequency
