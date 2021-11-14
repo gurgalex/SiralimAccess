@@ -1,3 +1,23 @@
+# v0.12.0
+## change
+- help text is now only spoken whenever a UI screen is opened/reopened. Press ? to hear it again at any time
+- Text should be less jumbled when icons are present
+- There is now a pause between sections of text
+
+## feat
+- Add experimental OCR option (uppercase O) to read text that is to the right of any green text
+  - Press uppercase O to force the text to the right to be read
+  - Seems to cover most boxes, however, the text is sometimes very verbose with lots of unneeded info
+  - This is a stopgap measure until areas are identified for each UI screen
+- New quest sound. Hopefully it is less annoying.
+- The config file for Siralim Access can now be opened by pressing uppercase C. Siralim Access must still be closed for changes to take effect.
+- Add more UIs
+  - Perk screen
+  - Codex screens
+    - Most of the reference list screens
+    - Game Information - Only the nether boss screen
+
+
 # v0.11.2
 ## fix
 - Crash when Creatures screen would pop up a dialog box
