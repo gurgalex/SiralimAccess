@@ -46,6 +46,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 | Speak secondary info      | o           |
 | Speak all available info  | v           |
 | Copy all available info   | c           |
+| Edit config file | C |
 | EXPERIMENTAL: OCR of text to the right of menu selection | O |
 
 ## Requirements
