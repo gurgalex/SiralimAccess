@@ -4,13 +4,11 @@ from typing import Optional
 
 import cv2
 from numpy.typing import NDArray
-from sqlalchemy.orm import joinedload
 
-from subot.audio import AudioSystem
 from subot.models import Quest, QuestType, ChestSprite, ResourceNodeSprite, NPCSprite
 from subot.ocr import OCR, detect_dialog_text, detect_green_text
 from subot.settings import Config, Session
-from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode
+from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode, SpeakCapability
 import numpy as np
 
 import logging
@@ -22,14 +20,12 @@ class OcrUnknownArea(SpeakAuto):
     mode = OCRMode.UNKNOWN
     QUEST_SCANNING_INTERVAL: float = 1.0
 
-    def __init__(self, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
+    def __init__(self, audio_system: SpeakCapability, config: Config, ocr_engine: OCR):
+        super().__init__(ocr_engine, config, audio_system)
         self.previous_dialog_text: str = ""
         self.current_dialog_text: str = ""
         self.previous_selected_text: str = ""
         self.current_selected_text: str = ""
-        self.audio_system: AudioSystem = audio_system
-        self.program_config = config
-        self.ocr_engine = ocr_engine
         self.quest_sprite_long_names: set[str] = set()
         self.current_quests: list[Quest] = []
         self.current_quest_ids: set[int] = set()
@@ -73,7 +69,7 @@ class OcrUnknownArea(SpeakAuto):
 
     def speak_auto(self):
         if self._should_speak_dialog():
-            root.info(f"Speaking dialog text: {self.current_dialog_text}")
+            root.debug(f"Speaking dialog text: {self.current_dialog_text}")
             self.audio_system.speak_nonblocking(self.current_dialog_text)
             self.silenced = False
         if self._should_speak_menu_selection():
@@ -138,7 +134,7 @@ class OcrUnknownArea(SpeakAuto):
                         self.quest_sprite_long_names.add(sprite.long_name)
 
                 if not quest.supported:
-                    self.audio_system.speak_blocking(f"Unsupported quest: {quest.title}")
+                    self.audio_system.speak_blocking(f"Unsupported quest: {quest.title} {quest.description}")
 
         self.current_quest_ids = new_quest_ids
 

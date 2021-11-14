@@ -20,8 +20,6 @@ def detect_siralim_ultimate_install_location() -> Path:
         raise e
 
 
-
-
 @click.group()
 def enter_cli():
     pass
@@ -37,10 +35,11 @@ def install():
     if ORIGINAL_BACKUP_FONT_FILEPATH.exists():
         print(f"Original font already backed up since {ORIGINAL_BACKUP_FONT_FILEPATH.name} exists")
     else:
-        shutil.copy(FONT_FILE_ORIG_SIRALIM_ULTIMATE,ORIGINAL_BACKUP_FONT_FILEPATH)
+        shutil.copy(FONT_FILE_ORIG_SIRALIM_ULTIMATE, ORIGINAL_BACKUP_FONT_FILEPATH)
 
     shutil.copy(font_filepath, FONT_FILE_ORIG_SIRALIM_ULTIMATE)
     print(f"{font_filepath.name} has replaced {FONT_FILE_ORIG_SIRALIM_ULTIMATE.name}")
+
 
 @enter_cli.command()
 def restore():
@@ -57,7 +56,6 @@ def restore():
     print(f"{FONT_FILE_ORIG_SIRALIM_ULTIMATE.name} restored")
 
 
-
 if __name__ == "__main__":
     # needed to prevent infinite process spawns when using pyintaller
     import multiprocessing
@@ -71,6 +69,8 @@ if __name__ == "__main__":
         before_send=before_send,
     )
     if len(sys.argv) == 1:
+        from subot.main import read_version
+        print(f"Siralim Access version = {read_version()}")
         start_bot()
     else:
         OCR_FONT = 'arialbd.ttf'

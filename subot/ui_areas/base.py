@@ -1,8 +1,12 @@
+from __future__ import annotations
 from abc import abstractmethod, ABC, ABCMeta
 from enum import Enum, auto
-from typing import Protocol
 
 from numpy.typing import NDArray
+
+from subot.ocr import OCR
+from subot.settings import Config
+from typing import Protocol
 
 
 class OCRMode(Enum):
@@ -13,6 +17,7 @@ class OCRMode(Enum):
     SELECT_GODFORGE_AVATAR = auto()
     CREATURE_REORDER_SELECT = auto()
     CREATURE_REORDER_WITH = auto()
+    GENERIC_SIDE_MENU_50 = auto()
     """Screen shown to select realm dept and realm to denter"""
     REALM_SELECT = auto()
 
@@ -22,20 +27,51 @@ class FrameInfo(Protocol):
     frame: NDArray
 
 
+class SpeakCapability(Protocol):
+    def speak_nonblocking(self, text: str):
+        """Don't block thread speaking"""
+
+    def silence(self, text: str):
+        """Silence any currently TTS output"""
+
+
 class SpeakAuto(metaclass=ABCMeta):
+
+    def __init__(self, ocr_engine: OCR, config: Config, audio_system: SpeakCapability):
+        self.help_text: str = ""
+        self.first_use: bool = True
+        self.prev_auto_text: str = ""
+        self.auto_text: str = ""
+        self.ocr_engine: OCR = ocr_engine
+        self.program_config: Config = config
+        self.audio_system = audio_system
 
     @property
     @abstractmethod
     def mode(self) -> OCRMode:
         return OCRMode.UNKNOWN
 
-    @abstractmethod
+    def help_text_for_auto(self) -> str:
+        if self.first_use:
+            return self.help_text
+        else:
+            return ""
+
     def speak_auto(self):
-        pass
+        if not self.auto_text:
+            return
+        if self.prev_auto_text == self.auto_text:
+            return
+        text = f"{self.auto_text}. {self.help_text_for_auto()}"
+        self.audio_system.speak_nonblocking(text)
+        self.first_use = False
 
     @abstractmethod
     def ocr(self, parent: FrameInfo):
         pass
+
+    def speak_help(self):
+        self.audio_system.speak_nonblocking(self.help_text)
 
     _step = None
 
@@ -45,6 +81,14 @@ class SpeakAuto(metaclass=ABCMeta):
     @step.setter
     def step(self, val):
         self._step = val
+
+    def same_ui_screen(self, cls: SpeakAuto):
+        return all([self.mode is cls.mode, self.step is cls.step])
+
+
+
+
+
 
 
 
