@@ -1,4 +1,4 @@
-# v0.12.3
+# v0.12.4
 ## fix
 - missing riddle dwarf SFX
 
