@@ -45,10 +45,12 @@ class Config:
     nether_portal: int = 100
     npc_master: int = 100
     npc_generic: int = 100
+    pandemonium_statue: int = 100
     project_item: int = 100
     quest: int = 100
     teleportation_shrine: int = 100
     summoning_brazier: int = 100
+    riddle_dwarf: int = 100
 
     detect_objects_through_walls: bool = True
 
@@ -83,10 +85,12 @@ class Config:
             "nether_portal": self.nether_portal,
             "npc_master": self.npc_master,
             "npc_generic": self.npc_generic,
+            "pandemonium_statue": self.pandemonium_statue,
             "project_item": self.project_item,
             "quest": self.quest,
             "summoning_brazier": self.summoning_brazier,
             "teleportation_shrine": self.teleportation_shrine,
+            "riddle_dwarf": self.riddle_dwarf,
         }
 
         ini["REALM_OBJECT_DETECTION"] = {
@@ -119,10 +123,12 @@ class Config:
         default_config.nether_portal = volume.getint('nether_portal', fallback=default_config.nether_portal)
         default_config.npc_master = volume.getint('npc_master', fallback=default_config.npc_master)
         default_config.npc_generic = volume.getint("npc_generic", fallback=default_config.npc_generic)
+        default_config.pandemonium_statue = volume.getint("pandemonium_statue", fallback=default_config.pandemonium_statue)
         default_config.project_item = volume.getint("project_item", fallback=default_config.project_item)
         default_config.quest = volume.getint("quest", fallback=default_config.quest)
         default_config.teleportation_shrine = volume.getint("teleportation_shrine", fallback=default_config.teleportation_shrine)
         default_config.summoning_brazier = volume.getint('summoning_brazier', fallback=default_config.summoning_brazier)
+        default_config.riddle_dwarf = volume.getint('riddle_dwarf', fallback=default_config.riddle_dwarf)
 
         ocr = ini["OCR"]
         default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)

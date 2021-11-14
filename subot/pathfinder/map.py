@@ -33,6 +33,7 @@ class Color(enum.Enum):
     purple = (255, 0, 255)
     red = (0, 0, 255)
     saddlebrown = (19, 69, 139)
+    safety_yellow = (2, 210, 238)
     silver = (192, 192, 192)
     tan = (140, 180, 210)
     teal = (128, 128, 0)
@@ -79,6 +80,8 @@ class TileType(Enum):
     REACHABLE_DIRECTION = (27, Color.peachpuff, "direction")
     NETHER_PORTAL = (28, Color.blue_mid, 'nether portal')
     SUMMONING = (29, Color.blue_mid, 'summoning brazier')
+    RIDDLE_DWARF = (30, Color.safety_yellow, 'riddle_dwarf')
+    PANDEMONIUM_STATUE = (31, None, 'pandemonium_statue')
 
     def __init__(self, num, color: Color, description: str):
         self.num = num
