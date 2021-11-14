@@ -34,6 +34,7 @@ class SoundType(enum.Enum):
     QUEST_ITEM = (auto(), "quest item")
     REACHABLE_BLACK = (auto(), "untraveled tile")
     REACHABLE_DIRECTION = (auto(), "direction can travel")
+    RIDDLE_DWARF = (auto(), 'riddle_dwarf')
     TELEPORTATION_SHRINE = (auto(), "teleportation shrine")
     NETHER_PORTAL = (auto(), "nether portal")
     SUMMONING = (auto(), 'summoning brazier')
@@ -63,6 +64,8 @@ class SoundType(enum.Enum):
             return SoundType.NETHER_PORTAL
         elif f is TileType.SUMMONING:
             return SoundType.SUMMONING
+        elif f is TileType.RIDDLE_DWARF:
+            return SoundType.RIDDLE_DWARF
         # elif f is TileType.REACHABLE_DIRECTION:
         #     return SoundType.REACHABLE_DIRECTION
         # elif f is TileType.REACHABLE_BLACK:
@@ -199,6 +202,16 @@ class AudioSystem:
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("summoning-high.ogg").as_posix()),
                 )
             ),
+            SoundType.RIDDLE_DWARF: SoundMapping(
+                channel=pygame.mixer.Channel(10),
+                volume_adj=self.config.riddle_dwarf,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("riddle-dwarf/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("riddle-dwarf/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("riddle-dwarf/high.wav").as_posix()),
+                )
+            ),
+
             # SoundType.REACHABLE_BLACK: SoundMapping(
             #     channel=pygame.mixer.Channel(8),
             #     sounds=SoundIndicator(

@@ -49,6 +49,7 @@ class Config:
     quest: int = 100
     teleportation_shrine: int = 100
     summoning_brazier: int = 100
+    riddle_dwarf: int = 100
 
     detect_objects_through_walls: bool = True
 
@@ -87,6 +88,7 @@ class Config:
             "quest": self.quest,
             "summoning_brazier": self.summoning_brazier,
             "teleportation_shrine": self.teleportation_shrine,
+            "riddle_dwarf": self.riddle_dwarf,
         }
 
         ini["REALM_OBJECT_DETECTION"] = {
@@ -123,6 +125,7 @@ class Config:
         default_config.quest = volume.getint("quest", fallback=default_config.quest)
         default_config.teleportation_shrine = volume.getint("teleportation_shrine", fallback=default_config.teleportation_shrine)
         default_config.summoning_brazier = volume.getint('summoning_brazier', fallback=default_config.summoning_brazier)
+        default_config.riddle_dwarf = volume.getint('riddle_dwarf', fallback=default_config.riddle_dwarf)
 
         ocr = ini["OCR"]
         default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)

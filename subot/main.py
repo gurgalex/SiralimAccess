@@ -1337,6 +1337,9 @@ class NearPlayerProcessing(Thread):
         if img_info.long_name == "bck_FOW_Tile":
             return TileType.BLACK
 
+        elif img_info.long_name == "ospr_dwarfpower":
+            return TileType.RIDDLE_DWARF
+
         elif img_info.long_name in self.parent.quest_sprite_long_names:
             return TileType.QUEST
         elif img_info.long_name in self.parent.teleportation_shrine_names:
