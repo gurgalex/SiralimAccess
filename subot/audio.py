@@ -26,10 +26,12 @@ Right = float
 
 
 class SoundType(enum.Enum):
+    _ignore_ = ["mapping"]
     ALTAR = (auto(), "altar")
     CHEST = (auto(), "chest")
     MASTER_NPC = (auto(), "master")
     NPC_NORMAL = (auto(), "NPC")
+    PANDEMONIUM_STATUE = (auto(), 'pandemonium statue')
     PROJECT_ITEM = (auto(), "project item")
     QUEST_ITEM = (auto(), "quest item")
     REACHABLE_BLACK = (auto(), "untraveled tile")
@@ -39,6 +41,8 @@ class SoundType(enum.Enum):
     NETHER_PORTAL = (auto(), "nether portal")
     SUMMONING = (auto(), 'summoning brazier')
 
+    mapping: dict[TileType, SoundType] = {}
+
     def __init__(self, number, description):
         self.number = number
         self.description = description
@@ -46,32 +50,22 @@ class SoundType(enum.Enum):
     @classmethod
     def from_tile_type(cls, f: TileType) -> SoundType:
         """raises: KeyError if no sound exists for varient of FoundType"""
-        if f is TileType.ALTAR:
-            return SoundType.ALTAR
-        elif f is TileType.CHEST:
-            return SoundType.CHEST
-        elif f is TileType.QUEST:
-            return SoundType.QUEST_ITEM
-        elif f is TileType.MASTER_NPC:
-            return SoundType.MASTER_NPC
-        elif f is TileType.NPC:
-            return SoundType.NPC_NORMAL
-        elif f is TileType.PROJECT_ITEM:
-            return SoundType.PROJECT_ITEM
-        elif f is TileType.TELEPORTATION_SHRINE:
-            return SoundType.TELEPORTATION_SHRINE
-        elif f is TileType.NETHER_PORTAL:
-            return SoundType.NETHER_PORTAL
-        elif f is TileType.SUMMONING:
-            return SoundType.SUMMONING
-        elif f is TileType.RIDDLE_DWARF:
-            return SoundType.RIDDLE_DWARF
-        # elif f is TileType.REACHABLE_DIRECTION:
-        #     return SoundType.REACHABLE_DIRECTION
-        # elif f is TileType.REACHABLE_BLACK:
-        #     return SoundType.REACHABLE_BLACK
-        else:
-            raise KeyError(f)
+        return cls.mapping[f]
+
+
+SoundType.mapping = {
+    TileType.ALTAR: SoundType.ALTAR,
+    TileType.CHEST: SoundType.CHEST,
+    TileType.QUEST: SoundType.QUEST_ITEM,
+    TileType.MASTER_NPC: SoundType.MASTER_NPC,
+    TileType.NPC: SoundType.NPC_NORMAL,
+    TileType.PROJECT_ITEM: SoundType.PROJECT_ITEM,
+    TileType.TELEPORTATION_SHRINE: SoundType.TELEPORTATION_SHRINE,
+    TileType.NETHER_PORTAL: SoundType.NETHER_PORTAL,
+    TileType.SUMMONING: SoundType.SUMMONING,
+    TileType.RIDDLE_DWARF: SoundType.RIDDLE_DWARF,
+    TileType.PANDEMONIUM_STATUE: SoundType.PANDEMONIUM_STATUE,
+}
 
 
 @dataclass
@@ -194,7 +188,7 @@ class AudioSystem:
                 )
             ),
             SoundType.SUMMONING: SoundMapping(
-                channel=pygame.mixer.Channel(8),
+                channel=pygame.mixer.Channel(9),
                 volume_adj=self.config.summoning_brazier,
                 sounds=SoundIndicator(
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("summoning-low.ogg").as_posix()),
@@ -209,6 +203,15 @@ class AudioSystem:
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("riddle-dwarf/low.wav").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("riddle-dwarf/normal.wav").as_posix()),
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("riddle-dwarf/high.wav").as_posix()),
+                )
+            ),
+            SoundType.PANDEMONIUM_STATUE: SoundMapping(
+                channel=pygame.mixer.Channel(11),
+                volume_adj=self.config.pandemonium_statue,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("pand-statue/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("pand-statue/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("pand-statue/high.wav").as_posix()),
                 )
             ),
 

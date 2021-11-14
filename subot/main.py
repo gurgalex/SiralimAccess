@@ -43,7 +43,7 @@ import numpy as np
 import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
-from subot.ocr import detect_title, OCR
+from subot.ocr import detect_title, OCR, LanguageNotInstalledException
 from subot.ui_areas.ui_ocr_types import OCR_UI_SYSTEMS
 from subot.ui_areas.base import OCRMode
 import win32gui
@@ -938,7 +938,13 @@ class WholeWindowAnalyzer(Thread):
         self.gray_frame: np.typing.NDArray = np.zeros(
             shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
             dtype="uint8")
-        self.ocr_engine: OCR = OCR()
+        try:
+            self.ocr_engine: OCR = OCR()
+        except LanguageNotInstalledException:
+            self.parent.audio_system.speak_blocking(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
+            root.error(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
+            self.parent.audio_system.speak_blocking("Shutting down")
+            sys.exit(1)
         if not self.ocr_engine.english_installed():
             self.parent.audio_system.speak_blocking(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
             root.error(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
@@ -1336,14 +1342,14 @@ class NearPlayerProcessing(Thread):
     def identify_type(self, img_info: ImageInfo, asset_location: AssetGridLoc) -> TileType:
         if img_info.long_name == "bck_FOW_Tile":
             return TileType.BLACK
+        elif img_info.long_name in self.parent.quest_sprite_long_names:
+            return TileType.QUEST
+
+        elif img_info.long_name in self.parent.teleportation_shrine_names:
+            return TileType.TELEPORTATION_SHRINE
 
         elif img_info.long_name == "ospr_dwarfpower":
             return TileType.RIDDLE_DWARF
-
-        elif img_info.long_name in self.parent.quest_sprite_long_names:
-            return TileType.QUEST
-        elif img_info.long_name in self.parent.teleportation_shrine_names:
-            return TileType.TELEPORTATION_SHRINE
 
         elif img_info.sprite_type is SpriteType.MASTER_NPC:
             return TileType.MASTER_NPC
@@ -1587,11 +1593,6 @@ def version_check(config, audio_system):
 def init_bot() -> Bot:
     config = settings.load_config()
     audio_system = AudioSystem(config)
-    # if not english_installed():
-    #     audio_system.speak_blocking(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
-    #     root.error(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
-    #     audio_system.speak_blocking("Shutting down")
-    #     sys.exit(1)
     version_check(config, audio_system)
     is_minimized = True
     while is_minimized:

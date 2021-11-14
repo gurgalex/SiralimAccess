@@ -1,3 +1,9 @@
+# v0.12.2
+## fix
+- Crash when fail to detect realm instability
+## feat
+- Add riddle dwarf sound effect
+
 # v0.12.1
 ## fix
 - reintroduce check for English US language pack
