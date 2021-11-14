@@ -18,19 +18,24 @@ import semantic_version
 import webbrowser
 
 from ctypes import windll
+
+import win32clipboard
 from pynput import keyboard
 from pynput.keyboard import KeyCode
 
 import win32process
+from winrt.windows.media.ocr import OcrResult
 
-from subot import models, ocr
+from subot import models
+from subot.ui_areas.CodexGeneric import CodexGeneric
 from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
 from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
 from subot.ui_areas.OcrUnknownArea import OcrUnknownArea
+from subot.ui_areas.PerkScreen import PerkScreen
 from subot.ui_areas.creatures_display import OCRCreaturesDisplaySystem
 from subot.ui_areas.realm_select import OCRRealmSelect, SelectStep
 from subot.ui_areas.summoning import OcrSummoningSystem
-from subot.trait_info import TraitData, Creature
+from subot.trait_info import TraitData
 from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert, Shutdown
 
 import cv2
@@ -38,7 +43,7 @@ import numpy as np
 import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
-from subot.ocr import detect_green_text, detect_dialog_text, english_installed, detect_title, OCR
+from subot.ocr import detect_title, OCR
 from subot.ui_areas.ui_ocr_types import OCR_UI_SYSTEMS
 from subot.ui_areas.base import OCRMode
 import win32gui
@@ -68,7 +73,6 @@ from subot.utils import Point, read_version
 import traceback
 
 user32 = windll.user32
-
 
 def set_dpi_aware():
     # makes functions return real pixel numbers instead of scaled values
@@ -242,6 +246,14 @@ class ActionType(enum.Enum):
     READ_ALL_INFO = auto()
     COPY_ALL_INFO = auto()
     HELP = auto()
+    SCREENSHOT = auto()
+    SILENCE = auto()
+    OPEN_CONFIG_LOCATION = auto()
+    FORCE_OCR = auto()
+
+
+def open_config_file():
+    os.startfile(settings.config_file_path(), 'edit')
 
 
 class Bot:
@@ -259,6 +271,12 @@ class Bot:
             self.action_queue.put_nowait(ActionType.COPY_ALL_INFO)
         elif key == KeyCode.from_char('?'):
             self.action_queue.put_nowait(ActionType.HELP)
+        elif key == KeyCode.from_char("P"):
+            self.action_queue.put_nowait(ActionType.SCREENSHOT)
+        elif key == KeyCode.from_char(self.config.open_config_key):
+            self.action_queue.put_nowait(ActionType.OPEN_CONFIG_LOCATION)
+        elif key == KeyCode.from_char("O"):
+            self.action_queue.put_nowait(ActionType.FORCE_OCR)
 
     def on_press(self, key):
         pass
@@ -732,6 +750,32 @@ class Bot:
                     self.whole_window_thandle.copy_all_info()
                 elif msg is ActionType.HELP:
                     root.debug("got help request")
+                    self.whole_window_thandle.speak_help()
+                elif msg is ActionType.SILENCE:
+                    self.audio_system.silence()
+                elif msg is ActionType.OPEN_CONFIG_LOCATION:
+                    open_config_file()
+                elif msg is ActionType.FORCE_OCR:
+                    self.whole_window_thandle.force_ocr()
+                elif msg is ActionType.SCREENSHOT:
+
+
+                    def send_to_clipboard(clip_type, data):
+                        """copy image to clipboard. Found at https://stackoverflow.com/a/62007792/17323787"""
+                        import win32clipboard
+                        win32clipboard.OpenClipboard()
+                        win32clipboard.EmptyClipboard()
+                        win32clipboard.SetClipboardData(clip_type, data)
+                        win32clipboard.CloseClipboard()
+
+                    bgr_frame = self.whole_window_thandle.frame
+                    is_success, buffer = cv2.imencode(".bmp", bgr_frame)
+                    BMP_HEADER_LEN = 14
+                    bmp_data = buffer[BMP_HEADER_LEN:].tobytes()
+                    send_to_clipboard(win32clipboard.CF_DIB, bmp_data)
+
+
+                    root.info("copied whole frame bytes to clipboard")
             except queue.Empty:
                 pass
 
@@ -889,9 +933,9 @@ class WholeWindowAnalyzer(Thread):
         self._hang_monitor = hang_monitor
         self.hang_activity_sender: Optional[HangMonitorChan] = None
 
-        self.frame: np.typing.ArrayLike = np.zeros(
+        self.frame: np.typing.NDArray = np.zeros(
             shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w, 3), dtype="uint8")
-        self.gray_frame: np.typing.ArrayLike = np.zeros(
+        self.gray_frame: np.typing.NDArray = np.zeros(
             shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w),
             dtype="uint8")
         self.ocr_engine: OCR = OCR()
@@ -901,40 +945,74 @@ class WholeWindowAnalyzer(Thread):
         self.frames_since_last_scan: int = 0
         self.got_first_frame: bool = False
 
+    def determine_ocr_system(self, ocr_result: OcrResult) -> OCR_UI_SYSTEMS:
+        unknown_system = OcrUnknownArea(audio_system=self.parent.audio_system, config=self.config,
+                                            ocr_engine=self.ocr_engine)
+        try:
+            title = ocr_result.merged_text
+            root.debug(f"{title=}")
+            lower_title = title.lower()
+            first_word = ocr_result.lines[0].words[0]
+            if lower_title.startswith("select a creature to summon"):
+                return OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config,
+                                                        self.ocr_engine)
+
+            elif lower_title.startswith("creatures") and first_word.bounding_rect.x/self.frame.shape[1] > 0.13:
+                return OCRCreaturesDisplaySystem(self.parent.audio_system, self.config, self.ocr_engine)
+            elif lower_title.startswith("choose the avatar"):
+                return OCRGodForgeSelectSystem(audio_system=self.parent.audio_system, config=self.config,
+                                                             ocr_engine=self.ocr_engine)
+
+            elif lower_title.startswith("choose the creature whose position"):
+                return OCRCreatureRecorderSelectFirst(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
+
+            elif lower_title.startswith("choose a creature to swap"):
+                return OCRCreatureRecorderSwapWith(audio_system=self.parent.audio_system,
+                                                              config=self.config, ocr_engine=self.ocr_engine)
+            elif step_type := _realm_select_step(title):
+                root.debug(f"realm step - {step_type} {title}")
+                return OCRRealmSelect(audio_system=self.parent.audio_system, config=self.config,
+                                                 ocr_engine=self.ocr_engine, step=step_type)
+            elif lower_title.startswith("choose an item to purchase"):
+                pass
+            # Equip / Items -> Artifacts screen
+            elif lower_title.startswith("artifacts ("):
+                pass
+            # Spell gems in inventory screen
+            elif lower_title.startswith("spell gems ("):
+                pass
+            elif lower_title.startswith("choose a perk to rank"):
+                return PerkScreen(self.parent.audio_system, self.config, self.ocr_engine)
+
+            # codex section
+            elif lower_title.startswith(("artifact properties", "realm properties", "status effects", "spell gem properties", "traits", "skins", "gate of the gods", "gods", "guilds and false gods", "rodian creature masters", "macros", "nether bosses")):
+                return CodexGeneric(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config, title=title)
+            # todo:-Problematic codex entries  "Castle", "Character", "Events", "Gods", "Items", "Realms", "Relics", "Spell Gems"
+            elif lower_title.startswith("spells"):
+                # todo: proper spell gem screen
+                return CodexGeneric(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config, title=title)
+            elif lower_title.startswith("skins"):
+                pass
+            elif lower_title.startswith("traits"):
+                pass
+            # codex artifact info
+            elif lower_title.startswith("artifacts") and first_word.bounding_rect.x/self.frame.shape[1] < 0.1:
+                print("art screen")
+            elif lower_title.startswith("nether stones ("):
+                print("nether stone item screen")
+
+        except IndexError:
+            return unknown_system
+        return unknown_system
+
     def ocr_title(self):
         mask = detect_title(self.frame)
         resize_factor = 2
         mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor),
                           interpolation=cv2.INTER_LINEAR)
+
         ocr_result = self.ocr_engine.recognize_cv2_image(mask)
-        detected_system = OcrUnknownArea(audio_system=self.parent.audio_system, config=self.config,
-                                            ocr_engine=self.ocr_engine)
-        try:
-            title = ocr_result.merged_text
-            root.debug(f"title: {title}")
-            if title.startswith("Select a creature to summon"):
-                detected_system = OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config,
-                                                        self.ocr_engine)
-
-            elif title.startswith("Creatures"):
-                detected_system = OCRCreaturesDisplaySystem(self.creature_data, self.parent.audio_system,
-                                                               self.config, self.ocr_engine)
-            elif title.startswith("Choose the Avatar"):
-                detected_system = OCRGodForgeSelectSystem(audio_system=self.parent.audio_system, config=self.config,
-                                                             ocr_engine=self.ocr_engine)
-
-            elif title.startswith("Choose the creature whose position"):
-                detected_system = OCRCreatureRecorderSelectFirst(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
-
-            elif title.startswith("Choose a creature to swap"):
-                detected_system = OCRCreatureRecorderSwapWith(audio_system=self.parent.audio_system,
-                                                              config=self.config, ocr_engine=self.ocr_engine)
-            elif step_type := _realm_select_step(title):
-                root.debug(f"realm step - {step_type} {title}")
-                detected_system = OCRRealmSelect(audio_system=self.parent.audio_system, config=self.config,
-                                                 ocr_engine=self.ocr_engine, step=step_type)
-        except IndexError:
-            pass
+        detected_system = self.determine_ocr_system(ocr_result)
 
         if detected_system.mode != self.ocr_ui_system.mode or self.ocr_ui_system.step != detected_system.step:
             root.debug(f"new ocr system: {detected_system.mode}, {self.ocr_ui_system.mode}")
@@ -949,12 +1027,18 @@ class WholeWindowAnalyzer(Thread):
     def speak_interaction_info(self):
         if not self.ocr_ui_system:
             return
-        elif isinstance(self.ocr_ui_system, OcrSummoningSystem):
+        try:
             self.ocr_ui_system.speak_interaction()
-        elif isinstance(self.ocr_ui_system, OcrUnknownArea):
-            self.ocr_ui_system.speak_interaction()
-        elif isinstance(self.ocr_ui_system, OCRRealmSelect):
-            self.ocr_ui_system.speak_interaction()
+        except AttributeError:
+            pass
+
+    def speak_help(self):
+        if not self.ocr_ui_system:
+            return
+        try:
+            self.ocr_ui_system.speak_help()
+        except AttributeError:
+            root.warning(f"no help implemented for {self.ocr_ui_system.__name__}")
 
     def ocr_screen(self):
         self.ocr_title()
@@ -1027,14 +1111,22 @@ class WholeWindowAnalyzer(Thread):
         root.info("WindowAnalyzer thread shutting down")
 
     def speak_all_info(self):
-        if isinstance(self.ocr_ui_system, OcrSummoningSystem):
-            self.ocr_ui_system.speak_detailed()
-        elif isinstance(self.ocr_ui_system, OCRRealmSelect):
+        try:
             self.ocr_ui_system.speak_all_info()
+        except AttributeError:
+            pass
 
     def copy_all_info(self):
-        if isinstance(self.ocr_ui_system, OcrSummoningSystem):
+        try:
             self.ocr_ui_system.copy_detailed_text()
+        except AttributeError:
+            pass
+
+    def force_ocr(self):
+        try:
+            self.ocr_ui_system.force_ocr_content(self.gray_frame)
+        except AttributeError:
+            pass
 
 
 class NearbyFrameGrabber(multiprocessing.Process):
@@ -1486,11 +1578,11 @@ def version_check(config, audio_system):
 def init_bot() -> Bot:
     config = settings.load_config()
     audio_system = AudioSystem(config)
-    if not english_installed():
-        audio_system.speak_blocking(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
-        root.error(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
-        audio_system.speak_blocking("Shutting down")
-        sys.exit(1)
+    # if not english_installed():
+    #     audio_system.speak_blocking(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
+    #     root.error(ocr.ENGLISH_NOT_INSTALLED_EXCEPTION.args[0])
+    #     audio_system.speak_blocking("Shutting down")
+    #     sys.exit(1)
     version_check(config, audio_system)
     is_minimized = True
     while is_minimized:

@@ -4,14 +4,13 @@ from typing import Optional
 import cv2
 
 from subot.ocr import detect_green_text, detect_white_text, OCR
-from subot.audio import AudioSystem
 from subot.settings import Config
 from subot.trait_info import Creature, CreatureInfo, TraitData, CreatureLimited
 import numpy as np
 import pyclip as clip
 from logging import getLogger
 
-from subot.ui_areas.base import FrameInfo, OCRMode, SpeakAuto
+from subot.ui_areas.base import FrameInfo, OCRMode, SpeakAuto, SpeakCapability
 
 root = getLogger()
 
@@ -23,15 +22,17 @@ class OcrSummoningSystem(SpeakAuto):
     """
     mode = OCRMode.SUMMON
 
-    def __init__(self, creature_data: TraitData, audio_system: AudioSystem, config: Config, ocr_engine: OCR):
+    def __init__(self, creature_data: TraitData, audio_system: SpeakCapability, config: Config, ocr_engine: OCR):
+        super().__init__(ocr_engine, config, audio_system)
         self.prev_creature: Optional[CreatureInfo] = None
         self.creature: Optional[CreatureInfo] = None
         self.creature_data = creature_data
-        self.audio_system: AudioSystem = audio_system
-        self.program_config = config
-        self.ocr_engine = ocr_engine
+        # first time UI has been open
+        self.help_text: str = ""
 
     def ocr(self, parent: FrameInfo):
+        self.help_text = f".\nPress {self.program_config.read_secondary_key} to hear trait and trait description. Press {'v'} to hear all available info, press {'c'} to copy all available info to clipboard"
+
         self._ocr_summoning(parent.frame, parent.gray_frame)
 
     def speak_auto(self) -> Optional[str]:
@@ -39,10 +40,10 @@ class OcrSummoningSystem(SpeakAuto):
         if not self.creature:
             return
         text = self.creature.name
-        hint_text = f".\nPress {self.program_config.read_secondary_key} to hear trait and trait description. Press {'v'} to hear all available info, press {'c'} to copy all available info to clipboard"
         if self.creature != self.prev_creature:
-            combined_text = f"{text} {hint_text}"
+            combined_text = f"{text} {self.help_text_for_auto()}"
             self.audio_system.speak_nonblocking(combined_text)
+        self.first_use = False
         return text
 
     def speak_interaction(self) -> str:
@@ -82,7 +83,7 @@ trait description: {self.creature.trait_description}
         else:
             return "no creature info available"
 
-    def speak_detailed(self):
+    def speak_all_info(self):
         text = self.detailed_text()
         self.audio_system.speak_nonblocking(text)
         return text

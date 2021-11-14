@@ -157,9 +157,9 @@ class AudioSystem:
                 channel=pygame.mixer.Channel(0),
                 volume_adj=self.config.quest,
                 sounds=SoundIndicator(
-                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-low.wav").as_posix()),
-                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-normal.wav").as_posix()),
-                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-high.wav").as_posix()),
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("quest-item/low-2.ogg").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("quest-item/normal.ogg").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("quest-item/high.ogg").as_posix()),
                 )
             ),
 

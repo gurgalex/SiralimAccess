@@ -111,12 +111,13 @@ class AsciiConverter:
         "P": TileType.PLAYER,
         "W": TileType.WALL,
         "R": TileType.REACHABLE_BLACK,
+        "X": TileType.REACHABLE_DIRECTION,
     }
     tile_type_to_char = {v: k for k, v in char_to_tile_type.items()}
 
     @classmethod
     def from_tile_type(cls, tile_type: TileType) -> str:
-        return cls.tile_type_to_char[tile_type]
+        return cls.tile_type_to_char.get(tile_type, ".")
 
     @classmethod
     def to_tile_type(cls, char: str) -> TileType:
@@ -269,8 +270,9 @@ class Map:
                 traversable = False
             if traversable:
                 center_adjusted_point = Point(y=direction[1], x=direction[0])
-                self.set(center_adjusted_point, TileType.REACHABLE_DIRECTION)
-                self.adj_list.setdefault(TileType.REACHABLE_DIRECTION, defaultdict(list))[center_adjusted_point].append(self.center)
+                # TODO: disable reachable immediate directions until used
+                # self.set(center_adjusted_point, TileType.REACHABLE_DIRECTION)
+                # self.adj_list.setdefault(TileType.REACHABLE_DIRECTION, defaultdict(list))[center_adjusted_point].append(self.center)
 
     def find_reachable_blocks(self):
         marked: set[Point] = set()
