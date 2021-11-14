@@ -1,3 +1,7 @@
+# v0.12.3
+## fix
+- missing riddle dwarf SFX
+
 # v0.12.2
 ## fix
 - Crash when fail to detect realm instability
