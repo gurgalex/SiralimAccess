@@ -14,10 +14,6 @@ import cv2
 import numpy as np
 import numpy.typing
 from numpy.typing import NDArray
-# from winrt.windows.media.ocr import OcrEngine
-# from winrt.windows.globalization import Language
-# from winrt.windows.graphics.imaging import *
-# from winrt.windows.security.cryptography import CryptographicBuffer
 from more_itertools import windowed
 import statistics
 
@@ -262,8 +258,7 @@ class OCR:
         return self.ocr_engine.is_language_supported(lang)
 
     def english_installed(self) -> bool:
-        # is_installed = self.language_is_installed("en-US")
-        is_installed = self.language_is_installed("ru")
+        is_installed = self.language_is_installed("en-US")
         return is_installed
 
     def recognize_cv2_image(self, frame: np.typing.NDArray) -> OCRResult:
