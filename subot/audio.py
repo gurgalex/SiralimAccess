@@ -37,9 +37,10 @@ class SoundType(enum.Enum):
     REACHABLE_BLACK = (auto(), "untraveled tile")
     REACHABLE_DIRECTION = (auto(), "direction can travel")
     RIDDLE_DWARF = (auto(), 'riddle_dwarf')
-    TELEPORTATION_SHRINE = (auto(), "teleportation shrine")
     NETHER_PORTAL = (auto(), "nether portal")
     SUMMONING = (auto(), 'summoning brazier')
+    TELEPORTATION_SHRINE = (auto(), "teleportation shrine")
+    TREASURE_MAP_ITEM = (auto(), 'treasure map item')
 
     mapping: dict[TileType, SoundType] = {}
 
@@ -65,6 +66,7 @@ SoundType.mapping = {
     TileType.SUMMONING: SoundType.SUMMONING,
     TileType.RIDDLE_DWARF: SoundType.RIDDLE_DWARF,
     TileType.PANDEMONIUM_STATUE: SoundType.PANDEMONIUM_STATUE,
+    TileType.TREASURE_MAP_ITEM: SoundType.TREASURE_MAP_ITEM,
 }
 
 
@@ -212,6 +214,15 @@ class AudioSystem:
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("pand-statue/low.wav").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("pand-statue/normal.wav").as_posix()),
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("pand-statue/high.wav").as_posix()),
+                )
+            ),
+            SoundType.TREASURE_MAP_ITEM: SoundMapping(
+                channel=pygame.mixer.Channel(12),
+                volume_adj=self.config.treasure_map_item,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("treasure-map-item/low.ogg").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("treasure-map-item/normal.ogg").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("treasure-map-item/high.ogg").as_posix()),
                 )
             ),
 

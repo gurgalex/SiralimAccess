@@ -38,6 +38,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Creature Master
 - Chest
 - Teleportation shrine
+- Treasure Map
 - Summoning brazier
 - Pandemonium shrine
 - Riddle dwarf

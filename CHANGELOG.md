@@ -1,3 +1,6 @@
+# v0.12.6
+- Add treasure map sound effect
+
 # v0.12.5
 ## feat
 - Add pandemonium shrine sound effect

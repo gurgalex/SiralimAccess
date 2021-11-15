@@ -373,6 +373,10 @@ class Bot:
             for phash, long_name, realm in floor_phashes:
                 self.floor_hashes[phash] = FloorInfo(realm=realm, long_name=long_name)
 
+            treasure_sprite_sprite_names: Quest = session.query(Quest)\
+                .filter(Quest.title_first_line == "Digging For Treasure").one()
+            self.treasure_map_item_names: set[str] = set(sprite.long_name for sprite in treasure_sprite_sprite_names.sprites)
+
         # multiple directions playing previous
         self.all_directions: set[Point] = {Point(1, 0), Point(-1, 0), Point(0, 1), Point(0, -1)}
 
@@ -1365,6 +1369,8 @@ class NearPlayerProcessing(Thread):
             return TileType.FLOOR
         elif img_info.sprite_type is SpriteType.CHEST:
             return TileType.CHEST
+        elif img_info.long_name in self.parent.treasure_map_item_names:
+            return TileType.TREASURE_MAP_ITEM
         elif img_info.long_name == "demonicstatue":
             return TileType.PANDEMONIUM_STATUE
         elif img_info.long_name == "netherportal":

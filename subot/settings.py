@@ -51,6 +51,7 @@ class Config:
     teleportation_shrine: int = 100
     summoning_brazier: int = 100
     riddle_dwarf: int = 100
+    treasure_map_item: int = 100
 
     detect_objects_through_walls: bool = True
 
@@ -91,6 +92,7 @@ class Config:
             "summoning_brazier": self.summoning_brazier,
             "teleportation_shrine": self.teleportation_shrine,
             "riddle_dwarf": self.riddle_dwarf,
+            "treasure_map_item": self.treasure_map_item
         }
 
         ini["REALM_OBJECT_DETECTION"] = {
@@ -127,6 +129,7 @@ class Config:
         default_config.project_item = volume.getint("project_item", fallback=default_config.project_item)
         default_config.quest = volume.getint("quest", fallback=default_config.quest)
         default_config.teleportation_shrine = volume.getint("teleportation_shrine", fallback=default_config.teleportation_shrine)
+        default_config.treasure_map_item = volume.getint("treasure_map_item", fallback=default_config.treasure_map_item)
         default_config.summoning_brazier = volume.getint('summoning_brazier', fallback=default_config.summoning_brazier)
         default_config.riddle_dwarf = volume.getint('riddle_dwarf', fallback=default_config.riddle_dwarf)
 
