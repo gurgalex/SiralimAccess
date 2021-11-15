@@ -1,3 +1,7 @@
+# v0.12.5
+## feat
+- Add pandemonium shrine sound effect
+
 # v0.12.4
 ## fix
 - missing riddle dwarf SFX

@@ -81,7 +81,7 @@ class TileType(Enum):
     NETHER_PORTAL = (28, Color.blue_mid, 'nether portal')
     SUMMONING = (29, Color.blue_mid, 'summoning brazier')
     RIDDLE_DWARF = (30, Color.safety_yellow, 'riddle_dwarf')
-    PANDEMONIUM_STATUE = (31, None, 'pandemonium_statue')
+    PANDEMONIUM_STATUE = (31, Color.black, 'pandemonium_statue')
 
     def __init__(self, num, color: Color, description: str):
         self.num = num

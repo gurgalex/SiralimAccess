@@ -1365,6 +1365,8 @@ class NearPlayerProcessing(Thread):
             return TileType.FLOOR
         elif img_info.sprite_type is SpriteType.CHEST:
             return TileType.CHEST
+        elif img_info.long_name == "demonicstatue":
+            return TileType.PANDEMONIUM_STATUE
         elif img_info.long_name == "netherportal":
             return TileType.NETHER_PORTAL
         elif img_info.long_name == "summoningbrazier":
@@ -1402,8 +1404,7 @@ class NearPlayerProcessing(Thread):
 
                     tile_type = self.identify_type(img_info, asset_location)
                     if not self.exclude_from_debug(img_info):
-                        root.debug(
-                            f"matched: {img_info.long_name} - asset location = {asset_location.point()}, {tile_type}")
+                        root.debug(f"matched: {img_info.long_name} - asset coord = {asset_location.point()}, {tile_type}")
                     if settings.DEBUG:
                         self.draw_debug(start_point, end_point, tile_type, "")
                     self.parent.all_found_matches[tile_type].append(asset_location)
