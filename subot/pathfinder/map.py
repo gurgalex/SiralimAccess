@@ -40,6 +40,7 @@ class Color(enum.Enum):
     white = (255, 255, 255)
     yellow = (0, 255, 255)
     unfilled = (80, 80, 80)
+    temp = (111, 111, 111)
 
     def rgb(self) -> tuple[int, int, int]:
         return self.value[2], self.value[1], self.value[0]
@@ -52,28 +53,28 @@ class TileType(Enum):
     REACHABLE_BLACK = (98, Color.pastel_red, "untraveled tile")
     CHEST = (2, Color.goldenrod, "chest")
     COMMON_CHEST = (3, Color.saddlebrown, "common chest")
-    CREATURE = (4, None, "creature")
+    CREATURE = (4, Color.temp, "creature")
     DECORATION = (5, Color.khaki, "decoration")
-    DIVINATION_CANDLE = (6, None, "divination candle")
-    DUMPLING = (7, None, "dumpling")
+    DIVINATION_CANDLE = (6, Color.temp, "divination candle")
+    DUMPLING = (7, Color.temp, "dumpling")
     EMBLEM = (8, Color.silver, "emblem")
-    ENEMY = (9, None, "enemy")
+    ENEMY = (9, Color.temp, "enemy")
     FLOOR = (10, Color.white, "floor")
     MASTER_NPC = (11, Color.orange, "master")
     NPC = (12, Color.green, "NPC")
     PROJECT_ITEM = (13, Color.yellow, "project item")
     PLAYER = (14, Color.olive, "player")
     QUEST = (15, Color.red, "quest item")
-    RESOURCE_NODE = (16, None, "resource node")
+    RESOURCE_NODE = (16, Color.temp, "resource node")
     TELEPORTATION_SHRINE = (17, Color.blue, "teleportation shrine")
-    TREASURE_GOLEM = (18, None, "treasure golem")
+    TREASURE_GOLEM = (18, Color.temp, "treasure golem")
     WALL = (19, Color.gray, "wall")
-    ARTIFACT_MATERIAL_BAG = (20, None, "artifact material bag")
-    SPELL_MATERIAL_BAG = (21, None, "spell material bag")
+    ARTIFACT_MATERIAL_BAG = (20, Color.temp, "artifact material bag")
+    SPELL_MATERIAL_BAG = (21, Color.temp, "spell material bag")
     # blue bag
-    TRICK_MATERIAL_BOX = (22, None, "trick material bag")
+    TRICK_MATERIAL_BOX = (22, Color.temp, "trick material bag")
     # gold box
-    TRAIT_MATERIAL_BOX = (23, None, "trait material bag")
+    TRAIT_MATERIAL_BOX = (23, Color.temp, "trait material bag")
     UNFILLED = (24, Color.unfilled, "unfilled")
     PASSAGEWAY_EXIT = (25, Color.teal, "passageway enter/exit")
     DEAD_END = (26, Color.tan, "dead end")
@@ -82,6 +83,7 @@ class TileType(Enum):
     SUMMONING = (29, Color.blue_mid, 'summoning brazier')
     RIDDLE_DWARF = (30, Color.safety_yellow, 'riddle_dwarf')
     PANDEMONIUM_STATUE = (31, Color.black, 'pandemonium_statue')
+    TREASURE_MAP_ITEM = (32, Color.temp, 'treasure map item')
 
     def __init__(self, num, color: Color, description: str):
         self.num = num
