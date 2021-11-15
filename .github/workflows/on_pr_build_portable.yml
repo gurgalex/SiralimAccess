@@ -34,4 +34,5 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: SiralimAccess_portable
-          path: dist/SiralimAccess
+          path: dist/Siralim Access
+          if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
