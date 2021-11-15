@@ -31,9 +31,8 @@ jobs:
         run: |
           python build_portable.py
 
-
-    - name: Build portable Siralim Access
-      uses: actions/upload-artifact@v2
-      with:
-        name: SiralimAccess_portable
-        path: dist/SiralimAccess
+      - name: Build portable Siralim Access
+        uses: actions/upload-artifact@v2
+        with:
+          name: SiralimAccess_portable
+          path: dist/SiralimAccess
