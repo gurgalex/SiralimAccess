@@ -39,6 +39,8 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Chest
 - Teleportation shrine
 - Summoning brazier
+- Pandemonium shrine
+- Riddle dwarf
 
 ## Keyboard Shortcuts
 | Action                    | Default Key |
