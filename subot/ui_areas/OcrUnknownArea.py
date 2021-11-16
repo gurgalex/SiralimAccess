@@ -150,7 +150,7 @@ class OcrUnknownArea(SpeakAuto):
                         self.quest_sprite_long_names.add(sprite.long_name)
 
                 if not quest.supported:
-                    self.audio_system.speak_blocking(f"Unsupported quest: {quest.title} {quest.description}")
+                    self.audio_system.speak_nonblocking(f"Unsupported quest: {quest.title} {quest.description}")
 
         self.current_quest_ids = new_quest_ids
 
