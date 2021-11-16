@@ -42,6 +42,7 @@ class Config:
     main_volume: int = 100
     altar: int = 100
     chest: int = 100
+    exotic_portal: int = 100
     nether_portal: int = 100
     npc_master: int = 100
     npc_generic: int = 100
@@ -83,6 +84,7 @@ class Config:
             "main_volume": self.main_volume,
             "altar": self.altar,
             "chest": self.chest,
+            "exotic_portal": self.exotic_portal,
             "nether_portal": self.nether_portal,
             "npc_master": self.npc_master,
             "npc_generic": self.npc_generic,
@@ -92,7 +94,7 @@ class Config:
             "summoning_brazier": self.summoning_brazier,
             "teleportation_shrine": self.teleportation_shrine,
             "riddle_dwarf": self.riddle_dwarf,
-            "treasure_map_item": self.treasure_map_item
+            "treasure_map_item": self.treasure_map_item,
         }
 
         ini["REALM_OBJECT_DETECTION"] = {
@@ -122,6 +124,7 @@ class Config:
         default_config.master_volume = volume.getint("main_volume", fallback=default_config.master_volume)
         default_config.altar = volume.getint("altar", fallback=default_config.altar)
         default_config.chest = volume.getint("chest", fallback=default_config.chest)
+        default_config.exotic_portal = volume.getint("exotic_portal", fallback=default_config.exotic_portal)
         default_config.nether_portal = volume.getint('nether_portal', fallback=default_config.nether_portal)
         default_config.npc_master = volume.getint('npc_master', fallback=default_config.npc_master)
         default_config.npc_generic = volume.getint("npc_generic", fallback=default_config.npc_generic)

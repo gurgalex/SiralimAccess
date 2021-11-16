@@ -1375,6 +1375,8 @@ class NearPlayerProcessing(Thread):
             return TileType.PANDEMONIUM_STATUE
         elif img_info.long_name == "netherportal":
             return TileType.NETHER_PORTAL
+        elif img_info.long_name == "portal_exotic":
+            return TileType.EXOTIC_PORTAL
         elif img_info.long_name == "summoningbrazier":
             return TileType.SUMMONING
         else:
