@@ -42,6 +42,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Summoning brazier
 - Pandemonium shrine
 - Riddle dwarf
+- Exotic Portal
 
 ## Keyboard Shortcuts
 | Action                    | Default Key |

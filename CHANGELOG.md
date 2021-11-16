@@ -1,5 +1,6 @@
 # v0.12.6
 - Add treasure map sound effect
+- Add exotic portal sound effect
 
 # v0.12.5
 ## feat
