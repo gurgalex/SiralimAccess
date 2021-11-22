@@ -1,3 +1,7 @@
+#v0.13.1
+## fix
+- crash on Perk screen
+
 # v0.13.0
 ## feat
 - All 9 new realms supported
