@@ -378,9 +378,9 @@ def detect_dialog_text(frame: NDArray, gray_frame: NDArray, ocr_engine: OCR) -> 
         # health bar text - rect(69, 87, 73, 16), rect(282, 87, 71, 16)
         # dialog box text - rect(14, 23, 75, 16)
 
-        offset_x = mask.shape[0] * 0.40
-        root.debug(f"{offset_x=}")
-        is_not_dialog_box = bbox.x > offset_x
+        exceeds_dialog_start_x_boundry = bbox.x > mask.shape[1] * 0.04
+        exceeds_dialog_start_y_boundry = bbox.y > mask.shape[0] * 0.8
+        is_not_dialog_box = exceeds_dialog_start_x_boundry or exceeds_dialog_start_y_boundry
         root.debug(f"{is_not_dialog_box=}")
         if is_not_dialog_box:
             return None
