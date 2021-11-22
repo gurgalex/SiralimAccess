@@ -226,7 +226,7 @@ class OcrUnknownArea(SpeakAuto):
         # see if any lines match a quest title
         with Session() as session:
             for line_info in text.lines:
-                line_text = line_info.merged_text
+                line_text = line_info.merged_text.strip()
                 quest_obj: Quest
                 # fast check - no changes
                 if quest_res := session.query(Quest.id).filter_by(title_first_line=line_text).first():
