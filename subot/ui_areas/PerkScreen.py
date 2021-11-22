@@ -63,7 +63,11 @@ class PerkScreen(SpeakAuto):
         if not self.auto_text_result:
             return False
 
-        return self.prev_auto_text_result.lines[0].first_word().bounding_rect.y == self.auto_text_result.lines[0].first_word().bounding_rect.y
+        # temp fix until proper check for empty results on both
+        try:
+            return self.prev_auto_text_result.lines[0].first_word().bounding_rect.y == self.auto_text_result.lines[0].first_word().bounding_rect.y
+        except IndexError:
+            return False
 
     def speak_auto(self):
         if self._should_speak_dialog():
