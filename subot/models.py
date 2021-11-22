@@ -171,19 +171,20 @@ class Realm(enum.Enum):
     UNSULLIED_MEADOWS = ('Unsullied Meadows', "Grassland", "Aeolian")
 
     # new realms
-    THE_FAE_LANDS = ('The Fae Lands', 'Fairy', 'Shallan')
-    AMALGAM_GARDENS = ('Amalgam Gardens', 'Amalgam', 'TMere Mrgo')
+    THE_FAE_LANDS = ('Fae Lands', 'Fairy', 'Shallan')
+    AMALGAM_GARDENS = ('Amalgum Gardens', 'Amalgam', 'TMere Mrgo')
     ASTRAL_GALLERY = ('Astral Gallery', "Astral", "Muse")
     DAMAREL = ('Damarel', 'Damarel', "Alexandria")
     FORBIDDEN_DEPTHS = ('Forbidden Depths', "ForbiddenDepths", "Anneltha")
     FORGOTTEN_LAB = ('Forgotten Lab', "ForgottenLab", "Robo")
     GAMBLERS_HIVE = ("Gambler's Hive", 'Beehive', "Reclusa")
-    LAND_OF_BALANCE = ('Land of Breath and Balance', "LandOfBalance", "Ariamaki")
+    LAND_OF_BALANCE = ('Land of Breath & Balance', "LandOfBalance", "Ariamaki")
     OVERGROWN_TEMPLE = ('Overgrown Temple', "OvergrownTemple", "Genaros")
 
-    _ignore_ = ['god_to_realm_mapping', 'internal_realm_name_to_god_mapping']
+    _ignore_ = ['god_to_realm_mapping', 'internal_realm_name_to_god_mapping', 'from_ingame_realm_name']
     god_to_realm_mapping: dict[str, Realm] = {}
     internal_realm_name_to_god_mapping: dict[str, Realm] = {}
+    from_ingame_realm_name: dict[str, Realm] = {}
 
     def __init__(self, realm_name: str, internal_realm_name: str, god_name: str):
         self.realm_name = realm_name
@@ -199,19 +200,11 @@ class Realm(enum.Enum):
 Realm.god_to_realm_mapping = {realm.god_name: realm for realm in Realm}
 
 Realm.internal_realm_name_to_god_mapping = {realm.internal_realm_name: realm for realm in Realm}
+Realm.from_ingame_realm_name = {realm.realm_name: realm for realm in Realm}
 
 UNSUPPORTED_REALMS = {
-                      # new realms
-                      Realm.AMALGAM_GARDENS,
-                      Realm.ASTRAL_GALLERY,
-                      Realm.DAMAREL,
-                      Realm.FORBIDDEN_DEPTHS,
-                      Realm.FORGOTTEN_LAB,
-                      Realm.GAMBLERS_HIVE,
-                      Realm.LAND_OF_BALANCE,
-                      Realm.OVERGROWN_TEMPLE,
-                      Realm.THE_FAE_LANDS
-                      }
+
+}
 
 
 class RealmLookup(Base):

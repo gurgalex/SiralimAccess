@@ -1,3 +1,12 @@
+# v0.13.0
+## feat
+- All 9 new realms supported
+- 62 new realm quests from the 9 new realms
+
+## fix
+- multi-line quests now are detected correctly
+- creature HP in-battle should no longer be misidentified as dialog text
+
 # v0.12.6
 ## feat
 - Add treasure map sound effect
