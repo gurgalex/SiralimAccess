@@ -3,6 +3,7 @@
 - The hang monitor has been replaced with a crash handler. This should work much better on low-end computers
 ## feat
 - Added an option to disable speaking any text OCR -> eanbled, set to False
+- Add realm sound for emblems on the ground
 - UI screen
   - anointment claim from false god
 

@@ -43,6 +43,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Pandemonium shrine
 - Riddle dwarf
 - Exotic Portal
+- Emblem
 
 ## Keyboard Shortcuts
 | Action                    | Default Key |

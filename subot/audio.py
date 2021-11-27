@@ -29,6 +29,7 @@ class SoundType(enum.Enum):
     _ignore_ = ["mapping"]
     ALTAR = (auto(), "altar")
     CHEST = (auto(), "chest")
+    EMBLEM = (auto(), 'emblem')
     EXOTIC_PORTAL = (auto(), 'exotic portal')
     MASTER_NPC = (auto(), "master")
     NPC_NORMAL = (auto(), "NPC")
@@ -58,6 +59,7 @@ class SoundType(enum.Enum):
 SoundType.mapping = {
     TileType.ALTAR: SoundType.ALTAR,
     TileType.CHEST: SoundType.CHEST,
+    TileType.EMBLEM: SoundType.EMBLEM,
     TileType.EXOTIC_PORTAL: SoundType.EXOTIC_PORTAL,
     TileType.QUEST: SoundType.QUEST_ITEM,
     TileType.MASTER_NPC: SoundType.MASTER_NPC,
@@ -234,6 +236,15 @@ class AudioSystem:
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("exotic-portal/low.ogg").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("exotic-portal/normal.ogg").as_posix()),
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("exotic-portal/high.ogg").as_posix()),
+                )
+            ),
+            SoundType.EMBLEM: SoundMapping(
+                channel=pygame.mixer.Channel(14),
+                volume_adj=self.config.emblem,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("emblem/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("emblem/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("emblem/high.wav").as_posix()),
                 )
             ),
 
