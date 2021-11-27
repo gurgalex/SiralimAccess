@@ -36,7 +36,7 @@ from subot.ui_areas.creatures_display import OCRCreaturesDisplaySystem
 from subot.ui_areas.realm_select import OCRRealmSelect, SelectStep
 from subot.ui_areas.summoning import OcrSummoningSystem
 from subot.trait_info import TraitData
-from subot.hang_monitor import HangMonitorWorker, HangMonitorChan, HangAnnotation, HangMonitorAlert, Shutdown
+
 
 import cv2
 import numpy as np
@@ -293,12 +293,7 @@ class Bot:
         self.player_direction: Optional[GameControl] = None
         self.realm: Optional[Realm] = None
 
-        self.hang_alert_queue = multiprocessing.Queue()
-        self.hang_control_send = multiprocessing.Queue()
-        self.hang_monitor_controller = HangMonitorWorker(daemon=True,
-                                                         hang_notify_queue=self.hang_alert_queue,
-                                                         control_port=self.hang_control_send)
-        self.hang_monitor_controller.start()
+        self.crash_notifier: queue.Queue[Optional[str]] = multiprocessing.Queue()
 
         self.current_quests: set[int] = set()
         self.timer = None
@@ -400,7 +395,7 @@ class Bot:
         self.nearby_process = NearbyFrameGrabber(name=NearbyFrameGrabber.__name__,
                                                  nearby_area=self.nearby_mon, nearby_queue=self.rx_color_nearby_queue,
                                                  rx_parent=self.tx_nearby_process_queue,
-                                                 hang_notifier=self.hang_alert_queue)
+                                                 hang_notifier=self.crash_notifier)
         root.debug(f"{self.nearby_process=}")
         self.nearby_process.start()
 
@@ -409,7 +404,6 @@ class Bot:
                                                               nearby_frame_queue=self.rx_color_nearby_queue,
                                                               nearby_comm_deque=self.nearby_send_deque,
                                                               parent=self, stop_event=self.stop_event,
-                                                              hang_monitor=self.hang_monitor_controller,
                                                               )
         self.nearby_processing_thandle.start()
 
@@ -418,7 +412,7 @@ class Bot:
                                                               out_quests=self.out_quests,
                                                               screenshot_area=self.mon_full_window,
                                                               rx_queue=self.tx_window_queue,
-                                                              hang_notifier=self.hang_alert_queue,
+                                                              hang_notifier=self.crash_notifier,
                                                               config=self.config,
                                                               )
         print(f"{self.window_framegrabber_phandle=}")
@@ -432,7 +426,6 @@ class Bot:
                                                                             h=self.mon_full_window["height"]),
                                                         parent=self,
                                                         stop_event=self.stop_event,
-                                                        hang_monitor=self.hang_monitor_controller,
                                                         config=self.config,
                                                         daemon=True
                                                         )
@@ -523,7 +516,6 @@ class Bot:
         self.window_framegrabber_phandle.terminate()
         self.nearby_process.terminate()
         self.stop_event.set()
-        self.hang_control_send.put(Shutdown())
         root.info("both should be shut down")
         self.audio_system.speak_blocking("Exitting Siralim Access")
         pygame.display.quit()
@@ -717,9 +709,9 @@ class Bot:
 
             # check for incoming hang messages
             try:
-                msg = self.hang_alert_queue.get_nowait()
+                msg = self.crash_notifier.get_nowait()
                 root.warning(f"got hang alert msg = {msg=}")
-                self.audio_system.speak_blocking("Bot has stopped responding. Shutting down")
+                self.audio_system.speak_blocking(f"Bot has stopped responding. {msg} Shutting down")
                 self.stop()
                 sys.exit(1)
 
@@ -834,7 +826,7 @@ FrameType = Union[ArrayLike, Minimized]
 
 class WholeWindowGrabber(multiprocessing.Process):
     def __init__(self, out_quests: Queue, outgoing_color_frame_queue: multiprocessing.Queue, screenshot_area: dict,
-                 rx_queue: multiprocessing.Queue, hang_notifier: queue.Queue[HangMonitorAlert],
+                 rx_queue: multiprocessing.Queue, hang_notifier: queue.Queue[Optional[str]],
                  config: settings.Config,
                  **kwargs):
         super().__init__(**kwargs)
@@ -843,16 +835,10 @@ class WholeWindowGrabber(multiprocessing.Process):
         self.out_quests: Queue = out_quests
         self.screenshot_area: dict = screenshot_area
         self.rx_parent_queue = rx_queue
-        self.hang_monitor: Optional[HangMonitorWorker] = None
         self.hang_notifier = hang_notifier
-        self.hang_control: Optional[queue.Queue] = None
-        self.activity_notify: Optional[HangMonitorChan] = None
         self.paused: bool = False
 
     def run(self):
-        self.hang_control = queue.Queue()
-        self.hang_monitor = HangMonitorWorker(self.hang_notifier, control_port=self.hang_control)
-        self.activity_notify = self.hang_monitor.register_component(threading.current_thread(), 3.0)
 
         try:
             should_stop = False
@@ -871,7 +857,6 @@ class WholeWindowGrabber(multiprocessing.Process):
                         elif isinstance(msg, Pause):
                             root.debug("Pausing capture of whole window frames")
                             self.paused = True
-                            self.activity_notify.notify_wait()
                         elif isinstance(msg, Resume):
                             root.debug("Resuming capture of whole window frames")
                             self.paused = False
@@ -888,7 +873,6 @@ class WholeWindowGrabber(multiprocessing.Process):
                         continue
 
                     try:
-                        self.activity_notify.notify_activity(HangAnnotation({"data": ""}))
 
                         # Performance: copying overhead is not an issue for needing a frame at 1-2 FPS
                         frame_np: ArrayLike = np.asarray(sct.grab(self.screenshot_area))
@@ -903,6 +887,11 @@ class WholeWindowGrabber(multiprocessing.Process):
                         continue
         except KeyboardInterrupt:
             self.color_frame_queue.put(None, timeout=10)
+        except Exception as e:
+            root.exception(e)
+            self.hang_notifier.put(str(e))
+            raise e
+
 
 def _realm_select_step(title: str) -> Optional[SelectStep]:
     if title.startswith("Choose a Realm Depth"):
@@ -916,7 +905,7 @@ def _realm_select_step(title: str) -> Optional[SelectStep]:
 
 class WholeWindowAnalyzer(Thread):
     def __init__(self, incoming_frame_queue: Queue, queue_child_comm_send: queue.Queue, out_quests_queue: Queue,
-                 su_client_rect: Rect, parent: Bot, stop_event: threading.Event, hang_monitor: HangMonitorWorker,
+                 su_client_rect: Rect, parent: Bot, stop_event: threading.Event,
                  config: settings.Config, **kwargs) -> None:
         super().__init__(**kwargs)
         self.creature_data = TraitData()
@@ -934,8 +923,6 @@ class WholeWindowAnalyzer(Thread):
         self.queue_parent_comm_recv = queue_child_comm_send
         self.out_quests_sprites_queue: Queue = out_quests_queue
         self.stop_event = stop_event
-        self._hang_monitor = hang_monitor
-        self.hang_activity_sender: Optional[HangMonitorChan] = None
 
         self.frame: np.typing.NDArray = np.zeros(
             shape=(self.parent.su_client_rect.h, self.parent.su_client_rect.w, 3), dtype="uint8")
@@ -1064,66 +1051,66 @@ class WholeWindowAnalyzer(Thread):
             self.parent.quest_sprite_long_names = self.ocr_ui_system.get_quest_items()
 
     def run(self):
-        self.hang_activity_sender = self._hang_monitor.register_component(thread_handle=self, hang_timeout_seconds=10)
-        while not self.stop_event.is_set():
+        try:
+            while not self.stop_event.is_set():
 
-            try:
-                comm_msg = self.queue_parent_comm_recv.get_nowait()
-                if isinstance(comm_msg, Pause):
-                    self.paused = True
-                    self.hang_activity_sender.notify_wait()
-                    root.info("pause. Pause request")
-                    self.parent.tx_window_queue.put(Pause())
-                    clear_queue(self.incoming_frame_queue)
-                    continue
+                try:
+                    comm_msg = self.queue_parent_comm_recv.get_nowait()
+                    if isinstance(comm_msg, Pause):
+                        self.paused = True
+                        root.info("pause. Pause request")
+                        self.parent.tx_window_queue.put(Pause())
+                        clear_queue(self.incoming_frame_queue)
+                        continue
 
-                elif isinstance(comm_msg, Resume):
-                    self.paused = False
-                    self.parent.tx_window_queue.put(Resume())
-            except queue.Empty:
-                pass
+                    elif isinstance(comm_msg, Resume):
+                        self.paused = False
+                        self.parent.tx_window_queue.put(Resume())
+                except queue.Empty:
+                    pass
 
-            if self.paused:
-                sleep_duration = 1 / self.config.whole_window_scanning_frequency
-                time.sleep(sleep_duration)
-                root.debug(f"main analyzer sleeping for {sleep_duration} seconds")
-                continue
-
-            if self.got_first_frame:
-                timeout = 5
-            else:
-                timeout = 30
-            try:
-                msg = self.incoming_frame_queue.get(timeout=timeout)
-                self.hang_activity_sender.notify_activity(HangAnnotation(data={"data": "window analyze"}))
-                if msg is None:
-                    break
-                if isinstance(msg, Minimized):
-                    self.paused = True
-                    continue
-
-                shot = msg
-            except queue.Empty:
-                # is it empty because stuff is shut down?
-                if self.stop_event.is_set():
-                    return
                 if self.paused:
-                    self.hang_activity_sender.notify_wait()
+                    sleep_duration = 1 / self.config.whole_window_scanning_frequency
+                    time.sleep(sleep_duration)
+                    root.debug(f"main analyzer sleeping for {sleep_duration} seconds")
                     continue
 
-                # something is wrong
-                raise Exception(f"No new full frame for {timeout} seconds")
-            if shot is None:
-                break
+                if self.got_first_frame:
+                    timeout = 5
+                else:
+                    timeout = 30
+                try:
+                    msg = self.incoming_frame_queue.get(timeout=timeout)
+                    if msg is None:
+                        break
+                    if isinstance(msg, Minimized):
+                        self.paused = True
+                        continue
 
-            self.frame = np.asarray(shot)[:, :, :3]
-            cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
-            self.frames_since_last_scan += 1
-            self.got_first_frame = True
+                    shot = msg
+                except queue.Empty:
+                    # is it empty because stuff is shut down?
+                    if self.stop_event.is_set():
+                        return
+                    if self.paused:
+                        continue
 
-            self.ocr_screen()
-            continue
+                    # something is wrong
+                    raise Exception(f"No new full frame for {timeout} seconds")
+                if shot is None:
+                    break
 
+                self.frame = np.asarray(shot)[:, :, :3]
+                cv2.cvtColor(self.frame, cv2.COLOR_BGRA2GRAY, dst=self.gray_frame)
+                self.frames_since_last_scan += 1
+                self.got_first_frame = True
+
+                self.ocr_screen()
+                continue
+        except Exception as e:
+            root.exception(e)
+            self.parent.crash_notifier.put(str(e))
+            raise e
         root.info("WindowAnalyzer thread shutting down")
 
     def speak_all_info(self):
@@ -1147,17 +1134,14 @@ class WholeWindowAnalyzer(Thread):
 
 class NearbyFrameGrabber(multiprocessing.Process):
     def __init__(self, nearby_queue: multiprocessing.Queue, rx_parent: multiprocessing.Queue,
-                 hang_notifier: queue.Queue[HangMonitorAlert],
+                 hang_notifier: queue.Queue[Optional[str]],
                  nearby_area: dict = None,
                  **kwargs):
         super().__init__(**kwargs)
         self.color_nearby_queue: multiprocessing.Queue = nearby_queue
         self.nearby_area = nearby_area
         self.rx_parent = rx_parent
-        self.hang_monitor: Optional[HangMonitorWorker] = None
         self.hang_notifier = hang_notifier
-        self.hang_control: Optional[queue.Queue] = None
-        self.activity_notify: Optional[HangMonitorChan] = None
         self.paused: bool = False
 
     def run(self):
@@ -1165,9 +1149,6 @@ class NearbyFrameGrabber(multiprocessing.Process):
         :param color_nearby_queue Queue used to send recent nearby screenshot to processing code
         :param nearby_rect dict used in mss.grab. keys `top`, `left`, `width`, `height`
         """
-        self.hang_control = queue.Queue()
-        self.hang_monitor = HangMonitorWorker(self.hang_notifier, control_port=self.hang_control)
-        self.activity_notify = self.hang_monitor.register_component(threading.current_thread(), 3.0)
 
         TARGET_MS = 1 / settings.FPS
 
@@ -1222,6 +1203,10 @@ class NearbyFrameGrabber(multiprocessing.Process):
                     continue
         except KeyboardInterrupt:
             self.color_nearby_queue.put(None)
+        except Exception as e:
+            root.exception(e)
+            self.hang_notifier.put(str(e))
+            raise e
 
 
 @dataclass()
@@ -1237,12 +1222,10 @@ class CastleAlignment:
 
 class NearPlayerProcessing(Thread):
     def __init__(self, nearby_frame_queue: multiprocessing.Queue, nearby_comm_deque: queue.Queue, parent: Bot,
-                 stop_event: threading.Event, hang_monitor: HangMonitorWorker, **kwargs):
+                 stop_event: threading.Event, **kwargs):
         super().__init__(**kwargs)
 
         self.map = Map(arr=np.zeros((NEARBY_TILES_WH, NEARBY_TILES_WH), dtype='object'))
-        self._hang_monitor: HangMonitorWorker = hang_monitor
-        self.hang_activity_sender: Optional[HangMonitorChan] = None
 
         self.parent = parent
         # used for multiprocess communication
@@ -1480,7 +1463,6 @@ class NearPlayerProcessing(Thread):
 
                 self.parent.item_hashes = RealmSpriteHasher(floor_tiles=None)
                 start = time.time()
-                self.hang_activity_sender.notify_activity(HangAnnotation({"data": "get new phashes"}))
                 self.parent.cache_image_hashes_of_decorations()
                 end = time.time()
                 print(
@@ -1518,65 +1500,67 @@ class NearPlayerProcessing(Thread):
         root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
 
     def run(self):
-        self.hang_activity_sender = self._hang_monitor.register_component(self, hang_timeout_seconds=10.0)
         if settings.VIEWER:
             debug_window = cv2.namedWindow("Siralim Access", cv2.WINDOW_KEEPRATIO)
 
-        while not self.stop_event.is_set():
+        try:
+            while not self.stop_event.is_set():
 
-            try:
-                # we don't block since we must be ready for new incoming frames ^^
-                comm_msg: MessageImpl = self.nearby_comm_deque.get_nowait()
+                try:
+                    # we don't block since we must be ready for new incoming frames ^^
+                    comm_msg: MessageImpl = self.nearby_comm_deque.get_nowait()
 
-                if isinstance(comm_msg, ScanForItems):
-                    self.handle_scan_for_item()
-                elif isinstance(comm_msg, Pause):
-                    self.paused = True
-                    self.parent.tx_nearby_process_queue.put(Pause())
-                    self.hang_activity_sender.notify_wait()
-                    self.parent.clear_all_matches()
-                    self.parent.speak_nearby_objects()
-                    clear_queue(self.nearby_queue)
-                    root.debug("paused nearby analysis")
+                    if isinstance(comm_msg, ScanForItems):
+                        self.handle_scan_for_item()
+                    elif isinstance(comm_msg, Pause):
+                        self.paused = True
+                        self.parent.tx_nearby_process_queue.put(Pause())
+                        self.parent.clear_all_matches()
+                        self.parent.speak_nearby_objects()
+                        clear_queue(self.nearby_queue)
+                        root.debug("paused nearby analysis")
 
-                elif isinstance(comm_msg, Resume):
-                    self.paused = False
-                    self.parent.tx_nearby_process_queue.put(Resume())
-                    root.debug("resuming nearby")
+                    elif isinstance(comm_msg, Resume):
+                        self.paused = False
+                        self.parent.tx_nearby_process_queue.put(Resume())
+                        root.debug("resuming nearby")
 
-                if settings.VIEWER:
-                    cv2.imshow("Siralim Access", self.map.img)
-                    if cv2.waitKey(1) & 0xFF == ord("q"):
-                        cv2.destroyAllWindows()
-                        break
-            except queue.Empty:
-                pass
+                    if settings.VIEWER:
+                        cv2.imshow("Siralim Access", self.map.img)
+                        if cv2.waitKey(1) & 0xFF == ord("q"):
+                            cv2.destroyAllWindows()
+                            break
+                except queue.Empty:
+                    pass
 
-            if self.paused:
-                root.debug("sleeping nearby analyzer due to being paused")
-                time.sleep(1 / settings.FPS)
-                continue
+                if self.paused:
+                    root.debug("sleeping nearby analyzer due to being paused")
+                    time.sleep(1 / settings.FPS)
+                    continue
 
-            if self.got_first_frame:
-                timeout = 5
-            else:
-                timeout = 30
-            try:
-                msg: MessageImpl = self.nearby_queue.get(timeout=timeout)
-            except queue.Empty:
-                empty_text = f"No nearby frame for {timeout} seconds"
-                root.warning(empty_text)
-                raise Exception(empty_text)
+                if self.got_first_frame:
+                    timeout = 5
+                else:
+                    timeout = 30
+                try:
+                    msg: MessageImpl = self.nearby_queue.get(timeout=timeout)
+                except queue.Empty:
+                    empty_text = f"No nearby frame for {timeout} seconds"
+                    root.warning(empty_text)
+                    raise Exception(empty_text)
 
-            self.hang_activity_sender.notify_activity(HangAnnotation({"event": "near_frame_processing"}))
-            if msg is None:
-                return
-            start = time.time()
-            if isinstance(msg, NewFrame):
-                self.handle_new_frame(msg)
-            end = time.time()
-            latency = end - start
-            root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
+                if msg is None:
+                    return
+                start = time.time()
+                if isinstance(msg, NewFrame):
+                    self.handle_new_frame(msg)
+                end = time.time()
+                latency = end - start
+                root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
+        except Exception as e:
+            root.exception(e)
+            self.parent.crash_notifier.put(str(e))
+            raise e
         root.info(f"{self.name} is shutting down")
 
 
