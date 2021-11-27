@@ -52,6 +52,8 @@ class OcrUnknownArea(SpeakAuto):
             root.debug(f"quest scanning took {math.ceil(total * 1000)}ms")
             self.last_quest_scan = time.time()
 
+        if not self.program_config.ocr_enabled:
+            return
         self.ocr_dialog_box(parent.frame, parent.gray_frame)
         self.ocr_selected_menu_item(parent.frame)
 
@@ -130,7 +132,8 @@ class OcrUnknownArea(SpeakAuto):
 
         root.debug(f"{self.quest_text=}")
         if self.quest_text:
-            self.audio_system.speak_nonblocking(self.quest_text)
+            if self.program_config.ocr_enabled:
+                self.audio_system.speak_nonblocking(self.quest_text)
 
         self.quest_sprite_long_names.clear()
         with Session() as session:

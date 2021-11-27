@@ -31,8 +31,8 @@ class Config:
     update_popup_browser: bool = True
     open_config_key: str = "C"
 
-    ocr_selected_menu_item: bool = True
-    ocr_read_dialog_boxes: bool = True
+    # OCR
+    ocr_enabled: bool = True
     read_secondary_key: str = "o"
     read_all_info_key: str = "v"
     copy_all_info_key: str = "c"
@@ -73,7 +73,7 @@ class Config:
         }
 
         ini["OCR"] = {
-            "read_selected_menu": self.ocr_selected_menu_item,
+            "enabled": self.ocr_enabled,
             "read_secondary_key": self.read_secondary_key,
             "read_all_info_key": self.read_all_info_key,
             "copy_all_info_key": self.copy_all_info_key,
@@ -137,8 +137,7 @@ class Config:
         default_config.riddle_dwarf = volume.getint('riddle_dwarf', fallback=default_config.riddle_dwarf)
 
         ocr = ini["OCR"]
-        default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)
-        default_config.ocr_read_dialog_boxes = ocr.getboolean('read_dialog_boxes', fallback=default_config.read_secondary_key)
+        default_config.ocr_enabled = ocr.getboolean("enabled", fallback=default_config.ocr_enabled)
         default_config.read_secondary_key = ocr.get('read_secondary_key', fallback=default_config.read_secondary_key)
         default_config.read_all_info_key = ocr.get("read_all_info_key", fallback=default_config.read_all_info_key)
         default_config.copy_all_info_key = ocr.get("copy_all_info_key", fallback=default_config.copy_all_info_key)

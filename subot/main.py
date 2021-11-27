@@ -1009,6 +1009,9 @@ class WholeWindowAnalyzer(Thread):
         return unknown_system
 
     def ocr_title(self):
+        if not self.config.ocr_enabled:
+            return
+
         mask = detect_title(self.frame)
         resize_factor = 2
         mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor),
@@ -1028,6 +1031,9 @@ class WholeWindowAnalyzer(Thread):
         self.ocr_mode = self.ocr_ui_system.mode
 
     def speak_interaction_info(self):
+        if not self.config.ocr_enabled:
+            return
+
         if not self.ocr_ui_system:
             return
         try:
@@ -1036,6 +1042,9 @@ class WholeWindowAnalyzer(Thread):
             pass
 
     def speak_help(self):
+        if not self.config.ocr_enabled:
+            return
+
         if not self.ocr_ui_system:
             return
         try:

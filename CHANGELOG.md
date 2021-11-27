@@ -1,3 +1,9 @@
+#v0.13.2
+## fix
+- The hang monitor has been replaced with a crash handler. This should work much better on low-end computers
+## feat
+- Added an option to disable speaking any text OCR -> eanbled, set to False
+
 #v0.13.1
 ## fix
 - crash on Perk screen
