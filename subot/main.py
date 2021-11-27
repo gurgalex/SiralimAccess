@@ -27,6 +27,7 @@ import win32process
 from winrt.windows.media.ocr import OcrResult
 
 from subot import models, ocr
+from subot.ui_areas.AnointmentClaimUI import AnointmentClaimUI
 from subot.ui_areas.CodexGeneric import CodexGeneric
 from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
 from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
@@ -1003,6 +1004,8 @@ class WholeWindowAnalyzer(Thread):
                 print("art screen")
             elif lower_title.startswith("nether stones ("):
                 print("nether stone item screen")
+            elif lower_title.startswith("choose an anointment to claim"):
+                return AnointmentClaimUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
 
         except IndexError:
             return unknown_system

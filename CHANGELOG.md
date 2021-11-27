@@ -3,6 +3,8 @@
 - The hang monitor has been replaced with a crash handler. This should work much better on low-end computers
 ## feat
 - Added an option to disable speaking any text OCR -> eanbled, set to False
+- UI screen
+  - anointment claim from false god
 
 #v0.13.1
 ## fix
