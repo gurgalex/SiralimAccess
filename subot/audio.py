@@ -43,6 +43,7 @@ class SoundType(enum.Enum):
     SUMMONING = (auto(), 'summoning brazier')
     TELEPORTATION_SHRINE = (auto(), "teleportation shrine")
     TREASURE_MAP_ITEM = (auto(), 'treasure map item')
+    WARDROBE = (auto(), 'wardrobe')
 
     mapping: dict[TileType, SoundType] = {}
 
@@ -71,6 +72,7 @@ SoundType.mapping = {
     TileType.RIDDLE_DWARF: SoundType.RIDDLE_DWARF,
     TileType.PANDEMONIUM_STATUE: SoundType.PANDEMONIUM_STATUE,
     TileType.TREASURE_MAP_ITEM: SoundType.TREASURE_MAP_ITEM,
+    TileType.WARDROBE: SoundType.WARDROBE
 }
 
 
@@ -114,7 +116,7 @@ class AudioSystem:
     def __init__(self, config: Config):
         self.config = config
         self.silenced: bool = False
-        pygame.mixer.set_num_channels(16)
+        pygame.mixer.set_num_channels(32)
         self.sound_mappings: dict[SoundType, SoundMapping] = {
             SoundType.ALTAR: SoundMapping(
                 channel=pygame.mixer.Channel(2),
@@ -245,6 +247,15 @@ class AudioSystem:
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("emblem/low.wav").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("emblem/normal.wav").as_posix()),
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("emblem/high.wav").as_posix()),
+                )
+            ),
+            SoundType.WARDROBE: SoundMapping(
+                channel=pygame.mixer.Channel(16),
+                volume_adj=self.config.wardrobe,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("wardrobe/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("wardrobe/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("wardrobe/high.wav").as_posix()),
                 )
             ),
 

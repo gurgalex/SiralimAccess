@@ -85,6 +85,7 @@ class TileType(Enum):
     PANDEMONIUM_STATUE = (31, Color.black, 'pandemonium_statue')
     TREASURE_MAP_ITEM = (32, Color.temp, 'treasure map item')
     EXOTIC_PORTAL = (33, Color.temp, 'exotic portal')
+    WARDROBE = (34, Color.peachpuff, 'wardrobe')
 
     def __init__(self, num, color: Color, description: str):
         self.num = num

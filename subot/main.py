@@ -1366,6 +1366,8 @@ class NearPlayerProcessing(Thread):
             return TileType.CHEST
         elif img_info.long_name == "emblem":
             return TileType.EMBLEM
+        elif img_info.long_name == "vital_wardrobe":
+            return TileType.WARDROBE
         elif img_info.long_name in self.parent.treasure_map_item_names:
             return TileType.TREASURE_MAP_ITEM
         elif img_info.long_name == "demonicstatue":

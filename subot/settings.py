@@ -54,6 +54,7 @@ class Config:
     summoning_brazier: int = 100
     riddle_dwarf: int = 100
     treasure_map_item: int = 100
+    wardrobe: int = 100
 
     detect_objects_through_walls: bool = True
 
@@ -97,6 +98,7 @@ class Config:
             "teleportation_shrine": self.teleportation_shrine,
             "riddle_dwarf": self.riddle_dwarf,
             "treasure_map_item": self.treasure_map_item,
+            "wardrobe": self.wardrobe,
         }
 
         ini["REALM_OBJECT_DETECTION"] = {
@@ -138,6 +140,8 @@ class Config:
         default_config.treasure_map_item = volume.getint("treasure_map_item", fallback=default_config.treasure_map_item)
         default_config.summoning_brazier = volume.getint('summoning_brazier', fallback=default_config.summoning_brazier)
         default_config.riddle_dwarf = volume.getint('riddle_dwarf', fallback=default_config.riddle_dwarf)
+        default_config.wardrobe = volume.getint('wardrobe', fallback=default_config.wardrobe)
+
 
         ocr = ini["OCR"]
         default_config.ocr_enabled = ocr.getboolean("enabled", fallback=default_config.ocr_enabled)
