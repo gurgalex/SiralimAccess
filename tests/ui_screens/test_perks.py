@@ -1,33 +1,10 @@
-import pprint
-from dataclasses import dataclass
 from importlib import resources
 
 from subot.settings import Config
 from subot.ui_areas.PerkScreen import PerkScreen
 import cv2
-from numpy.typing import NDArray
 from subot.ocr import OCR
-
-
-class AudioSystemTest:
-    def __init__(self):
-        self.texts: list[str] = []
-        self.silence_count: int = 0
-
-    def speak_nonblocking(self, text: str):
-        self.texts.append(text)
-
-    def speak_blocking(self, text: str):
-        self.texts.append(text)
-
-    def silence(self):
-        self.silence_count += 1
-
-
-@dataclass
-class FrameHolderTest:
-    frame: NDArray
-    gray_frame: NDArray
+from tests.ui_screens.utils import AudioSystemTest, FrameHolderTest
 
 
 def test_perk_ui():

@@ -20,6 +20,7 @@ class OCRMode(Enum):
     GENERIC_SIDE_MENU_50 = auto()
     """Screen shown to select realm dept and realm to denter"""
     REALM_SELECT = auto()
+    ANOINTMENT_CLAIM = auto()
 
 
 class FrameInfo(Protocol):

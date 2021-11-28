@@ -26,6 +26,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
   - Reorder creature screen
   - GodForge avatar select
   - Teleportation Shrine realm select
+  - Wardrobe in castle
 
 ## Item sounds
 [video of sounds playing](https://youtu.be/2vVCJtCocbA)
@@ -37,12 +38,19 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Nether portal and portal exits
 - Creature Master
 - Chest
+- Divination Candle
 - Teleportation shrine
 - Treasure Map
 - Summoning brazier
 - Pandemonium shrine
 - Riddle dwarf
 - Exotic Portal
+- Emblem
+- Castle
+- - Wardrobe
+- - Blacksmith
+- - Enchanter
+- - Everett
 
 ## Keyboard Shortcuts
 | Action                    | Default Key |
