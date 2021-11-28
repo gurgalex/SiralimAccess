@@ -1,4 +1,4 @@
-#v0.13.2
+# v0.14.0
 ## fix
 - The hang monitor has been replaced with a crash handler. This should work much better on low-end computers
 ## feat
@@ -14,7 +14,7 @@
 - UI screen
   - anointment claim from false god
 
-#v0.13.1
+# v0.13.1
 ## fix
 - crash on Perk screen
 
