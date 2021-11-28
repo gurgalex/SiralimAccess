@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from sqlalchemy.exc import NoResultFound
+
 import subot
 from subot.models import Quest, QuestType, QuestSprite, Sprite, Realm, RealmLookup, SpriteType, \
     SpriteFrame, SpriteTypeLookup, FloorSprite
@@ -56,6 +58,20 @@ def add_quest(title: str, sprites_long_name: str, quest_type: Optional[str], spe
         session.add(quest)
         session.commit()
         click.echo(f"Saved Quest: {title}\n")
+
+
+def update_quest_desc(title: str, description: str):
+    with Session() as session:
+        try:
+            quest = session.query(Quest).filter_by(title=title).one()
+        except NoResultFound:
+            print(f"no quest title for: {title}")
+            return
+
+        quest.description = description
+        session.add(quest)
+        session.commit()
+
 
 @click.command()
 @click.argument("long-name", required=True)

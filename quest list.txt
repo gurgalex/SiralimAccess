@@ -1,0 +1,4212 @@
+function scr_DatabaseQuests() {
+	var qid;
+	qid = 0;
+	global.quest[qid, QUEST_NAME] = "Natural Born Killer";
+	global.quest[qid, QUEST_DESC] = "Defeat enemies in this Realm to ensure the safety of " + global.castlename + "'s people.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Enemies Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 1;
+	global.quest[qid, QUEST_NAME] = "Need a Penny, Take a Penny";
+	global.quest[qid, QUEST_DESC] = "Collect coins in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Coins Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 2;
+	global.quest[qid, QUEST_NAME] = "The Robes Off Their Backs";
+	global.quest[qid, QUEST_DESC] = "Collect robes in this Realm to clothe " + global.castlename + "'s apprentice magi.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Robes Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 3;
+	global.quest[qid, QUEST_NAME] = "Pelted With Gifts";
+	global.quest[qid, QUEST_DESC] = "Collect pelts in this Realm to clothe " + global.castlename + "'s citizens.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Pelts Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 4;
+	global.quest[qid, QUEST_NAME] = "Call to Arms";
+	global.quest[qid, QUEST_DESC] = "Recruit knights from this Realm to guard " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Knights Recruited";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 5;
+	global.quest[qid, QUEST_NAME] = "Citizens of a Growing Empire";
+	global.quest[qid, QUEST_DESC] = "Recruit citizens from this Realm to populate " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Citizens Recruited";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 6;
+	global.quest[qid, QUEST_NAME] = "Quality Construction";
+	global.quest[qid, QUEST_DESC] = "Collect building materials in this Realm to expand " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Materials Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 7;
+	global.quest[qid, QUEST_NAME] = "Armaments for War";
+	global.quest[qid, QUEST_DESC] = "Collect weapons and armor in this Realm to equip " + global.castlename + "'s knights.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Weapons/Armor Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 8;
+	global.quest[qid, QUEST_NAME] = "Conquest for Cores";
+	global.quest[qid, QUEST_DESC] = "Collect wayward Cores in this Realm to give " + global.castlename + "'s magi access to new creatures.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Wayward Cores Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 9;
+	global.quest[qid, QUEST_NAME] = "Ancient Studies";
+	global.quest[qid, QUEST_DESC] = "Study inscribed slates to expand " + global.castlename + "'s library.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Slates Studied";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 10;
+	global.quest[qid, QUEST_NAME] = "Light the Darkness";
+	global.quest[qid, QUEST_DESC] = "Light the Piety Candle in this Realm to appease " + scr_GodName(scr_BiomeGod(global.biome), true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = -1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 11;
+	global.quest[qid, QUEST_NAME] = "A Favor For No One In Particular";
+	global.quest[qid, QUEST_DESC] = "Light the campfires in this Realm to highlight landmarks for other travelers.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Campfires Lit";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 12;
+	global.quest[qid, QUEST_NAME] = "Digging For Treasure Buried";
+	global.quest[qid, QUEST_DESC] = "Find a treasure map in this Realm and use it to uncover buried treasure.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Treasure Discovered";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 13;
+	global.quest[qid, QUEST_NAME] = "Nortah's Burden";
+	global.quest[qid, QUEST_DESC] = "Subdue " + global.castlename + "'s runaway creatures in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Creatures Subdued";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 14;
+	global.quest[qid, QUEST_NAME] = "Twinkling Titanite";
+	global.quest[qid, QUEST_DESC] = "Find chunks of deified essence in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Essences Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 15;
+	global.quest[qid, QUEST_NAME] = "Awaken, Abomination";
+	global.quest[qid, QUEST_DESC] = "Collect components from this Realm to summon a powerful enemy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Components Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 16;
+	global.quest[qid, QUEST_NAME] = "Nether Guardians";
+	global.quest[qid, QUEST_DESC] = "Defeat the Nether Guardians in this realm to summon a Nether Boss.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Guardians Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	item = scr_GetRandomItemName();
+	qid = 17;
+	global.quest[qid, QUEST_NAME] = "Generic Fetch Quest";
+	global.quest[qid, QUEST_DESC] = "Find " + item + " in this Realm by defeating enemy creatures.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = item + " Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	item = scr_GetRandomItemName();
+	qid = 18;
+	global.quest[qid, QUEST_NAME] = "Generic Fetch Quest";
+	global.quest[qid, QUEST_DESC] = "Find " + item + " inside breakable objects in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = item + " Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	name = rng_GenerateRandomName();
+	qid = 19;
+	global.quest[qid, QUEST_NAME] = "Lost, But Not Forgotten";
+	global.quest[qid, QUEST_DESC] = "Find and rescue " + global.castlename + " citizen " + name + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = name + " Rescued";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 20;
+	global.quest[qid, QUEST_NAME] = "The Defiled Trove";
+	global.quest[qid, QUEST_DESC] = "Cleanse the cursed treasure chest in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Chest Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// SORCERY REALM ONLY 
+	qid = 21;
+	global.quest[qid, QUEST_NAME] = "Forgotten Tomes";
+	global.quest[qid, QUEST_DESC] = "Obtain intact tomes from the bookshelves in this Realm to bolster " + global.castlename + "'s library.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Tomes Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 22;
+	global.quest[qid, QUEST_NAME] = "Stocking Up";
+	global.quest[qid, QUEST_DESC] = "Obtain potions from this Realm to bolster " + global.castlename + "'s emergency stockpile.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Potions Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 23;
+	global.quest[qid, QUEST_NAME] = "Simple Recon";
+	global.quest[qid, QUEST_DESC] = "Find telescopes in this Realm to aid " + global.castlename + "'s scouts in their missions.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Telescopes Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 24; // dungeon 
+	global.quest[qid, QUEST_NAME] = "The Pot Lid";
+	global.quest[qid, QUEST_DESC] = "Find artifact fragments in this Realm to create a new Artifact.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Fragments Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 25;
+	global.quest[qid, QUEST_NAME] = "A Shattered Soul";
+	global.quest[qid, QUEST_DESC] = "Find gem fragments in this Realm to create a new Spell Gem.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Fragments Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 26;
+	global.quest[qid, QUEST_NAME] = "A Bit of This, A Bit of That";
+	global.quest[qid, QUEST_DESC] = "Conduct experiments using the alchemy stations scattered around this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Experiments Completed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// SNOW REALM ONLY 
+	qid = 27;
+	global.quest[qid, QUEST_NAME] = "Covering Your Tracks";
+	global.quest[qid, QUEST_DESC] = "Snuff out the campfires in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Campfires Snuffed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 29;
+	global.quest[qid, QUEST_NAME] = "Ensuring Survival";
+	global.quest[qid, QUEST_DESC] = "Collect firewood and give them to the explorers that live in igloos in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Firewood Donated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 30;
+	global.quest[qid, QUEST_NAME] = "In Loving Memory";
+	global.quest[qid, QUEST_DESC] = "Pay your respects to fallen " + global.castlename + " knights and magi in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Graves Visited";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 32;
+	global.quest[qid, QUEST_NAME] = "Gifts For Azural";
+	global.quest[qid, QUEST_DESC] = "Collect Ice Diamonds in this Realm to appease " + scr_GodName(GOD_WINTER, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Ice Diamonds";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 33;
+	global.quest[qid, QUEST_NAME] = "Crystal Mining";
+	global.quest[qid, QUEST_DESC] = "Collect Crystal nodes found in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Crystal Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// NATURE REALM ONLY 
+	qid = 34;
+	global.quest[qid, QUEST_NAME] = "Experimental Harvest";
+	global.quest[qid, QUEST_DESC] = "Pick the berries in this Realm to help " + global.castlename + "'s researchers learn more about this environment.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Berries Picked";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 35;
+	global.quest[qid, QUEST_NAME] = "Green is Good";
+	global.quest[qid, QUEST_DESC] = "Pick the large green mushrooms in this Realm to help " + global.castlename + "'s researchers learn more about this environment.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Mushrooms Picked";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 36;
+	global.quest[qid, QUEST_NAME] = "Spectrum Sampler";
+	global.quest[qid, QUEST_DESC] = "Pick the small, colorful mushrooms in this Realm to help " + global.castlename + "'s researchers learn more about this environment.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Mushrooms Picked";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 37;
+	global.quest[qid, QUEST_NAME] = "Natural Botanist";
+	global.quest[qid, QUEST_DESC] = "Collect Hyacinths in this Realm to help " + global.castlename + "'s researchers learn more about this environment.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Hyacinths";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 38;
+	global.quest[qid, QUEST_NAME] = "Unexpected Carnivores";
+	global.quest[qid, QUEST_DESC] = "Destroy the man-eating flytraps in this Realm to protect humanity.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Flytraps Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 39;
+	global.quest[qid, QUEST_NAME] = "Vile Plumes";
+	global.quest[qid, QUEST_DESC] = "Destroy the poisonous spore plumes in this Realm to protect humanity.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Spore Plumes Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 41;
+	global.quest[qid, QUEST_NAME] = "Purifying the Temple";
+	global.quest[qid, QUEST_DESC] = "Find a corrupted temple in this Realm and destroy its master.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Temple Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 42;
+	global.quest[qid, QUEST_NAME] = "Natural Cleansing";
+	global.quest[qid, QUEST_DESC] = "Find and cleanse the cursed obelisks in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Obelisks Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 43;
+	global.quest[qid, QUEST_NAME] = "Finders Keepers";
+	global.quest[qid, QUEST_DESC] = "Find piles of treasure to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Treasure Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// GRASSLAND REALM ONLY 
+	qid = 44;
+	global.quest[qid, QUEST_NAME] = "Gift For Aeolian";
+	global.quest[qid, QUEST_DESC] = "Find and collect a golden feather to appease " + scr_GodName(GOD_GRASSLAND, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Golden Feather";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 45;
+	global.quest[qid, QUEST_NAME] = "Restoring Balance";
+	global.quest[qid, QUEST_DESC] = "Find and cleanse the corrupted totems in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Totems Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 46;
+	global.quest[qid, QUEST_NAME] = "Quenching Curiosity";
+	global.quest[qid, QUEST_DESC] = "Find sources of water in this Realm to aid " + global.castlename + "'s explorers.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Water Sources";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 47;
+	global.quest[qid, QUEST_NAME] = "Peace Offering";
+	global.quest[qid, QUEST_DESC] = "Collect logs and give them to the explorers that live in tents in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Supplies Donated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 48;
+	global.quest[qid, QUEST_NAME] = "A Source of Power";
+	global.quest[qid, QUEST_DESC] = "Search the piles of gems in this Realm to find the shiniest one.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Shiny Gem Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// DUNGEON REALMS ONLY 
+	qid = 49;
+	global.quest[qid, QUEST_NAME] = "Savior of the Defenseless";
+	global.quest[qid, QUEST_DESC] = "Break innocent creatures out of the cages in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Creatures Freed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 50;
+	global.quest[qid, QUEST_NAME] = "Eternal Entrapment";
+	global.quest[qid, QUEST_DESC] = "Free the spirits trapped within torture devices found in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Spirits Freed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 51;
+	global.quest[qid, QUEST_NAME] = "Jailbreak";
+	global.quest[qid, QUEST_DESC] = "Open the iron maidens found in this Realm and defeat the enemies contained within them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Enemies Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 52;
+	global.quest[qid, QUEST_NAME] = "Unscrupulous Scribbles";
+	global.quest[qid, QUEST_DESC] = "Find and study the parchments scattered around this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Parchment Studied";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// DEATH REALMS ONLY 
+	qid = 53;
+	global.quest[qid, QUEST_NAME] = "Granite Sweep";
+	global.quest[qid, QUEST_DESC] = "Collect Granite nodes found in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Granite Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 54;
+	global.quest[qid, QUEST_NAME] = "Death and Decay";
+	global.quest[qid, QUEST_DESC] = "Pick the mushrooms in this Realm to help " + global.castlename + "'s researchers learn more about this environment.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Mushrooms Picked";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 55;
+	global.quest[qid, QUEST_NAME] = "Lost, and Probably Forgotten";
+	global.quest[qid, QUEST_DESC] = "Pay your respects to fallen " + global.castlename + " knights and magi in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Graves Visited";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 56;
+	global.quest[qid, QUEST_NAME] = "Gifts For Erebyss";
+	global.quest[qid, QUEST_DESC] = "Find and collect kisses of death to appease " + scr_GodName(GOD_DEATH, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Kisses of Death";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 57;
+	global.quest[qid, QUEST_NAME] = "The Bone Collector";
+	global.quest[qid, QUEST_DESC] = "Find and collect skull piles to appease " + scr_GodName(GOD_DEATH, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Skull Piles";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// CHAOS REALM ONLY 
+	qid = 58;
+	global.quest[qid, QUEST_NAME] = "Learn By Example";
+	global.quest[qid, QUEST_DESC] = "Collect creature skulls from this Realm to help teach your creatures the meaning of death.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Skulls Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 59;
+	global.quest[qid, QUEST_NAME] = "Avatars of Spite";
+	global.quest[qid, QUEST_DESC] = "Destroy the demonic statues in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Statues Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 60;
+	global.quest[qid, QUEST_NAME] = "Greatest Greed";
+	global.quest[qid, QUEST_DESC] = "Collect resource nodes found in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Resource Nodes Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 61;
+	global.quest[qid, QUEST_NAME] = "Luck of the Draw";
+	global.quest[qid, QUEST_DESC] = "Collect Pandemonium Tokens in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Tokens Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 62;
+	global.quest[qid, QUEST_NAME] = "Slave to the Grind";
+	global.quest[qid, QUEST_DESC] = "Mine the stones found in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Resources Mined";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 64;
+	global.quest[qid, QUEST_NAME] = "Deviled Eggs";
+	global.quest[qid, QUEST_DESC] = "Steal eggs from the devil nests in this Realm to appease " + scr_GodName(GOD_CHAOS, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Devil Eggs";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// LIFE REALM ONLY 
+	qid = 65;
+	global.quest[qid, QUEST_NAME] = "Fallen Stars";
+	global.quest[qid, QUEST_DESC] = "Wish upon the stars in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Wishes";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 66;
+	global.quest[qid, QUEST_NAME] = "Gifts For Surathli";
+	global.quest[qid, QUEST_DESC] = "Collect fruit of life in this Realm to appease " + scr_GodName(GOD_LIFE, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Fruit of Life";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 67;
+	global.quest[qid, QUEST_NAME] = "To End the Rapture";
+	global.quest[qid, QUEST_DESC] = "Find and cleanse the corrupted obelisks in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Obelisks Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 69;
+	global.quest[qid, QUEST_NAME] = "Gathering the Essentials";
+	global.quest[qid, QUEST_DESC] = "Collect Essence nodes found in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Essence Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 70;
+	global.quest[qid, QUEST_NAME] = "True Self";
+	global.quest[qid, QUEST_DESC] = "Find and activate a mirrorball in this Realm to face your inner evil.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Mirrorball";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 71;
+	global.quest[qid, QUEST_NAME] = "Test of Righteousness";
+	global.quest[qid, QUEST_DESC] = "Find a holy portal in this Realm and destroy its master.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Portal Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// UNDERWATER REALM ONLY 
+	qid = 72;
+	global.quest[qid, QUEST_NAME] = "Conch Shell Peddling";
+	global.quest[qid, QUEST_DESC] = "Collect conch shells in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Shells Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 73;
+	global.quest[qid, QUEST_NAME] = "Spiral Shell Peddling";
+	global.quest[qid, QUEST_DESC] = "Collect spiral shells in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Shells Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 75;
+	global.quest[qid, QUEST_NAME] = "Don't Drop Them";
+	global.quest[qid, QUEST_DESC] = "Find doubloons in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Doubloons Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 76;
+	global.quest[qid, QUEST_NAME] = "Walking Where the Dead Ships Dwell";
+	global.quest[qid, QUEST_DESC] = "Investigate shipwrecks in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Shipwrecks Investigated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 77;
+	global.quest[qid, QUEST_NAME] = "Eyes Wide Shut";
+	global.quest[qid, QUEST_DESC] = "Find and examine mysterious masks in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Masks Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 78;
+	global.quest[qid, QUEST_NAME] = "Friden's Bounty";
+	global.quest[qid, QUEST_DESC] = "Find a golden key and use it to unlock a giant treasure chest in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Chest Opened";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// SPACE REALM ONLY 
+	qid = 79;
+	global.quest[qid, QUEST_NAME] = "Celestial Equilibrium";
+	global.quest[qid, QUEST_DESC] = "Find the moon, sun, and arcane spheres in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Spheres Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 85;
+	global.quest[qid, QUEST_NAME] = "Not Even Stars Last Forever";
+	global.quest[qid, QUEST_DESC] = "Find lunar stars in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Stars Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = irandom_range(3, 4);
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 86;
+	global.quest[qid, QUEST_NAME] = "My Lucky Meteor";
+	global.quest[qid, QUEST_DESC] = "Find fallen meteors in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Meteors Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 87;
+	global.quest[qid, QUEST_NAME] = "Battle of Eternity's End";
+	global.quest[qid, QUEST_DESC] = "Find a corrupted rift in this Realm and destroy its master.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Rift Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// JUNGLE REALMS ONLY 
+	qid = 89;
+	global.quest[qid, QUEST_NAME] = "Fuel to the Fire";
+	global.quest[qid, QUEST_DESC] = "Settle the dispute between the tiki tribes in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Dispute Settled";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 90;
+	global.quest[qid, QUEST_NAME] = "Fury and Brimstone";
+	global.quest[qid, QUEST_DESC] = "Collect Brimstone nodes found in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Brimstone Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = irandom_range(3, 4);
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 91;
+	global.quest[qid, QUEST_NAME] = "Savor Each Bite";
+	global.quest[qid, QUEST_DESC] = "Collect ripe fruit in this Realm to feed " + global.castlename + "'s citizens.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Fruit Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 93;
+	global.quest[qid, QUEST_NAME] = "Anger Personified";
+	global.quest[qid, QUEST_DESC] = "Find and defeat the angry spirits trapped within the totems of this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Totems Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// ISLAND REALMS ONLY 
+	qid = 94;
+	global.quest[qid, QUEST_NAME] = "Running an Endless Mile";
+	global.quest[qid, QUEST_DESC] = "Settle the dispute between the tiki tribes in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Dispute Settled";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 95;
+	global.quest[qid, QUEST_NAME] = "Sea Glass For All";
+	global.quest[qid, QUEST_DESC] = "Collect Crystal nodes found in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Crystal Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = irandom_range(3, 4);
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 97;
+	global.quest[qid, QUEST_NAME] = "From Another Universe";
+	global.quest[qid, QUEST_DESC] = "Collect sea pineapples in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Pineapples Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 98;
+	global.quest[qid, QUEST_NAME] = "Cast Away";
+	global.quest[qid, QUEST_DESC] = "Investigate shipwrecks in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Shipwrecks Investigated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 99;
+	global.quest[qid, QUEST_NAME] = "Bad Juju";
+	global.quest[qid, QUEST_DESC] = "Make an offering to this Realm's temples to gain a better understanding of this environment.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Temples Visited";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// DESERT REALMS ONLY 
+	qid = 100;
+	global.quest[qid, QUEST_NAME] = "Gift of the Ancients";
+	global.quest[qid, QUEST_DESC] = "Collect sacred relics in this Realm to appease " + scr_GodName(GOD_DESERT, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Sacred Relics";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 101;
+	global.quest[qid, QUEST_NAME] = "Miracle of the Mind";
+	global.quest[qid, QUEST_DESC] = "Investigate oases in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Oases Examined";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 102;
+	global.quest[qid, QUEST_NAME] = "A Surprising Find";
+	global.quest[qid, QUEST_DESC] = "Collect desert flowers in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Desert Flowers";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 103;
+	global.quest[qid, QUEST_NAME] = "A Peace Offering";
+	global.quest[qid, QUEST_DESC] = "Collect wood and give it to the explorers that live in tents in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Wood Donated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 104;
+	global.quest[qid, QUEST_NAME] = "Wormhole";
+	global.quest[qid, QUEST_DESC] = "Find a quicksand portal in this Realm and destroy its master.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Portal Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// CAVE REALMS ONLY 
+	qid = 105;
+	global.quest[qid, QUEST_NAME] = "End of Innocence";
+	global.quest[qid, QUEST_DESC] = "Collect baby spiderlings in this Realm to appease " + scr_GodName(GOD_CAVE, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Spiderlings";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 106;
+	global.quest[qid, QUEST_NAME] = "Uncertain Aid";
+	global.quest[qid, QUEST_DESC] = "Rescue the prey that is trapped in spider webs in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Prey Rescued";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 107;
+	global.quest[qid, QUEST_NAME] = "Gifts For Regalis";
+	global.quest[qid, QUEST_DESC] = "Collect spider eggs in this Realm to appease " + scr_GodName(GOD_CAVE, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Spider Eggs";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 108;
+	global.quest[qid, QUEST_NAME] = "Precious Resources";
+	global.quest[qid, QUEST_DESC] = "Collect Essence nodes found in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Essence Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = irandom_range(3, 4);
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 109;
+	global.quest[qid, QUEST_NAME] = "Autopsy Time";
+	global.quest[qid, QUEST_DESC] = "Examine web-encased skulls in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Skulls Examined";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = irandom_range(3, 5);
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// HAUNTED REALMS ONLY 
+	qid = 110;
+	global.quest[qid, QUEST_NAME] = "Throw Down the Gauntlet";
+	global.quest[qid, QUEST_DESC] = "Slay hostile knights in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Knights Slain";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 111;
+	global.quest[qid, QUEST_NAME] = "Studies of Days Gone By";
+	global.quest[qid, QUEST_DESC] = "Obtain intact tomes from the bookshelves in this Realm to bolster " + global.castlename + "'s library.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Tomes Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 112;
+	global.quest[qid, QUEST_NAME] = "Preparation";
+	global.quest[qid, QUEST_DESC] = "Obtain medicinal potions from this Realm to bolster " + global.castlename + "'s emergency stockpile.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Potions Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 40;
+	global.quest[qid, QUEST_NAME] = "Dark Souls";
+	global.quest[qid, QUEST_DESC] = "Find and examine blood stains in this Realm to find out the cause of their owner's death.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Blood Stains Examined";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// TUTORIAL QUESTS 
+	qid = 114;
+	global.quest[qid, QUEST_NAME] = "Where Do Creatures Come From?";
+	global.quest[qid, QUEST_DESC] = "Use the 'Extract' command on a creature in battle to receive its Core.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 115;
+	global.quest[qid, QUEST_NAME] = "Pleased to Meet You... Again";
+	global.quest[qid, QUEST_DESC] = "Seek out the Altar of " + scr_GodName(scr_BiomeGod(global.biome), false) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 116;
+	global.quest[qid, QUEST_NAME] = "A Proper Introduction";
+	global.quest[qid, QUEST_DESC] = "Speak with the Blacksmith in " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 117;
+	global.quest[qid, QUEST_NAME] = "Clang, Clang, Clang";
+	global.quest[qid, QUEST_DESC] = "Use the Blacksmith to 'Craft' or 'Forge' a new Artifact.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 228;
+	global.quest[qid, QUEST_NAME] = "A Triumphant Return";
+	global.quest[qid, QUEST_DESC] = "Return to " + global.castlename + " and speak with Ilberd.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 229;
+	global.quest[qid, QUEST_NAME] = "Break It Down";
+	global.quest[qid, QUEST_DESC] = "Find the source of the girly screams.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 230;
+	global.quest[qid, QUEST_NAME] = "Questions Left Unanswered";
+	global.quest[qid, QUEST_DESC] = "Return to " + global.castlename + " and speak with Ilberd.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 231;
+	global.quest[qid, QUEST_NAME] = "Enchanted to Meet You";
+	global.quest[qid, QUEST_DESC] = "Find and speak with the Enchanter somewhere in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// GOD QUESTS 
+	qid = 118;
+	global.quest[qid, QUEST_NAME] = "The Itherian World";
+	global.quest[qid, QUEST_DESC] = "Speak with Desiderata in " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 119;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_CAVE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CAVE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CAVE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 120;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_CAVE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CAVE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CAVE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 121;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_CAVE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CAVE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CAVE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 122;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_CAVE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CAVE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CAVE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 123;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_CHAOS, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CHAOS, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CHAOS)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 124;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_CHAOS, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CHAOS, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CHAOS)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 125;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_CHAOS, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CHAOS, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CHAOS)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 126;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_CHAOS, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CHAOS, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CHAOS)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 127;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_CHAOS, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CHAOS, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CHAOS)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 128;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_DEATH, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DEATH, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DEATH)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 129;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_DEATH, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DEATH, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DEATH)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 130;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_DEATH, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DEATH, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DEATH)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 131;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_DEATH, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DEATH, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DEATH)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 132;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_DEATH, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DEATH, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DEATH)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 133;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_DESERT, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DESERT, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DESERT)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 134;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_DESERT, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DESERT, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DESERT)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 135;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_DESERT, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DESERT, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DESERT)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 136;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_DESERT, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DESERT, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DESERT)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 137;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_DESERT, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DESERT, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DESERT)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 138;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_DUNGEON, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DUNGEON, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DUNGEON)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 139;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_DUNGEON, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DUNGEON, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DUNGEON)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 140;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_DUNGEON, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DUNGEON, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DUNGEON)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 141;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_DUNGEON, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DUNGEON, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DUNGEON)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 142;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_DUNGEON, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DUNGEON, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DUNGEON)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 143;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_FOREIGNKINGDOM, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_FOREIGNKINGDOM, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_FOREIGNKINGDOM)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 144;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_FOREIGNKINGDOM, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_FOREIGNKINGDOM, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_FOREIGNKINGDOM)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 145;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_FOREIGNKINGDOM, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_FOREIGNKINGDOM, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_FOREIGNKINGDOM)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 146;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_FOREIGNKINGDOM, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_FOREIGNKINGDOM, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_FOREIGNKINGDOM)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 147;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_FOREIGNKINGDOM, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_FOREIGNKINGDOM, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_FOREIGNKINGDOM)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 148;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_GRASSLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_GRASSLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_GRASSLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 149;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_GRASSLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_GRASSLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_GRASSLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 150;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_GRASSLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_GRASSLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_GRASSLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 151;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_GRASSLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_GRASSLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_GRASSLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 152;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_GRASSLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_GRASSLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_GRASSLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 153;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_ISLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_ISLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_ISLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 154;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_ISLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_ISLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_ISLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 155;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_ISLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_ISLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_ISLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 156;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_ISLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_ISLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_ISLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 157;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_ISLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_ISLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_ISLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 158;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_JUNGLE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_JUNGLE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_JUNGLE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 159;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_JUNGLE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_JUNGLE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_JUNGLE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 160;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_JUNGLE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_JUNGLE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_JUNGLE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 161;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_JUNGLE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_JUNGLE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_JUNGLE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 162;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_JUNGLE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_JUNGLE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_JUNGLE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 163;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_LIFE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_LIFE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_LIFE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 164;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_LIFE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_LIFE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_LIFE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 165;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_LIFE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_LIFE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_LIFE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 166;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_LIFE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_LIFE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_LIFE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 167;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_LIFE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_LIFE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_LIFE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 168;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_NATURE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_NATURE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_NATURE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 169;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_NATURE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_NATURE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_NATURE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 170;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_NATURE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_NATURE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_NATURE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 171;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_NATURE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_NATURE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_NATURE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 172;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_NATURE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_NATURE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_NATURE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 173;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_SORCERY, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SORCERY, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SORCERY)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 174;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_SORCERY, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SORCERY, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SORCERY)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 175;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_SORCERY, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SORCERY, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SORCERY)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 176;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_SORCERY, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SORCERY, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SORCERY)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 177;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_SORCERY, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SORCERY, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SORCERY)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 178;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_SPACE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SPACE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SPACE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 179;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_SPACE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SPACE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SPACE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 180;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_SPACE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SPACE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SPACE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 181;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_SPACE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SPACE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SPACE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 182;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_SPACE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SPACE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SPACE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 183;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_UNDERWATER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_UNDERWATER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_UNDERWATER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 184;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_UNDERWATER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_UNDERWATER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_UNDERWATER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 185;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_UNDERWATER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_UNDERWATER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_UNDERWATER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 186;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_UNDERWATER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_UNDERWATER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_UNDERWATER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 187;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_UNDERWATER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_UNDERWATER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_UNDERWATER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 188;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(1) + " by " + scr_GodName(GOD_WINTER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_WINTER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_WINTER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 189;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(2) + " by " + scr_GodName(GOD_WINTER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_WINTER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_WINTER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 190;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(3) + " by " + scr_GodName(GOD_WINTER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_WINTER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_WINTER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 191;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(4) + " by " + scr_GodName(GOD_WINTER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_WINTER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_WINTER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 192;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(5) + " by " + scr_GodName(GOD_WINTER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_WINTER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_WINTER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 193;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_CHAOS, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CHAOS, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CHAOS)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 194;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_DEATH, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DEATH, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DEATH)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 195;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_LIFE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_LIFE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_LIFE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 196;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_SORCERY, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SORCERY, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SORCERY)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 197;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_NATURE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_NATURE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_NATURE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 198;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_GRASSLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_GRASSLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_GRASSLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 199;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_DUNGEON, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DUNGEON, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DUNGEON)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 200;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_WINTER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_WINTER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_WINTER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 201;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_FOREIGNKINGDOM, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_FOREIGNKINGDOM, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_FOREIGNKINGDOM)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 202;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_CAVE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_CAVE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_CAVE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 203;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_JUNGLE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_JUNGLE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_JUNGLE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 204;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_ISLAND, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_ISLAND, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_ISLAND)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 205;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_DESERT, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_DESERT, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_DESERT)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 206;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_SPACE, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_SPACE, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_SPACE)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 207;
+	global.quest[qid, QUEST_NAME] = scr_GodLevelWord(0) + " by " + scr_GodName(GOD_UNDERWATER, false);
+	global.quest[qid, QUEST_DESC] = "Visit the altar of " + scr_GodName(GOD_UNDERWATER, false) + " in " + scr_BiomeName(scr_GodBiome(GOD_UNDERWATER)) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// GRIMOIRE QUESTS 
+	qid = 208;
+	global.quest[qid, QUEST_NAME] = "Piecing It Together";
+	global.quest[qid, QUEST_DESC] = "Collect all the pages to complete the Runic Grimoire.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Runic Pages";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 176;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 209;
+	global.quest[qid, QUEST_NAME] = "Hate By Design";
+	global.quest[qid, QUEST_DESC] = "Collect all the pages to complete the Pyro Grimoire.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Pyro Pages";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 256;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 210;
+	global.quest[qid, QUEST_NAME] = "Trashed and Scattered";
+	global.quest[qid, QUEST_DESC] = "Collect all the pages to complete the Necro Grimoire.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Necro Pages";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 39;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 211;
+	global.quest[qid, QUEST_NAME] = "All In Due Time";
+	global.quest[qid, QUEST_DESC] = "Collect all the pages to complete the Forbidden Grimoire.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Forbidden Pages";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 112;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 212;
+	global.quest[qid, QUEST_NAME] = "Drowning Your Sorrows";
+	global.quest[qid, QUEST_DESC] = "Collect all the pages to complete the Faded Grimoire.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Faded Pages";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 63;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 213;
+	global.quest[qid, QUEST_NAME] = "Triumph Through Tragedy";
+	global.quest[qid, QUEST_DESC] = "Collect all the pages to complete the Ancient Grimoire.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Ancient Pages";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 55;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+
+	// SIN/SANCTUS QUESTS 
+	qid = 214;
+	global.quest[qid, QUEST_NAME] = "A Necessary Evil";
+	global.quest[qid, QUEST_DESC] = "Return to " + global.castlename + " and speak with Ilberd.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 215;
+	global.quest[qid, QUEST_NAME] = "Defying Gluttony";
+	global.quest[qid, QUEST_DESC] = "Obtain a Blood Slime and give it to the Bringer of Gluttony.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 216;
+	global.quest[qid, QUEST_NAME] = "Defying Greed";
+	global.quest[qid, QUEST_DESC] = "Obtain a Diamond Imling and give it to the Bringer of Greed.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 217;
+	global.quest[qid, QUEST_NAME] = "Defying Sloth";
+	global.quest[qid, QUEST_DESC] = "Obtain a Colossal Giant and give it to the Bringer of Sloth.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 218;
+	global.quest[qid, QUEST_NAME] = "Defying Wrath";
+	global.quest[qid, QUEST_DESC] = "Obtain a Carnage Destructor and give it to the Bringer of Wrath.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 219;
+	global.quest[qid, QUEST_NAME] = "Defying Envy";
+	global.quest[qid, QUEST_DESC] = "Obtain a Doom Devil and give it to the Bringer of Envy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 220;
+	global.quest[qid, QUEST_NAME] = "Defying Pride";
+	global.quest[qid, QUEST_DESC] = "Obtain a Terror Hound and give it to the Bringer of Pride.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 221;
+	global.quest[qid, QUEST_NAME] = "Embracing Chastity";
+	global.quest[qid, QUEST_DESC] = "Obtain a Priest Vizier and give it to the Bringer of Chastity.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 222;
+	global.quest[qid, QUEST_NAME] = "Embracing Temperance";
+	global.quest[qid, QUEST_DESC] = "Obtain a Holy Crusader and give it to the Bringer of Temperance.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 223;
+	global.quest[qid, QUEST_NAME] = "Embracing Charity";
+	global.quest[qid, QUEST_DESC] = "Obtain a Unicorn Holycaster and give it to the Bringer of Charity.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 224;
+	global.quest[qid, QUEST_NAME] = "Embracing Diligence";
+	global.quest[qid, QUEST_DESC] = "Obtain a Diabolic Insurgent and give it to the Bringer of Diligence.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 225;
+	global.quest[qid, QUEST_NAME] = "Embracing Patience";
+	global.quest[qid, QUEST_DESC] = "Obtain a Forest Gargantuan and give it to the Bringer of Patience.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 226;
+	global.quest[qid, QUEST_NAME] = "Embracing Humility";
+	global.quest[qid, QUEST_DESC] = "Obtain a Valkyrie Shieldmaiden and give it to the Bringer of Humility.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 227;
+	global.quest[qid, QUEST_NAME] = "Embracing Kindness";
+	global.quest[qid, QUEST_DESC] = "Obtain a Mithril Imler and give it to the Bringer of Kindness.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+
+	// STORY QUESTS
+
+	qid = 233;
+	global.quest[qid, QUEST_NAME] = "Enchanted Armaments";
+	global.quest[qid, QUEST_DESC] = "Speak with Angela in " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 234;
+	global.quest[qid, QUEST_NAME] = "First Time For Everything";
+	global.quest[qid, QUEST_DESC] = "Enchant one of your Artifacts.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 235;
+	global.quest[qid, QUEST_NAME] = "Welcome to " + global.castlename + "";
+	global.quest[qid, QUEST_DESC] = "Approach the container and press " + scr_KeyE() + " to open it.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 236;
+	global.quest[qid, QUEST_NAME] = "Welcome to " + global.castlename + "";
+	global.quest[qid, QUEST_DESC] = "Equip the artifact to your creature. Press " + scr_KeyQ() + " to open the menu, then select Items, then select Artifacts, and then select the artifact you just received.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 237;
+	global.quest[qid, QUEST_NAME] = "Welcome to " + global.castlename + "";
+	global.quest[qid, QUEST_DESC] = "Press " + scr_KeyE() + " to use the teleporter and move to the next area. Then, open the container you find.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 238;
+	global.quest[qid, QUEST_NAME] = "Welcome to " + global.castlename + "";
+	global.quest[qid, QUEST_DESC] = "Equip the Spell Gem to your creature. Press " + scr_KeyQ() + " to open the menu, then select Creatures, then select Manage Spell Gems, and then select an empty slot.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 239;
+	global.quest[qid, QUEST_NAME] = "Welcome to " + global.castlename + "";
+	global.quest[qid, QUEST_DESC] = "Approach the enemy and press " + scr_KeyE() + " to start a battle.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 240;
+	global.quest[qid, QUEST_NAME] = "Welcome to " + global.castlename + "";
+	global.quest[qid, QUEST_DESC] = "Use the teleporter to warp to your kingdom, " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	// NEED TO GO BACK AND RENUMBER BEYOND THIS LINE
+
+	qid = 241;
+	global.quest[qid, QUEST_NAME] = "Start of the End";
+	global.quest[qid, QUEST_DESC] = "Speak with Ilberd.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 242;
+	global.quest[qid, QUEST_NAME] = "The Final Wink";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 3.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 243;
+	global.quest[qid, QUEST_NAME] = "Uncomfortable Gaze";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 6.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 244;
+	global.quest[qid, QUEST_NAME] = "Slash and Burn";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 9.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 245;
+	global.quest[qid, QUEST_NAME] = "The Crown Jewel";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 12.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 246;
+	global.quest[qid, QUEST_NAME] = "An Urgent Request";
+	global.quest[qid, QUEST_DESC] = "Speak with Polio in " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 247;
+	global.quest[qid, QUEST_NAME] = "The Deathlord";
+	global.quest[qid, QUEST_DESC] = "Search for the cause of the commotion in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 248;
+	global.quest[qid, QUEST_NAME] = "Deathlord Who?";
+	global.quest[qid, QUEST_DESC] = "Return to Polio in " + global.castlename + " and tell him the good news.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 249;
+	global.quest[qid, QUEST_NAME] = "Corrupted Enchantress";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 15.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 250;
+	global.quest[qid, QUEST_NAME] = "A Traumatic Moment";
+	global.quest[qid, QUEST_DESC] = "Speak with Ilberd in " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 251;
+	global.quest[qid, QUEST_NAME] = "Back From The Dead";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 18.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 252;
+	global.quest[qid, QUEST_NAME] = "Intoxicated";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 21.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 253;
+	global.quest[qid, QUEST_NAME] = "A New Profession";
+	global.quest[qid, QUEST_DESC] = "Search for the endangered old-timer in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 254;
+	global.quest[qid, QUEST_NAME] = "Creature Mills";
+	global.quest[qid, QUEST_DESC] = "To learn about breeding, speak with Benjamin in the Stables at " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 255;
+	global.quest[qid, QUEST_NAME] = "Hangover Overwhelming";
+	global.quest[qid, QUEST_DESC] = "Speak with Furness in " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 256;
+	global.quest[qid, QUEST_NAME] = "The Ancient One";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 24.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 257;
+	global.quest[qid, QUEST_NAME] = "Unwanted Advances";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 27.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 258;
+	global.quest[qid, QUEST_NAME] = "Mind Games";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 30.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 259;
+	global.quest[qid, QUEST_NAME] = "Plot Twist";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 33.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 260;
+	global.quest[qid, QUEST_NAME] = "Source of Corruption";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 36.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 261;
+	global.quest[qid, QUEST_NAME] = "Your Inner Demons";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 39.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 262;
+	global.quest[qid, QUEST_NAME] = "Back With Vengeance";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 42.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 263;
+	global.quest[qid, QUEST_NAME] = "Sever the Hand";
+	global.quest[qid, QUEST_DESC] = "Defeat the boss at Realm Depth 44.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 264;
+	global.quest[qid, QUEST_NAME] = "Wrath";
+	global.quest[qid, QUEST_DESC] = "End this war once and for all.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 265;
+	global.quest[qid, QUEST_NAME] = "New Technology";
+	global.quest[qid, QUEST_DESC] = "Collect Iron Ingots from Realms in order to upgrade the Blacksmith.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Iron Ingots";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 50;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 266;
+	global.quest[qid, QUEST_NAME] = "Golden Age";
+	global.quest[qid, QUEST_DESC] = "Collect Gold Ingots from Realms in order to upgrade the Blacksmith.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 50;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 267;
+	global.quest[qid, QUEST_NAME] = "Rescue Mission";
+	global.quest[qid, QUEST_DESC] = "Find whoever wrote the letter and rescue them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 268;
+	global.quest[qid, QUEST_NAME] = "Cracking the Code";
+	global.quest[qid, QUEST_DESC] = "Speak with Desiderata in " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 269;
+	global.quest[qid, QUEST_NAME] = "Hide-n-Seek";
+	global.quest[qid, QUEST_DESC] = "Find the four dwarves hiding in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Dwarves";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 4;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 270;
+	global.quest[qid, QUEST_NAME] = "Mind Control";
+	global.quest[qid, QUEST_DESC] = "Speak with Ilberd.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 271;
+	global.quest[qid, QUEST_NAME] = "End Transmission";
+	global.quest[qid, QUEST_DESC] = "Speak with Ilberd.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 272;
+	global.quest[qid, QUEST_NAME] = "Preparations";
+	global.quest[qid, QUEST_DESC] = "Speak with Ilberd.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 273;
+	global.quest[qid, QUEST_NAME] = "Sullen Horizon";
+	global.quest[qid, QUEST_DESC] = "Speak with Ilberd.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 274;
+	global.quest[qid, QUEST_NAME] = "Epilogue";
+	global.quest[qid, QUEST_DESC] = "Speak with Ilberd.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 275;
+	global.quest[qid, QUEST_NAME] = "Prophecies";
+	global.quest[qid, QUEST_DESC] = "Speak with Elize the Prophet in the northern-most part of " + global.castlename + ", near the Summoning Brazier.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 276;
+	global.quest[qid, QUEST_NAME] = "Hate, and Other Triumphs";
+	global.quest[qid, QUEST_DESC] = "Search for a Nether Orb at Realm Depth 31.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 277;
+	global.quest[qid, QUEST_NAME] = "Unguided We Stand";
+	global.quest[qid, QUEST_DESC] = "Speak with Hebron.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 278;
+	global.quest[qid, QUEST_NAME] = "Judgment and Mercy";
+	global.quest[qid, QUEST_DESC] = "Search for a Nether Orb at Realm Depth 35.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 279;
+	global.quest[qid, QUEST_NAME] = "Promise of Reward";
+	global.quest[qid, QUEST_DESC] = "Speak with Torun in " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 280;
+	global.quest[qid, QUEST_NAME] = "The Best Deal Ever";
+	global.quest[qid, QUEST_DESC] = "Purchase the surprise from Torun for 100,000 of each resource.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_SIDEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 232;
+	global.quest[qid, QUEST_NAME] = "To End the Rapture";
+	global.quest[qid, QUEST_DESC] = "Congratulations on your victory! Speak with Damaos.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 281;
+	global.quest[qid, QUEST_NAME] = "Your Nemesis";
+	global.quest[qid, QUEST_DESC] = "Defeat Nemesis Creatures in this Realm to ensure the safety of " + global.castlename + "'s people.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Nemeses Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 282;
+	global.quest[qid, QUEST_NAME] = "A Formidable Opponent";
+	global.quest[qid, QUEST_DESC] = "Kill a Renegade in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 283;
+	global.quest[qid, QUEST_NAME] = "Cull the Rebellion";
+	global.quest[qid, QUEST_DESC] = "Kill a rebel in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 284;
+	global.quest[qid, QUEST_NAME] = "Riddle Me These";
+	global.quest[qid, QUEST_DESC] = "Attempt Stoyakoff the Riddle Dwarf's riddles.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Riddles Attempted";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 285;
+	global.quest[qid, QUEST_NAME] = "Cleaning Day";
+	global.quest[qid, QUEST_DESC] = "Scrape together the green goo on the floor until they congeal into Slimes. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Slime Packs Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 286;
+	global.quest[qid, QUEST_NAME] = "Cursed Phylactery";
+	global.quest[qid, QUEST_DESC] = "Activate the Cursed Phylactery in this Realm and defeat the enemies it spawns.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Invaders Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 287;
+	global.quest[qid, QUEST_NAME] = "But Why Was It Moving?";
+	global.quest[qid, QUEST_DESC] = "Activate the Haunted Chest in this Realm and defeat the enemies it spawns.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Invaders Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 288;
+	global.quest[qid, QUEST_NAME] = "Lonely Spirit";
+	global.quest[qid, QUEST_DESC] = "Find the Lost Soul in this Realm and return it to its Cursed Phylactery.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = -1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 289;
+	global.quest[qid, QUEST_NAME] = "Tartarith Would Be Proud";
+	global.quest[qid, QUEST_DESC] = "Defeat an enemy, then take its corpse to a Cursed Phylactery.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = -1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 290;
+	global.quest[qid, QUEST_NAME] = "Pollin Season";
+	global.quest[qid, QUEST_DESC] = "Collect sunflowers in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Sunflowers Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 291;
+	global.quest[qid, QUEST_NAME] = "Total Carnage";
+	global.quest[qid, QUEST_DESC] = "Destroy Pinwheels in this Realm to show everyone how powerful you are.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Pinwheels Annihilated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 292;
+	global.quest[qid, QUEST_NAME] = "Total Carnage";
+	global.quest[qid, QUEST_DESC] = "Destroy flags in this Realm. They're bad for the environment.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Flags Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 293;
+	global.quest[qid, QUEST_NAME] = "The Missing Links";
+	global.quest[qid, QUEST_DESC] = "Thaw and kill the frozen Yeti families in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Yeti Families Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 294;
+	global.quest[qid, QUEST_NAME] = "To Kill Again";
+	global.quest[qid, QUEST_DESC] = "Unearth Mummies from their graves and kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Mummy Packs Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 295;
+	global.quest[qid, QUEST_NAME] = "First, Peanut Butter. Next...";
+	global.quest[qid, QUEST_DESC] = "Collect jellyfish from this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Jellyfish Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 296;
+	global.quest[qid, QUEST_NAME] = "A Cruel Fate";
+	global.quest[qid, QUEST_DESC] = "Crack open the dragon eggs in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Slaughters";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 297;
+	global.quest[qid, QUEST_NAME] = "But Why?";
+	global.quest[qid, QUEST_DESC] = "Collect crabs from this Realm. We'll find a use for them later, maybe.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Crabs Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 298;
+	global.quest[qid, QUEST_NAME] = "Unnatural Death";
+	global.quest[qid, QUEST_DESC] = "Knock on the doors of lodges in this Realm and kill everyone inside.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Hunter Packs Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 299;
+	global.quest[qid, QUEST_NAME] = "Natural Selection";
+	global.quest[qid, QUEST_DESC] = "Find Imlers and Imlings in their natural habitats. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Im Packs Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 300;
+	global.quest[qid, QUEST_NAME] = "Miracles Gone Wrong";
+	global.quest[qid, QUEST_DESC] = "Wish upon some stars to see Unicorns. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Unicorn Families Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 301;
+	global.quest[qid, QUEST_NAME] = "We Come In Peace";
+	global.quest[qid, QUEST_DESC] = "Channel the spires in this Realm and defeat whatever pops out of them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Invaders Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 302;
+	global.quest[qid, QUEST_NAME] = "Unwanted Knowledge";
+	global.quest[qid, QUEST_DESC] = "Search the books and bookshelves in this Realm for Grimoires. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Grimoires Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 303;
+	global.quest[qid, QUEST_NAME] = "Better, Faster, Stronger, Dead";
+	global.quest[qid, QUEST_DESC] = "Use the time portals in this Realm to summon Phase Warriors. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Phase Folk Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 304;
+	global.quest[qid, QUEST_NAME] = "End of the Void";
+	global.quest[qid, QUEST_DESC] = "Close rifts in this Realm to keep your kingdom safe.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Rifts Closed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 305;
+	global.quest[qid, QUEST_NAME] = "That Which Cannot Be Contained";
+	global.quest[qid, QUEST_DESC] = "Unleash Voidlords from their cages and kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Voidlords Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 306;
+	global.quest[qid, QUEST_NAME] = "Dreams Gone Wrong";
+	global.quest[qid, QUEST_DESC] = "Collect Essence nodes in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Essence Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 307;
+	global.quest[qid, QUEST_NAME] = "Spurt, Spurt, Spurt";
+	global.quest[qid, QUEST_DESC] = "Unleash geysers in this Realm to cover your enemies in a peculiar substance.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Geysers Unleashed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 308;
+	global.quest[qid, QUEST_NAME] = "Cuteness Overwhelming";
+	global.quest[qid, QUEST_DESC] = "See those cute, cuddly wisps running around? Kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Wisps Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 309;
+	global.quest[qid, QUEST_NAME] = "Gifts for Tenebris";
+	global.quest[qid, QUEST_DESC] = "Collect Void Relics in this Realm to appease " + scr_GodName(GOD_VOID, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Relics Obtained";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 310;
+	global.quest[qid, QUEST_NAME] = "Unearthed Secrets";
+	global.quest[qid, QUEST_DESC] = "Collect caches in this Realm to distribute to the poor and needy of " + global.castlename + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Void Caches";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 311;
+	global.quest[qid, QUEST_NAME] = "Gatekeeper";
+	global.quest[qid, QUEST_DESC] = "Find a Void Portal in this Realm and destroy the enemies contained within.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Portal Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 312;
+	global.quest[qid, QUEST_NAME] = "Aurum's Avarice";
+	global.quest[qid, QUEST_DESC] = "Find a gem-studded key and use it to open a giant treasure chest in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Chest Opened";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 313;
+	global.quest[qid, QUEST_NAME] = "Taste the Rainbow";
+	global.quest[qid, QUEST_DESC] = "Drink from the small rainbow wells in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Rainbow Wells";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 314;
+	global.quest[qid, QUEST_NAME] = "Rainbow Lights";
+	global.quest[qid, QUEST_DESC] = "Find the rainbow braziers in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Rainbow Braziers";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 315;
+	global.quest[qid, QUEST_NAME] = "Another Dimension";
+	global.quest[qid, QUEST_DESC] = "Find a Rainbow Portal in this Realm and destroy the enemies contained within.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Portal Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 316;
+	global.quest[qid, QUEST_NAME] = "Cute, Fluffy, Dead";
+	global.quest[qid, QUEST_DESC] = "Use horseshoes in this Realm to attract Carbuncles. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Carbuncles Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 317;
+	global.quest[qid, QUEST_NAME] = "My, What Big Eyes";
+	global.quest[qid, QUEST_DESC] = "Collect Giant Gems in this Realm to appease " + scr_GodName(GOD_GEM, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Gems Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 318;
+	global.quest[qid, QUEST_NAME] = "The Little Things";
+	global.quest[qid, QUEST_DESC] = "Collect Gem Dust in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Gem Dust Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 319;
+	global.quest[qid, QUEST_NAME] = "Crunch, Splat";
+	global.quest[qid, QUEST_DESC] = "Use the giant sacks of Gem Dust in this Realm to attract Crunchers. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Crunchers Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 320;
+	global.quest[qid, QUEST_NAME] = "Brains Destroyed By Brawn";
+	global.quest[qid, QUEST_DESC] = "Use the brains in this Realm to attract Soulflayers. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Soulflayers Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 321;
+	global.quest[qid, QUEST_NAME] = "Alms For The Poor";
+	global.quest[qid, QUEST_DESC] = "Find tithes in this Realm to appease " + scr_GodName(GOD_PURGATORY, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Tithes Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 322;
+	global.quest[qid, QUEST_NAME] = "Snuffed Out";
+	global.quest[qid, QUEST_DESC] = "Find Power nodes in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Power Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 323;
+	global.quest[qid, QUEST_NAME] = "Mirror, Mirror";
+	global.quest[qid, QUEST_DESC] = "Use Shadow Mirrors in this Realm to attract Sins. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Sins Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 324;
+	global.quest[qid, QUEST_NAME] = "Which Switch Switches The Switcher?";
+	global.quest[qid, QUEST_DESC] = "Cleanse the dark obelisks in this Realm to keep " + global.castlename + " safe from harm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Obelisks Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 325;
+	global.quest[qid, QUEST_NAME] = "Sacrilege";
+	global.quest[qid, QUEST_DESC] = "Destroy the giant statues of kings in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Statues Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 326;
+	global.quest[qid, QUEST_NAME] = "Venedon's Request";
+	global.quest[qid, QUEST_DESC] = "Turn on the valves in this Realm. Don't ask questions.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Valves Turned On";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 327;
+	global.quest[qid, QUEST_NAME] = "Mama?";
+	global.quest[qid, QUEST_DESC] = "Find the baby oozelings in this Realm and squash them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Oozes Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 328;
+	global.quest[qid, QUEST_NAME] = "Click, Clack, Reload";
+	global.quest[qid, QUEST_DESC] = "Collect Brimstone nodes in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Brimstone Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 329;
+	global.quest[qid, QUEST_NAME] = "Box of Supplies";
+	global.quest[qid, QUEST_DESC] = "Obtain supplies from the crates in this Realm to distribute to " + global.castlename + "'s citizens.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Supplies Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 330;
+	global.quest[qid, QUEST_NAME] = "Glug, Glug, Glug";
+	global.quest[qid, QUEST_DESC] = "Drink the potions in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Potions Used";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 331;
+	global.quest[qid, QUEST_NAME] = "The Many Uses of Parchment";
+	global.quest[qid, QUEST_DESC] = "Collect Parchment in this Realm for no good reason.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Parchment Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 332;
+	global.quest[qid, QUEST_NAME] = "Apocranox's Request";
+	global.quest[qid, QUEST_DESC] = "Spring the traps in this Realm to appease " + scr_GodName(GOD_AUTUMN, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Traps Sprung";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 333;
+	global.quest[qid, QUEST_NAME] = "Man-made Disaster";
+	global.quest[qid, QUEST_DESC] = "Find creatures that are trying to live peaceful lives in their caves and kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Habitat Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 334;
+	global.quest[qid, QUEST_NAME] = "Firewood, Again?";
+	global.quest[qid, QUEST_DESC] = "Collect wood and give it to the campers that live in tents in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Wood Donated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 335;
+	global.quest[qid, QUEST_NAME] = "Rare and Wondrous Resources";
+	global.quest[qid, QUEST_DESC] = "Collect Crystal nodes in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Crystal Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 336;
+	global.quest[qid, QUEST_NAME] = "Annoying Song";
+	global.quest[qid, QUEST_DESC] = "Play the pipes in this Realm to attract Satyrs. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Satyrs Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 337;
+	global.quest[qid, QUEST_NAME] = "Does Anyone Actually Like This Stuff?";
+	global.quest[qid, QUEST_DESC] = "Collect squash in this Realm to feed " + global.castlename + "'s citizens.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 338;
+	global.quest[qid, QUEST_NAME] = "Who Needs Skin, Anyway?";
+	global.quest[qid, QUEST_DESC] = "Find Blood Effigies in this Realm to attract Clutchers. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Clutchers Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 339;
+	global.quest[qid, QUEST_NAME] = "They're Alive!";
+	global.quest[qid, QUEST_DESC] = "Use the charred bones in this Realm to attract Osseins. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Osseins Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 340;
+	global.quest[qid, QUEST_NAME] = "Blood Everywhere";
+	global.quest[qid, QUEST_DESC] = "Turn on the Blood Geysers in this Realm to weaken your enemies.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Geysers Unleashed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 341;
+	global.quest[qid, QUEST_NAME] = "There's No Way This Is Granite";
+	global.quest[qid, QUEST_DESC] = "Collect Granite nodes in this Realm to bolster " + global.castlename + "'s economy.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Granite Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 342;
+	global.quest[qid, QUEST_NAME] = "Of Blood And Bone";
+	global.quest[qid, QUEST_DESC] = "Find a key and use it to open a giant treasure chest in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Chest Opened";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 343;
+	global.quest[qid, QUEST_NAME] = "It's Not Juice";
+	global.quest[qid, QUEST_DESC] = "Drink the Blood Wells in this Realm to appease " + scr_GodName(GOD_BLOODBONE, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Blood Wells Consumed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 344;
+	global.quest[qid, QUEST_NAME] = "A Little Rust";
+	global.quest[qid, QUEST_DESC] = "Speak with Everett to start your first battle.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 345;
+	global.quest[qid, QUEST_NAME] = "The Summoning Brazier";
+	global.quest[qid, QUEST_DESC] = "Use the Summoning Brazier to summon a new creature.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 346;
+	global.quest[qid, QUEST_NAME] = "Onward and Upward";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 347;
+	global.quest[qid, QUEST_NAME] = "The Menagerie";
+	global.quest[qid, QUEST_DESC] = "Speak with Nortah at the Menagerie.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 348;
+	global.quest[qid, QUEST_NAME] = "Back and Forth";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 349;
+	global.quest[qid, QUEST_NAME] = "To the Smitty!";
+	global.quest[qid, QUEST_DESC] = "Speak with Sabon the Blacksmith.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 350;
+	global.quest[qid, QUEST_NAME] = "Steel is the Answer";
+	global.quest[qid, QUEST_DESC] = "Forge a Sword.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 351;
+	global.quest[qid, QUEST_NAME] = "The Grind";
+	global.quest[qid, QUEST_DESC] = "Upgrade your Sword to Tier 3.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 352;
+	global.quest[qid, QUEST_NAME] = "Sockets and Such";
+	global.quest[qid, QUEST_DESC] = "Socket your Sword with a crafting material.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 353;
+	global.quest[qid, QUEST_NAME] = "The Final Touch";
+	global.quest[qid, QUEST_DESC] = "Equip one of your creatures with the Sword.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 354;
+	global.quest[qid, QUEST_NAME] = "All About Spell Gems";
+	global.quest[qid, QUEST_DESC] = "Speak with Rhea the Enchantress.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 355;
+	global.quest[qid, QUEST_NAME] = "First Things First";
+	global.quest[qid, QUEST_DESC] = "Craft a Spell Gem.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 356;
+	global.quest[qid, QUEST_NAME] = "Well-Armed";
+	global.quest[qid, QUEST_DESC] = "Equip one of your creatures with your new Spell Gem.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 357
+	global.quest[qid, QUEST_NAME] = "All Work And No Play";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 358;
+	global.quest[qid, QUEST_NAME] = "Destination: Blood Grove";
+	global.quest[qid, QUEST_DESC] = "Use the Teleportation Shrine to travel to the Blood Grove.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 359;
+	global.quest[qid, QUEST_NAME] = "God of the Hunt";
+	global.quest[qid, QUEST_DESC] = "Find Apocranox's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 360;
+	global.quest[qid, QUEST_NAME] = "A Formidable Ally";
+	global.quest[qid, QUEST_DESC] = "Seek out and subdue Kiichi at Realm Depth 3.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 361;
+	global.quest[qid, QUEST_NAME] = "The Hunt Begins";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 362;
+	global.quest[qid, QUEST_NAME] = "Onward We Go";
+	global.quest[qid, QUEST_DESC] = "Speak with Everett again.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 363;
+	global.quest[qid, QUEST_NAME] = "Destination: Frostbite Caverns";
+	global.quest[qid, QUEST_DESC] = "Travel to the Frostbite Caverns.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = true;
+
+	qid = 364;
+	global.quest[qid, QUEST_NAME] = "God of Frost";
+	global.quest[qid, QUEST_DESC] = "Find Azural's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 365;
+	global.quest[qid, QUEST_NAME] = "Myrtle the... Cruncher";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Myrtle at Realm Depth 6.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 366;
+	global.quest[qid, QUEST_NAME] = "Time For Work";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 367;
+	global.quest[qid, QUEST_NAME] = "All About Projects";
+	global.quest[qid, QUEST_DESC] = "Speak with Everett to learn about Projects.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 368;
+	global.quest[qid, QUEST_NAME] = "My First Project";
+	global.quest[qid, QUEST_DESC] = "Speak with Everett and start the Blacksmith (Rank 2) project.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 369;
+	global.quest[qid, QUEST_NAME] = "Destination: Caustic Reactor";
+	global.quest[qid, QUEST_DESC] = "Travel to the Caustic Reactor.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 370;
+	global.quest[qid, QUEST_NAME] = "God of Discord";
+	global.quest[qid, QUEST_DESC] = "Find Venedon's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 371;
+	global.quest[qid, QUEST_NAME] = "Pumpkin Pie Haircutted Freak";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Loid at Realm Depth 9.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 372;
+	global.quest[qid, QUEST_NAME] = "A Triumphant Return";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 373;
+	global.quest[qid, QUEST_NAME] = "Decorator Extraordinaire";
+	global.quest[qid, QUEST_DESC] = "Switch to Decoration Mode and place the Fusion Station somewhere in your castle.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 374;
+	global.quest[qid, QUEST_NAME] = "Almost There...";
+	global.quest[qid, QUEST_DESC] = "Exit Decoration Mode and speak with Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 375;
+	global.quest[qid, QUEST_NAME] = "Destination: Titan's Wound";
+	global.quest[qid, QUEST_DESC] = "Travel to the Titan's Wound.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 376;
+	global.quest[qid, QUEST_NAME] = "God of Blood";
+	global.quest[qid, QUEST_DESC] = "Find Mortem's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 377;
+	global.quest[qid, QUEST_NAME] = "Quest For Thy Cater-cousins";
+	global.quest[qid, QUEST_DESC] = "Find Hebron and Damaos.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 378;
+	global.quest[qid, QUEST_NAME] = "Mixed Feelings";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 379;
+	global.quest[qid, QUEST_NAME] = "Destination: Path of the Damned";
+	global.quest[qid, QUEST_DESC] = "Travel to the Path of the Damned.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 380;
+	global.quest[qid, QUEST_NAME] = "Goddess of Darkness";
+	global.quest[qid, QUEST_DESC] = "Find Erebyss' altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 381;
+	global.quest[qid, QUEST_NAME] = "A Tragic Death";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Vlora at Realm Depth 15.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 382;
+	global.quest[qid, QUEST_NAME] = "Orb of Death";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 383;
+	global.quest[qid, QUEST_NAME] = "Destination: The Swamplands";
+	global.quest[qid, QUEST_DESC] = "Travel to The Swamplands.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 384;
+	global.quest[qid, QUEST_NAME] = "God of Bliss";
+	global.quest[qid, QUEST_DESC] = "Find Meraxis's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 385;
+	global.quest[qid, QUEST_NAME] = "Meraxis's Trial";
+	global.quest[qid, QUEST_DESC] = "Overcome Meraxis's trial at Realm Depth 18.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 386;
+	global.quest[qid, QUEST_NAME] = "Orb of Nature";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 387;
+	global.quest[qid, QUEST_NAME] = "Destination: Refuge of the Magi";
+	global.quest[qid, QUEST_DESC] = "Travel to the Refuge of the Magi.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 388;
+	global.quest[qid, QUEST_NAME] = "God of Wisdom";
+	global.quest[qid, QUEST_DESC] = "Find Zonte's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 389;
+	global.quest[qid, QUEST_NAME] = "A Timely Rescue";
+	global.quest[qid, QUEST_DESC] = "Find the Soulflayer at Realm Depth 21.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 390;
+	global.quest[qid, QUEST_NAME] = "Orb of Sorcery";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 391;
+	global.quest[qid, QUEST_NAME] = "Destination: Great Pandemonium";
+	global.quest[qid, QUEST_DESC] = "Travel to the Great Pandemonium.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 392;
+	global.quest[qid, QUEST_NAME] = "God of Fire";
+	global.quest[qid, QUEST_DESC] = "Find Vulcanar's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 393;
+	global.quest[qid, QUEST_NAME] = "Spoonor";
+	global.quest[qid, QUEST_DESC] = "Find Spoonor at Realm Depth 24 and convince him to hand over the Chaos Orb.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 394;
+	global.quest[qid, QUEST_NAME] = "Orb of Chaos";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 395;
+	global.quest[qid, QUEST_NAME] = "Destination: Azure Dream";
+	global.quest[qid, QUEST_DESC] = "Travel to the Azure Dream.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 396;
+	global.quest[qid, QUEST_NAME] = "Goddess of Light";
+	global.quest[qid, QUEST_DESC] = "Find Surathli's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 397;
+	global.quest[qid, QUEST_NAME] = "Trial of Surathli";
+	global.quest[qid, QUEST_DESC] = "Overcome Surathli's trial at Realm Depth 27.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 398;
+	global.quest[qid, QUEST_NAME] = "Orb of Life";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 399;
+	global.quest[qid, QUEST_NAME] = "Destination: Temple of Lies";
+	global.quest[qid, QUEST_DESC] = "Travel to the Temple of Lies.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 400;
+	global.quest[qid, QUEST_NAME] = "God of Vanity";
+	global.quest[qid, QUEST_DESC] = "Find Aurum's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 401;
+	global.quest[qid, QUEST_NAME] = "Vitja Games";
+	global.quest[qid, QUEST_DESC] = "Defeat Vitja and her Gemlings at Realm Depth 30.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 402;
+	global.quest[qid, QUEST_NAME] = "Tying It All Together";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 403;
+	global.quest[qid, QUEST_NAME] = "Destination: Eternity's End";
+	global.quest[qid, QUEST_DESC] = "Travel to Eternity's End.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 404;
+	global.quest[qid, QUEST_NAME] = "God of Time";
+	global.quest[qid, QUEST_DESC] = "Find Vertraag's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 405;
+	global.quest[qid, QUEST_NAME] = "Imp Impington";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Imp Impington at Realm Depth 33.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 406;
+	global.quest[qid, QUEST_NAME] = "A Slight Miscalculation";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 407;
+	global.quest[qid, QUEST_NAME] = "Destination: Eternity's End";
+	global.quest[qid, QUEST_DESC] = "Travel to Eternity's End.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 408;
+	global.quest[qid, QUEST_NAME] = "An Unknown God";
+	global.quest[qid, QUEST_DESC] = "Find an altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 409;
+	global.quest[qid, QUEST_NAME] = "Harlot Hitman";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Etta at Realm Depth 36.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 410;
+	global.quest[qid, QUEST_NAME] = "Third Time's A Charm";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 411;
+	global.quest[qid, QUEST_NAME] = "Destination: Eternity's End";
+	global.quest[qid, QUEST_DESC] = "Travel to Eternity's End.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 412;
+	global.quest[qid, QUEST_NAME] = "God of Time";
+	global.quest[qid, QUEST_DESC] = "Find Vertraag's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 413;
+	global.quest[qid, QUEST_NAME] = "The King of Nex";
+	global.quest[qid, QUEST_DESC] = "Find and defeat the King of Nex at Realm Depth 39.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 414;
+	global.quest[qid, QUEST_NAME] = "Rescue Mission";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 415;
+	global.quest[qid, QUEST_NAME] = "Destination: Where the Dead Ships Dwell";
+	global.quest[qid, QUEST_DESC] = "Travel to Where the Dead Ships Dwell.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 416;
+	global.quest[qid, QUEST_NAME] = "God of the Sea";
+	global.quest[qid, QUEST_DESC] = "Find Friden's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 417;
+	global.quest[qid, QUEST_NAME] = "Not Much To Go On";
+	global.quest[qid, QUEST_DESC] = "Find the beach.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 418;
+	global.quest[qid, QUEST_NAME] = "Beach Party";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 419;
+	global.quest[qid, QUEST_NAME] = "Destination: Faraway Enclave";
+	global.quest[qid, QUEST_DESC] = "Travel to the Faraway Enclave.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 420;
+	global.quest[qid, QUEST_NAME] = "God of Fortune";
+	global.quest[qid, QUEST_DESC] = "Find Lister's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 421;
+	global.quest[qid, QUEST_NAME] = "Pest Patrol";
+	global.quest[qid, QUEST_DESC] = "Defeat the creature at Realm Depth 45.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 422;
+	global.quest[qid, QUEST_NAME] = "The Slog";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 423;
+	global.quest[qid, QUEST_NAME] = "Destination: The Barrens";
+	global.quest[qid, QUEST_DESC] = "Travel to The Barrens.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 424;
+	global.quest[qid, QUEST_NAME] = "Goddess of Illusion";
+	global.quest[qid, QUEST_DESC] = "Find Yseros' altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 425;
+	global.quest[qid, QUEST_NAME] = "Riddle Me This";
+	global.quest[qid, QUEST_DESC] = "Seek out Ramses at Realm Depth 48 and solve his riddle.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 426;
+	global.quest[qid, QUEST_NAME] = "So Close Yet So Far";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 427;
+	global.quest[qid, QUEST_NAME] = "Destination: Unsullied Meadows";
+	global.quest[qid, QUEST_DESC] = "Travel to the Unsullied Meadows.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 428;
+	global.quest[qid, QUEST_NAME] = "God of Wind";
+	global.quest[qid, QUEST_DESC] = "Find Aeolian's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 429;
+	global.quest[qid, QUEST_NAME] = "The Great Scavenge";
+	global.quest[qid, QUEST_DESC] = "Acquire a Void Rune.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 430;
+	global.quest[qid, QUEST_NAME] = "An Unpleasant Surprise";
+	global.quest[qid, QUEST_DESC] = "Return to Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 431;
+	global.quest[qid, QUEST_NAME] = "Destination: Bastion of the Void";
+	global.quest[qid, QUEST_DESC] = "Travel to the Bastion of the Void.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 432;
+	global.quest[qid, QUEST_NAME] = "God of Shadow";
+	global.quest[qid, QUEST_DESC] = "Find Tenebris' altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 433;
+	global.quest[qid, QUEST_NAME] = "God of Extinction";
+	global.quest[qid, QUEST_DESC] = "Find Perdition's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 434;
+	global.quest[qid, QUEST_NAME] = "Shadows Fall";
+	global.quest[qid, QUEST_DESC] = "Overcome your inner turmoil.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 435;
+	global.quest[qid, QUEST_NAME] = "To Kill a God";
+	global.quest[qid, QUEST_DESC] = "Speak with Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 436;
+	global.quest[qid, QUEST_NAME] = "Destination: Torture Chamber";
+	global.quest[qid, QUEST_DESC] = "Travel to the Torture Chamber.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 437;
+	global.quest[qid, QUEST_NAME] = "God of Punishment";
+	global.quest[qid, QUEST_DESC] = "Find Tartarith's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 438;
+	global.quest[qid, QUEST_NAME] = "The End of Pain";
+	global.quest[qid, QUEST_DESC] = "Rescue Damaos and Hebron.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 439;
+	global.quest[qid, QUEST_NAME] = "The Saddest News";
+	global.quest[qid, QUEST_DESC] = "Speak with Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 440;
+	global.quest[qid, QUEST_NAME] = "Destination: Kingdom of Heretics";
+	global.quest[qid, QUEST_DESC] = "Travel to the Kingdom of Heretics.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 441;
+	global.quest[qid, QUEST_NAME] = "God of War";
+	global.quest[qid, QUEST_DESC] = "Find Gonfurian's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 442;
+	global.quest[qid, QUEST_NAME] = "Vengeance";
+	global.quest[qid, QUEST_DESC] = "Defeat the King of Nex.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 443;
+	global.quest[qid, QUEST_NAME] = "The True Enemy";
+	global.quest[qid, QUEST_DESC] = "Speak with Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 444;
+	global.quest[qid, QUEST_NAME] = "Destination: Sanctum Umbra";
+	global.quest[qid, QUEST_DESC] = "Travel to Sanctum Umbra.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 445;
+	global.quest[qid, QUEST_NAME] = "The Awakened Dreamer";
+	global.quest[qid, QUEST_DESC] = "Defeat Caliban.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 446;
+	global.quest[qid, QUEST_NAME] = "Blood For Blood";
+	global.quest[qid, QUEST_DESC] = "Speak with Everett.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_CASTLEQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 447;
+	global.quest[qid, QUEST_NAME] = "Ember to Inferno";
+	global.quest[qid, QUEST_DESC] = "Collect Living Embers in this Realm to please " + scr_GodName(GOD_CHAOS, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Living Embers Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 448;
+	global.quest[qid, QUEST_NAME] = "Spontaneous Combustion";
+	global.quest[qid, QUEST_DESC] = "Activate small volcanoes in this Realm to please " + scr_GodName(GOD_CHAOS, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Volcanoes Activated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 449;
+	global.quest[qid, QUEST_NAME] = "God of Extinction";
+	global.quest[qid, QUEST_DESC] = "Find Perdition's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 450
+	global.quest[qid, QUEST_NAME] = "Nether Boss";
+	global.quest[qid, QUEST_DESC] = "Seek out the Nether Portal in this realm and defeat the Nether Boss contained within.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 451
+	global.quest[qid, QUEST_NAME] = "False God";
+	global.quest[qid, QUEST_DESC] = "Defeat the enemies in this Realm to track down the False God, then defeat them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 452;
+	global.quest[qid, QUEST_NAME] = "Treasures of the Deep";
+	global.quest[qid, QUEST_DESC] = "Search for lost relics in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Relics Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 453;
+	global.quest[qid, QUEST_NAME] = "Supply Hunt";
+	global.quest[qid, QUEST_DESC] = "Search for supplies in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Supplies Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 454;
+	global.quest[qid, QUEST_NAME] = "Icky Ichor";
+	global.quest[qid, QUEST_DESC] = "Find and study the ichor pools in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Ichor Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 455;
+	global.quest[qid, QUEST_NAME] = "Love Notes";
+	global.quest[qid, QUEST_DESC] = "Find and study the scrolls scattered around this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Scrolls Studied";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 456;
+	global.quest[qid, QUEST_NAME] = "Shrine of Sands";
+	global.quest[qid, QUEST_DESC] = "Find and activate Sand Shrines in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Shrines Activated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 457;
+	global.quest[qid, QUEST_NAME] = "Lost Treasure";
+	global.quest[qid, QUEST_DESC] = "Find buried treasure in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Treasure Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 458;
+	global.quest[qid, QUEST_NAME] = "Washed Ashore";
+	global.quest[qid, QUEST_DESC] = "Find and study the starfish in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Starfish Studied";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 459;
+	global.quest[qid, QUEST_NAME] = "Raw Sewage";
+	global.quest[qid, QUEST_DESC] = "Find and destroy a boss in a sewer in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Sewer Boss Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 460;
+	global.quest[qid, QUEST_NAME] = "Balls of Fire";
+	global.quest[qid, QUEST_DESC] = "Find and activate magma orbs in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Magma Orbs Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 461;
+	global.quest[qid, QUEST_NAME] = "Nemesis Shrine";
+	global.quest[qid, QUEST_DESC] = "Find and activate a Nemesis Shrine in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Nemesis Shrine Activated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 462;
+	global.quest[qid, QUEST_NAME] = "Light in the Dark";
+	global.quest[qid, QUEST_DESC] = "Find illuminated skulls in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Skulls Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 463;
+	global.quest[qid, QUEST_NAME] = "Shrine of Spiders";
+	global.quest[qid, QUEST_DESC] = "Find and activate Spider Shrines in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Shrines Activated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 464
+	global.quest[qid, QUEST_NAME] = "Unexpected Wealth";
+	global.quest[qid, QUEST_DESC] = "Mine rocks for resources in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Rocks Mined";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 465
+	global.quest[qid, QUEST_NAME] = "Blessed Be";
+	global.quest[qid, QUEST_DESC] = "Find and activate an Angel Shrine in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Shrine Activated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 466
+	global.quest[qid, QUEST_NAME] = "Effigies For Days";
+	global.quest[qid, QUEST_DESC] = "Find and activate mysterious Effigies in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Effigies Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 467
+	global.quest[qid, QUEST_NAME] = "Tartarith's Homework";
+	global.quest[qid, QUEST_DESC] = "Find and read scrolls in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Scrolls Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 468
+	global.quest[qid, QUEST_NAME] = "You Don't Even Give a Cairn";
+	global.quest[qid, QUEST_DESC] = "Find cairns in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Cairns Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 469
+	global.quest[qid, QUEST_NAME] = "Nature's Bounty";
+	global.quest[qid, QUEST_DESC] = "Find fruit trees in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Fruit Trees Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 470
+	global.quest[qid, QUEST_NAME] = "But Why Was It Moving?";
+	global.quest[qid, QUEST_DESC] = "Find and rescue webbed victims in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Victims Rescued";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 471
+	global.quest[qid, QUEST_NAME] = "The Decorated Soldier";
+	global.quest[qid, QUEST_DESC] = "Find coats of arms in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Coats of Arms Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 472
+	global.quest[qid, QUEST_NAME] = "Goddess of Falsity";
+	global.quest[qid, QUEST_DESC] = "Find Alexandria's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 473
+	global.quest[qid, QUEST_NAME] = "Goddess of Earth";
+	global.quest[qid, QUEST_DESC] = "Find Anneltha's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 474
+	global.quest[qid, QUEST_NAME] = "God of Balance";
+	global.quest[qid, QUEST_DESC] = "Find Ariamaki's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 475
+	global.quest[qid, QUEST_NAME] = "God of Strife";
+	global.quest[qid, QUEST_DESC] = "Find Genaros' altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 476
+	global.quest[qid, QUEST_NAME] = "Goddess of Creation";
+	global.quest[qid, QUEST_DESC] = "Find Muse's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 477
+	global.quest[qid, QUEST_NAME] = "Goddess of Uncertainty";
+	global.quest[qid, QUEST_DESC] = "Find Reclusa's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 478
+	global.quest[qid, QUEST_NAME] = "God of Science";
+	global.quest[qid, QUEST_DESC] = "Find 4080's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 479
+	global.quest[qid, QUEST_NAME] = "Goddess of Prophecy";
+	global.quest[qid, QUEST_DESC] = "Find Shallan's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 480
+	global.quest[qid, QUEST_NAME] = "God of Fusion";
+	global.quest[qid, QUEST_DESC] = "Find T'mere M'rgo's altar in this realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 0
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	// forbidden depths
+	qid = 481;
+	global.quest[qid, QUEST_NAME] = "Self-Made Maestro";
+	global.quest[qid, QUEST_DESC] = "Use the Music Crystals in this realm to compose a song.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Songs Composed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 482;
+	global.quest[qid, QUEST_NAME] = "Red Stones";
+	global.quest[qid, QUEST_DESC] = "Collect Red Magnetic Stones in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Red Stones Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 483;
+	global.quest[qid, QUEST_NAME] = "Blue Stones";
+	global.quest[qid, QUEST_DESC] = "Collect Blue Magnetic Stones in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Blue Stones Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 484;
+	global.quest[qid, QUEST_NAME] = "An Unexpected Donation";
+	global.quest[qid, QUEST_DESC] = "Make an offering to the Glowing Pits in this Realm to appease Anneltha.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Offerings";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 485;
+	global.quest[qid, QUEST_NAME] = "Bottomless Pits";
+	global.quest[qid, QUEST_DESC] = "Find Pit Worms that are minding their own business. Then, kill them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Pit Worms Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 486;
+	global.quest[qid, QUEST_NAME] = "The Exterminator Has Arrived";
+	global.quest[qid, QUEST_DESC] = "Find and destroy Waspids in their hives.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Waspids Exterminated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	// forgotten lab
+	qid = 487;
+	global.quest[qid, QUEST_NAME] = "Back to the Junk Heap";
+	global.quest[qid, QUEST_DESC] = "Activate Modrons in this Realm and destroy them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Modrons Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 488;
+	global.quest[qid, QUEST_NAME] = "Diamond in the Rough";
+	global.quest[qid, QUEST_DESC] = "Collect Shiny Cogs in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Shiny Cogs Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 489;
+	global.quest[qid, QUEST_NAME] = "A Bit of Elbow Grease";
+	global.quest[qid, QUEST_DESC] = "Collect Weapon Piles in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Weapon Piles Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 490;
+	global.quest[qid, QUEST_NAME] = "Junkyard Blues";
+	global.quest[qid, QUEST_DESC] = "Activate Automatons in this Realm and destroy them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Automatons Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 491;
+	global.quest[qid, QUEST_NAME] = "Self Awareness";
+	global.quest[qid, QUEST_DESC] = "Collect Robot Parts in this Realm and re-assemble them.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Robot Parts Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 4
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 492;
+	global.quest[qid, QUEST_NAME] = "Blueprints of the Future";
+	global.quest[qid, QUEST_DESC] = "Collect Schematics in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Schematics Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	// damarel
+	qid = 493;
+	global.quest[qid, QUEST_NAME] = "A Greater Whole";
+	global.quest[qid, QUEST_DESC] = "Collect Piles of Gears in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Gears Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 494;
+	global.quest[qid, QUEST_NAME] = "Gifts For Alexandria";
+	global.quest[qid, QUEST_DESC] = "Find and collect Mechanical Scrap to appease " + scr_GodName(GOD_ALEXANDRIA, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Mechanical Scrap Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 495;
+	global.quest[qid, QUEST_NAME] = "Power: On";
+	global.quest[qid, QUEST_DESC] = "Collect batteries and use them to power generators in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Generators Powered Up";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 496;
+	global.quest[qid, QUEST_NAME] = "Clockwork World";
+	global.quest[qid, QUEST_DESC] = "Find a clock portal in this Realm and destroy its master.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Portal Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1;
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 497;
+	global.quest[qid, QUEST_NAME] = "Grandfather Time";
+	global.quest[qid, QUEST_DESC] = "Use the Antique Clocks in this Realm to request a boon from Alexandria.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Clocks Used";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+	qid = 498;
+	global.quest[qid, QUEST_NAME] = "Tick Tock, You're Dead";
+	global.quest[qid, QUEST_DESC] = "Reanimate and destroy Clockworks in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Clockworks Killed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	// land of balance
+	qid = 499;
+	global.quest[qid, QUEST_NAME] = "Final Arbitration";
+	global.quest[qid, QUEST_DESC] = "Find and destroy Arbiters in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Arbiters Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 500;
+	global.quest[qid, QUEST_NAME] = "Leaning Toward Truth";
+	global.quest[qid, QUEST_DESC] = "Find Left-Balanced Scales in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Scales Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 501;
+	global.quest[qid, QUEST_NAME] = "Leaning Toward Lies";
+	global.quest[qid, QUEST_DESC] = "Find Right-Balanced Scales in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Scales Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 502;
+	global.quest[qid, QUEST_NAME] = "Cards Against Inhumanity";
+	global.quest[qid, QUEST_DESC] = "Collect Tarot Cards in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Cards Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 503;
+	global.quest[qid, QUEST_NAME] = "Perfection Is Overrated";
+	global.quest[qid, QUEST_DESC] = "Collect Books in this Realm and put them back on their Bookshelves.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Books Re-shelved";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 504;
+	global.quest[qid, QUEST_NAME] = "Gifts For Ariamaki";
+	global.quest[qid, QUEST_DESC] = "Find and collect Horse Figurines to appease " + scr_GodName(GOD_ARIAMAKI, true) + ".";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Horse Figurines Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+
+	// gambler's hive
+	qid = 505;
+	global.quest[qid, QUEST_NAME] = "Winner, Winner, Cockatrice Dinner";
+	global.quest[qid, QUEST_DESC] = "Find a Large Slot Machine in this Realm and win big.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Large Slot Machine";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 506;
+	global.quest[qid, QUEST_NAME] = "Drunken Revenge";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Drunken Gambling Dwarves in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Dwarves Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 507;
+	global.quest[qid, QUEST_NAME] = "Gambler's Fallacy";
+	global.quest[qid, QUEST_DESC] = "Find and collect Decks of Cards in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Decks Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 508;
+	global.quest[qid, QUEST_NAME] = "Little Wins";
+	global.quest[qid, QUEST_DESC] = "Find Small Slot Machines in this Realm and win.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Small Slot Machines";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 509;
+	global.quest[qid, QUEST_NAME] = "Spin the Wheel";
+	global.quest[qid, QUEST_DESC] = "Find a portal in this Realm and destroy its master.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Portal Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 510;
+	global.quest[qid, QUEST_NAME] = "Undone Ambitions";
+	global.quest[qid, QUEST_DESC] = "Knock down Houses of Cards and defeat the Luckmantrias contained within.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Luckmantrias Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	// overgrown temple
+	qid = 511;
+	global.quest[qid, QUEST_NAME] = "Monolith of Fate";
+	global.quest[qid, QUEST_DESC] = "Find Monoliths in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Monoliths Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 512;
+	global.quest[qid, QUEST_NAME] = "Keeper of the Orb";
+	global.quest[qid, QUEST_DESC] = "Find and activate a Mysterious Orb in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Orb";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 513;
+	global.quest[qid, QUEST_NAME] = "Better Days";
+	global.quest[qid, QUEST_DESC] = "Find and destroy Bloodstained Altars in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Altars Destroyed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 514;
+	global.quest[qid, QUEST_NAME] = "Unexpected Treasure";
+	global.quest[qid, QUEST_DESC] = "Find and ransack Bookshelves in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Bookshelves Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 515;
+	global.quest[qid, QUEST_NAME] = "A Little Help";
+	global.quest[qid, QUEST_DESC] = "Find and use Pristine Statues in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Statues Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 516;
+	global.quest[qid, QUEST_NAME] = "Entangled";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Snaptraps in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Snaptraps Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	
+	// amalgam gardens
+	qid = 517;
+	global.quest[qid, QUEST_NAME] = "The Brightest Brazier";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Wolpertingers in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Wolpertingers Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 518;
+	global.quest[qid, QUEST_NAME] = "Retro Style";
+	global.quest[qid, QUEST_DESC] = "Find and collect Neon Roses in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Neon Roses Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 519;
+	global.quest[qid, QUEST_NAME] = "Right in the Eye";
+	global.quest[qid, QUEST_DESC] = "Find an Eye of T'mere M'rgo in this Realm and defeated its master.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Portal Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 520;
+	global.quest[qid, QUEST_NAME] = "Long Lost Garbage";
+	global.quest[qid, QUEST_DESC] = "Find and ransack Abandoned Caves in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Abandoned Caves";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 521;
+	global.quest[qid, QUEST_NAME] = "Amalgam Gardens Blues";
+	global.quest[qid, QUEST_DESC] = "Find and use Red Runestones in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Red Runestones";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 522;
+	global.quest[qid, QUEST_NAME] = "Seeing Red";
+	global.quest[qid, QUEST_DESC] = "Find and use Blue Runestones in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Blue Runestones";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	
+	// astral gallery
+	qid = 523;
+	global.quest[qid, QUEST_NAME] = "Self-Inflicted Pain";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Masochists in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Masochists Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 524;
+	global.quest[qid, QUEST_NAME] = "Beauty of Creation";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Animations in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Animations Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 525;
+	global.quest[qid, QUEST_NAME] = "Destroy the Imperfections";
+	global.quest[qid, QUEST_DESC] = "Find and use Sculptures found in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Sculptures Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 526;
+	global.quest[qid, QUEST_NAME] = "Fun and Games";
+	global.quest[qid, QUEST_DESC] = "Find and catch an Animated Paint Brush in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Animated Paint Brush";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 527;
+	global.quest[qid, QUEST_NAME] = "Diabolical Work of Art";
+	global.quest[qid, QUEST_DESC] = "Find and cleanse a Painting Portal in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Portal Cleansed";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 528;
+	global.quest[qid, QUEST_NAME] = "Astral Trove";
+	global.quest[qid, QUEST_DESC] = "Find a key and use it to unlock a Large Treasure Chest in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Large Chest Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	
+	// fae lands
+	qid = 529;
+	global.quest[qid, QUEST_NAME] = "Eternal Glory";
+	global.quest[qid, QUEST_DESC] = "Find and make a wish at Fairy Fountains in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Fairy Fountains";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 530;
+	global.quest[qid, QUEST_NAME] = "Nightmares Begone";
+	global.quest[qid, QUEST_DESC] = "Find and use Dream Catchers in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Dream Catchers Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 531;
+	global.quest[qid, QUEST_NAME] = "Children of Shallan";
+	global.quest[qid, QUEST_DESC] = "Find and defeat Fae in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Fae Defeated";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 2
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 532;
+	global.quest[qid, QUEST_NAME] = "Finders Keepers";
+	global.quest[qid, QUEST_DESC] = "Find and ransack Treasure Caches in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Caches Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 3
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 533;
+	global.quest[qid, QUEST_NAME] = "It's Just a Game";
+	global.quest[qid, QUEST_DESC] = "Chase and capture a Young Fae in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Young Fae Found";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 1
+	global.quest[qid, QUEST_REPEATABLE] = false;
+	
+	qid = 534;
+	global.quest[qid, QUEST_NAME] = "Gift for Shallan";
+	global.quest[qid, QUEST_DESC] = "Find and collect Fae Orbs in this Realm.";
+	global.quest[qid, QUEST_TYPE] = QTYPE_REALMQUEST;
+	global.quest[qid, QUEST_ITEM_NEEDED] = "Orbs Collected";
+	global.quest[qid, QUEST_ITEM_QUANTITY] = 5
+	global.quest[qid, QUEST_REPEATABLE] = false;
+
+}

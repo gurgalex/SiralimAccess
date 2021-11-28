@@ -31,8 +31,8 @@ class Config:
     update_popup_browser: bool = True
     open_config_key: str = "C"
 
-    ocr_selected_menu_item: bool = True
-    ocr_read_dialog_boxes: bool = True
+    # OCR
+    ocr_enabled: bool = True
     read_secondary_key: str = "o"
     read_all_info_key: str = "v"
     copy_all_info_key: str = "c"
@@ -41,7 +41,12 @@ class Config:
     master_volume: int = 100
     main_volume: int = 100
     altar: int = 100
+    blacksmith: int = 100
     chest: int = 100
+    divination_candle: int = 100
+    emblem: int = 100
+    enchanter: int = 100
+    everett: int = 70
     exotic_portal: int = 100
     nether_portal: int = 100
     npc_master: int = 100
@@ -53,6 +58,7 @@ class Config:
     summoning_brazier: int = 100
     riddle_dwarf: int = 100
     treasure_map_item: int = 100
+    wardrobe: int = 100
 
     detect_objects_through_walls: bool = True
 
@@ -73,7 +79,7 @@ class Config:
         }
 
         ini["OCR"] = {
-            "read_selected_menu": self.ocr_selected_menu_item,
+            "enabled": self.ocr_enabled,
             "read_secondary_key": self.read_secondary_key,
             "read_all_info_key": self.read_all_info_key,
             "copy_all_info_key": self.copy_all_info_key,
@@ -83,7 +89,12 @@ class Config:
         ini["VOLUME"] = {
             "main_volume": self.main_volume,
             "altar": self.altar,
+            "blacksmith": self.blacksmith,
             "chest": self.chest,
+            "divination_candle": self.divination_candle,
+            "emblem": self.emblem,
+            'enchanter': self.enchanter,
+            "everett": self.everett,
             "exotic_portal": self.exotic_portal,
             "nether_portal": self.nether_portal,
             "npc_master": self.npc_master,
@@ -95,6 +106,7 @@ class Config:
             "teleportation_shrine": self.teleportation_shrine,
             "riddle_dwarf": self.riddle_dwarf,
             "treasure_map_item": self.treasure_map_item,
+            "wardrobe": self.wardrobe,
         }
 
         ini["REALM_OBJECT_DETECTION"] = {
@@ -123,7 +135,12 @@ class Config:
 
         default_config.master_volume = volume.getint("main_volume", fallback=default_config.master_volume)
         default_config.altar = volume.getint("altar", fallback=default_config.altar)
+        default_config.blacksmith = volume.getint("blacksmith", fallback=default_config.blacksmith)
         default_config.chest = volume.getint("chest", fallback=default_config.chest)
+        default_config.divination_candle = volume.getint("divination_candle", fallback=default_config.divination_candle)
+        default_config.emblem = volume.getint("emblem", fallback=default_config.emblem)
+        default_config.enchanter = volume.getint("enchanter", fallback=default_config.enchanter)
+        default_config.everett = volume.getint("everett", fallback=default_config.everett)
         default_config.exotic_portal = volume.getint("exotic_portal", fallback=default_config.exotic_portal)
         default_config.nether_portal = volume.getint('nether_portal', fallback=default_config.nether_portal)
         default_config.npc_master = volume.getint('npc_master', fallback=default_config.npc_master)
@@ -135,10 +152,11 @@ class Config:
         default_config.treasure_map_item = volume.getint("treasure_map_item", fallback=default_config.treasure_map_item)
         default_config.summoning_brazier = volume.getint('summoning_brazier', fallback=default_config.summoning_brazier)
         default_config.riddle_dwarf = volume.getint('riddle_dwarf', fallback=default_config.riddle_dwarf)
+        default_config.wardrobe = volume.getint('wardrobe', fallback=default_config.wardrobe)
+
 
         ocr = ini["OCR"]
-        default_config.ocr_selected_menu_item = ocr.getboolean("read_selected_menu", fallback=default_config.ocr_selected_menu_item)
-        default_config.ocr_read_dialog_boxes = ocr.getboolean('read_dialog_boxes', fallback=default_config.read_secondary_key)
+        default_config.ocr_enabled = ocr.getboolean("enabled", fallback=default_config.ocr_enabled)
         default_config.read_secondary_key = ocr.get('read_secondary_key', fallback=default_config.read_secondary_key)
         default_config.read_all_info_key = ocr.get("read_all_info_key", fallback=default_config.read_all_info_key)
         default_config.copy_all_info_key = ocr.get("copy_all_info_key", fallback=default_config.copy_all_info_key)
