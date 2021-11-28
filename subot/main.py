@@ -1360,6 +1360,8 @@ class NearPlayerProcessing(Thread):
         # specific NPCs
         elif img_info.long_name == "ospr_blacksmith" and not self.parent.realm:
             return TileType.BLACKSMITH
+        elif (img_info.long_name == "ospr_enchanter" or img_info.long_name == "Rhea the Enchantress") and not self.parent.realm:
+            return TileType.ENCHANTER
 
         # all other NPCs
         elif img_info.sprite_type is SpriteType.NPC:

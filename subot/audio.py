@@ -31,6 +31,7 @@ class SoundType(enum.Enum):
     BLACKSMITH = (auto(), "blacksmith")
     CHEST = (auto(), "chest")
     EMBLEM = (auto(), 'emblem')
+    ENCHANTER = (auto(), 'enchanter')
     EXOTIC_PORTAL = (auto(), 'exotic portal')
     MASTER_NPC = (auto(), "master")
     NPC_NORMAL = (auto(), "NPC")
@@ -63,6 +64,7 @@ SoundType.mapping = {
     TileType.BLACKSMITH: SoundType.BLACKSMITH,
     TileType.CHEST: SoundType.CHEST,
     TileType.EMBLEM: SoundType.EMBLEM,
+    TileType.ENCHANTER: SoundType.ENCHANTER,
     TileType.EXOTIC_PORTAL: SoundType.EXOTIC_PORTAL,
     TileType.QUEST: SoundType.QUEST_ITEM,
     TileType.MASTER_NPC: SoundType.MASTER_NPC,
@@ -267,6 +269,15 @@ class AudioSystem:
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("blacksmith/low.wav").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("blacksmith/normal.wav").as_posix()),
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("blacksmith/high.wav").as_posix()),
+                )
+            ),
+            SoundType.ENCHANTER: SoundMapping(
+                channel=pygame.mixer.Channel(18),
+                volume_adj=self.config.enchanter,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("enchanter/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("enchanter/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("enchanter/high.wav").as_posix()),
                 )
             ),
 

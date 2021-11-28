@@ -44,6 +44,7 @@ class Config:
     blacksmith: int = 100
     chest: int = 100
     emblem: int = 100
+    enchanter: int = 100
     exotic_portal: int = 100
     nether_portal: int = 100
     npc_master: int = 100
@@ -89,6 +90,7 @@ class Config:
             "blacksmith": self.blacksmith,
             "chest": self.chest,
             "emblem": self.emblem,
+            'enchanter': self.enchanter,
             "exotic_portal": self.exotic_portal,
             "nether_portal": self.nether_portal,
             "npc_master": self.npc_master,
@@ -132,6 +134,7 @@ class Config:
         default_config.blacksmith = volume.getint("blacksmith", fallback=default_config.blacksmith)
         default_config.chest = volume.getint("chest", fallback=default_config.chest)
         default_config.emblem = volume.getint("emblem", fallback=default_config.emblem)
+        default_config.enchanter = volume.getint("enchanter", fallback=default_config.enchanter)
         default_config.exotic_portal = volume.getint("exotic_portal", fallback=default_config.exotic_portal)
         default_config.nether_portal = volume.getint('nether_portal', fallback=default_config.nether_portal)
         default_config.npc_master = volume.getint('npc_master', fallback=default_config.npc_master)

@@ -45,8 +45,10 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Riddle dwarf
 - Exotic Portal
 - Emblem
-- Wardrobe
-- Blacksmith
+- Castle
+- - Wardrobe
+- - Blacksmith
+- - Enchanter
 
 ## Keyboard Shortcuts
 | Action                    | Default Key |
