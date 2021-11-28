@@ -4,6 +4,8 @@
 ## feat
 - Added an option to disable speaking any text OCR -> eanbled, set to False
 - Add realm sound for emblems on the ground
+- Add wardrobe castle sound
+- Add blacksmith sound effect
 - UI screen
   - anointment claim from false god
 

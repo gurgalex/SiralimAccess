@@ -28,6 +28,7 @@ Right = float
 class SoundType(enum.Enum):
     _ignore_ = ["mapping"]
     ALTAR = (auto(), "altar")
+    BLACKSMITH = (auto(), "blacksmith")
     CHEST = (auto(), "chest")
     EMBLEM = (auto(), 'emblem')
     EXOTIC_PORTAL = (auto(), 'exotic portal')
@@ -59,6 +60,7 @@ class SoundType(enum.Enum):
 
 SoundType.mapping = {
     TileType.ALTAR: SoundType.ALTAR,
+    TileType.BLACKSMITH: SoundType.BLACKSMITH,
     TileType.CHEST: SoundType.CHEST,
     TileType.EMBLEM: SoundType.EMBLEM,
     TileType.EXOTIC_PORTAL: SoundType.EXOTIC_PORTAL,
@@ -256,6 +258,15 @@ class AudioSystem:
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("wardrobe/low.wav").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("wardrobe/normal.wav").as_posix()),
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("wardrobe/high.wav").as_posix()),
+                )
+            ),
+            SoundType.BLACKSMITH: SoundMapping(
+                channel=pygame.mixer.Channel(17),
+                volume_adj=self.config.blacksmith,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("blacksmith/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("blacksmith/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("blacksmith/high.wav").as_posix()),
                 )
             ),
 

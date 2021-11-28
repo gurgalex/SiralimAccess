@@ -26,6 +26,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
   - Reorder creature screen
   - GodForge avatar select
   - Teleportation Shrine realm select
+  - Wardrobe in castle
 
 ## Item sounds
 [video of sounds playing](https://youtu.be/2vVCJtCocbA)
@@ -44,6 +45,8 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Riddle dwarf
 - Exotic Portal
 - Emblem
+- Wardrobe
+- Blacksmith
 
 ## Keyboard Shortcuts
 | Action                    | Default Key |

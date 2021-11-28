@@ -1356,8 +1356,16 @@ class NearPlayerProcessing(Thread):
             return TileType.ALTAR
         elif img_info.sprite_type is SpriteType.PROJ_ITEM:
             return TileType.PROJECT_ITEM
+
+        # specific NPCs
+        elif img_info.long_name == "ospr_blacksmith" and not self.parent.realm:
+            return TileType.BLACKSMITH
+
+        # all other NPCs
         elif img_info.sprite_type is SpriteType.NPC:
             return TileType.NPC
+
+
         elif img_info.sprite_type is SpriteType.WALL:
             return TileType.WALL
         elif img_info.sprite_type is SpriteType.FLOOR:
