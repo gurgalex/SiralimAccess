@@ -1362,6 +1362,8 @@ class NearPlayerProcessing(Thread):
             return TileType.BLACKSMITH
         elif (img_info.long_name == "ospr_enchanter" or img_info.long_name == "Rhea the Enchantress") and not self.parent.realm:
             return TileType.ENCHANTER
+        elif img_info.long_name == "NPC everett" and not self.parent.realm:
+            return TileType.EVERETT
 
         # all other NPCs
         elif img_info.sprite_type is SpriteType.NPC:
@@ -1376,6 +1378,8 @@ class NearPlayerProcessing(Thread):
             return TileType.CHEST
         elif img_info.long_name == "emblem":
             return TileType.EMBLEM
+        elif img_info.long_name == "divinationcandle":
+            return TileType.DIVINATION_CANDLE
         elif img_info.long_name == "vital_wardrobe":
             return TileType.WARDROBE
         elif img_info.long_name in self.parent.treasure_map_item_names:

@@ -88,6 +88,7 @@ class TileType(Enum):
     WARDROBE = (34, Color.peachpuff, 'wardrobe')
     BLACKSMITH = (35, Color.temp, 'blacksmith')
     ENCHANTER = (36, Color.green, 'enchanter')
+    EVERETT = (37, Color.temp, 'everett')
 
     def __init__(self, num, color: Color, description: str):
         self.num = num

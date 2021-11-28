@@ -38,6 +38,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - Nether portal and portal exits
 - Creature Master
 - Chest
+- Divination Candle
 - Teleportation shrine
 - Treasure Map
 - Summoning brazier
@@ -49,6 +50,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
 - - Wardrobe
 - - Blacksmith
 - - Enchanter
+- - Everett
 
 ## Keyboard Shortcuts
 | Action                    | Default Key |

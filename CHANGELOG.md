@@ -2,11 +2,15 @@
 ## fix
 - The hang monitor has been replaced with a crash handler. This should work much better on low-end computers
 ## feat
-- Added an option to disable speaking any text OCR -> eanbled, set to False
-- Add realm sound for emblems on the ground
-- Add wardrobe castle sound
-- Add blacksmith castle sound effect
-- Add enchanter castle sound effect
+- Added an option to disable speaking any text OCR -> enabled, set to False
+- Added new realm sounds
+  - Add realm sound for emblems on the ground
+  - Add realm sound for divination candle
+- Castle sounds
+  - Add wardrobe castle sound
+  - Add blacksmith castle sound effect
+  - Add enchanter castle sound effect
+  - Add everett castle sound effect
 - UI screen
   - anointment claim from false god
 

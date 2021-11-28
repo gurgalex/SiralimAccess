@@ -43,8 +43,10 @@ class Config:
     altar: int = 100
     blacksmith: int = 100
     chest: int = 100
+    divination_candle: int = 100
     emblem: int = 100
     enchanter: int = 100
+    everett: int = 70
     exotic_portal: int = 100
     nether_portal: int = 100
     npc_master: int = 100
@@ -89,8 +91,10 @@ class Config:
             "altar": self.altar,
             "blacksmith": self.blacksmith,
             "chest": self.chest,
+            "divination_candle": self.divination_candle,
             "emblem": self.emblem,
             'enchanter': self.enchanter,
+            "everett": self.everett,
             "exotic_portal": self.exotic_portal,
             "nether_portal": self.nether_portal,
             "npc_master": self.npc_master,
@@ -133,8 +137,10 @@ class Config:
         default_config.altar = volume.getint("altar", fallback=default_config.altar)
         default_config.blacksmith = volume.getint("blacksmith", fallback=default_config.blacksmith)
         default_config.chest = volume.getint("chest", fallback=default_config.chest)
+        default_config.divination_candle = volume.getint("divination_candle", fallback=default_config.divination_candle)
         default_config.emblem = volume.getint("emblem", fallback=default_config.emblem)
         default_config.enchanter = volume.getint("enchanter", fallback=default_config.enchanter)
+        default_config.everett = volume.getint("everett", fallback=default_config.everett)
         default_config.exotic_portal = volume.getint("exotic_portal", fallback=default_config.exotic_portal)
         default_config.nether_portal = volume.getint('nether_portal', fallback=default_config.nether_portal)
         default_config.npc_master = volume.getint('npc_master', fallback=default_config.npc_master)

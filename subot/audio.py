@@ -30,6 +30,7 @@ class SoundType(enum.Enum):
     ALTAR = (auto(), "altar")
     BLACKSMITH = (auto(), "blacksmith")
     CHEST = (auto(), "chest")
+    DIVINATION_CANDLE = (auto(), 'divination candle')
     EMBLEM = (auto(), 'emblem')
     ENCHANTER = (auto(), 'enchanter')
     EXOTIC_PORTAL = (auto(), 'exotic portal')
@@ -46,6 +47,7 @@ class SoundType(enum.Enum):
     TELEPORTATION_SHRINE = (auto(), "teleportation shrine")
     TREASURE_MAP_ITEM = (auto(), 'treasure map item')
     WARDROBE = (auto(), 'wardrobe')
+    EVERETT = (auto(), 'everett')
 
     mapping: dict[TileType, SoundType] = {}
 
@@ -63,6 +65,7 @@ SoundType.mapping = {
     TileType.ALTAR: SoundType.ALTAR,
     TileType.BLACKSMITH: SoundType.BLACKSMITH,
     TileType.CHEST: SoundType.CHEST,
+    TileType.DIVINATION_CANDLE: SoundType.DIVINATION_CANDLE,
     TileType.EMBLEM: SoundType.EMBLEM,
     TileType.ENCHANTER: SoundType.ENCHANTER,
     TileType.EXOTIC_PORTAL: SoundType.EXOTIC_PORTAL,
@@ -76,7 +79,8 @@ SoundType.mapping = {
     TileType.RIDDLE_DWARF: SoundType.RIDDLE_DWARF,
     TileType.PANDEMONIUM_STATUE: SoundType.PANDEMONIUM_STATUE,
     TileType.TREASURE_MAP_ITEM: SoundType.TREASURE_MAP_ITEM,
-    TileType.WARDROBE: SoundType.WARDROBE
+    TileType.WARDROBE: SoundType.WARDROBE,
+    TileType.EVERETT: SoundType.EVERETT,
 }
 
 
@@ -253,6 +257,15 @@ class AudioSystem:
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("emblem/high.wav").as_posix()),
                 )
             ),
+            SoundType.DIVINATION_CANDLE: SoundMapping(
+                channel=pygame.mixer.Channel(15),
+                volume_adj=self.config.divination_candle,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("divination-candle/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("divination-candle/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("divination-candle/high.wav").as_posix()),
+                )
+            ),
             SoundType.WARDROBE: SoundMapping(
                 channel=pygame.mixer.Channel(16),
                 volume_adj=self.config.wardrobe,
@@ -280,7 +293,15 @@ class AudioSystem:
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("enchanter/high.wav").as_posix()),
                 )
             ),
-
+            SoundType.EVERETT: SoundMapping(
+                channel=pygame.mixer.Channel(19),
+                volume_adj=self.config.everett,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("everett/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("everett/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("everett/high.wav").as_posix()),
+                )
+            ),
             # SoundType.REACHABLE_BLACK: SoundMapping(
             #     channel=pygame.mixer.Channel(8),
             #     sounds=SoundIndicator(
