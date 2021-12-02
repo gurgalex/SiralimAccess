@@ -1,0 +1,12 @@
+orig_long_name,short_name,type_id,width_px,height_px,match_offset_x,match_offset_y
+forge_t1,,,,,64,96
+forge_t2,,,,,64,96
+forge_t3,,,,,64,96
+forge_t4,,,,,64,96
+forge_t5,,,,,64,96
+enchanter_t1,,,,,32,
+enchanter_t2,,,,,32,
+enchanter_t3,,,,,32,
+vital_fusion,,,,,32,
+reliquary,,,,,96,32
+menagerie_base,,,,,160,192
