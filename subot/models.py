@@ -113,6 +113,11 @@ class Sprite(Base):
     type = relationship('SpriteTypeLookup', backref='sprites', uselist=False)
     frames: list[SpriteFrame] = relationship("SpriteFrame", lazy='joined', cascade='all, delete-orphan')
 
+    width_px = Column(Integer, nullable=True)
+    height_px = Column(Integer, nullable=True)
+    match_offset_x = Column(Integer, nullable=True)
+    match_offset_y = Column(Integer, nullable=True)
+
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.DECORATION.value,
         'polymorphic_on': type_id,

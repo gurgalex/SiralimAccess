@@ -1,3 +1,4 @@
+import csv
 import logging
 import time
 from dataclasses import dataclass, field
@@ -6,6 +7,8 @@ from typing import Optional, Callable, Type, Union, Iterator
 
 import cv2
 import re
+
+import imagesize
 import numpy as np
 
 from numpy.typing import ArrayLike
@@ -53,7 +56,7 @@ relic_regex = re.compile(r".*Relics/Sprites/.*.png")
 battle_background_regex = re.compile(r".*/Sprites/TS_SU_Battle_.*.png")
 
 MASTER_ICON_SIZE = 16
-
+TILE_SIZE = 32
 
 @dataclass
 class ChestResult:
@@ -185,17 +188,31 @@ def add_or_update_sprites(sprites: dict[str, Type[Sprite]]):
             _ = session.merge(sprite_new)
         session.commit()
 
-    # cleanup sprites without attachment
-    with Session() as session:
-        session.execute('PRAGMA foreign_keys = ON;')
-        session.commit()
-        saved_frames_subquery = session.query(SpriteFrame.sprite_id).subquery()
-        rows_deleted = session.query(Sprite).filter(Sprite.id.not_in(saved_frames_subquery)).delete(synchronize_session=False)
-        session.commit()
-        print(f"deleted {rows_deleted} unused sprites")
+    # # cleanup sprites without attachment
+    # with Session() as session:
+    #     session.execute('PRAGMA foreign_keys = ON;')
+    #     session.commit()
+    #     saved_frames_subquery = session.query(SpriteFrame.sprite_id).subquery()
+    #     rows_deleted = session.query(Sprite).filter(Sprite.id.not_in(saved_frames_subquery)).delete(synchronize_session=False)
+    #     session.commit()
+    #     print(f"deleted {rows_deleted} unused sprites")
     end = time.time()
     print(f"adding sprites took {end - start} seconds")
 
+
+def apply_sprite_corrections():
+    print("applying sprite corrections")
+    with open("sprite_data_corrections.csv", newline='') as f:
+        reader = csv.DictReader(f)
+        with Session() as session:
+            for correction in reader:
+                long_name = correction["orig_long_name"]
+                sprite = session.query(Sprite).filter(Sprite.long_name == long_name).one()
+                if x_offset := correction["match_offset_x"]:
+                    sprite.match_offset_x = int(x_offset)
+                if y_offset := correction["match_offset_y"]:
+                    sprite.match_offset_y = int(y_offset)
+            session.commit()
 
 def match_battle_sprite(path: Path) -> Optional[re.Match]:
     return sprite_crits_battle_regex.match(path.as_posix())
@@ -404,7 +421,6 @@ class Inserter:
         return CastleSprite(short_name=long_name, long_name=long_name)
 
     def extract_realm_floortiles(self):
-        TILE_SIZE = 32
         floortiles_path = self.export_dir.joinpath("Chaos").joinpath("Sprites").joinpath("bg_chaos_0.png")
         floortiles_img = cv2.imread(floortiles_path.as_posix(), cv2.IMREAD_UNCHANGED)
 
@@ -463,7 +479,6 @@ class Inserter:
                 cv2.imwrite(destination_filepath.as_posix(), img)
 
     def extract_wall_sprites(self):
-        TILE_SIZE = 32
 
         dest_dir_walls = self.export_dir.joinpath("wall_realm_tiles")
         dest_dir_walls.mkdir(exist_ok=True)
@@ -649,11 +664,22 @@ class Inserter:
         for path in self.paths:
             for scanner in self.scanners:
                 if sprite := scanner(path):
+                    width, height = imagesize.get(path.as_posix())
+                    sprite.width_px = width
+                    sprite.height_px = height
+                    sprite.match_offset_x = 0
+                    sprite.match_offset_y = max(sprite.height_px - TILE_SIZE, 0)
                     sprite_frame = self.chop_path(path, self.export_dir)
                     self.sprites.setdefault(sprite.long_name, sprite).frames.append(sprite_frame)
                     break
 
         for path, sprite in self.manual_sprites():
+            width, height = imagesize.get(path.as_posix())
+            sprite.width_px = width
+            sprite.height_px = height
+            sprite.match_offset_x = 0
+            sprite.match_offset_y = max(sprite.height_px - TILE_SIZE, 0)
+
             sprite_frame = self.chop_path(path, self.custom_assets_dir)
             self.sprites.setdefault(sprite.long_name, sprite).frames.append(sprite_frame)
 
@@ -673,4 +699,5 @@ if __name__ == "__main__":
     sprite_scanner.extract_wall_sprites()
     sprite_scanner.extract_realm_floortiles()
     sprite_scanner.scan_sprites()
+    apply_sprite_corrections()
     hash_items()

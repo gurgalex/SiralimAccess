@@ -55,6 +55,7 @@ def join_plus_strings(line):
 
 @dataclass
 class Quest:
+    qid: int
     desc: Optional[str] = None
     title: Optional[str] = None
     items_needed: Optional[str] = None
@@ -63,11 +64,12 @@ class Quest:
 
 if __name__ == "__main__":
     quests = []
-    quest_obj = Quest()
+    quest_obj = Quest(qid=-1)
     for line in data:
         qid = -1
         if line.startswith("	qid"):
-            quest_obj = Quest()
+            _qid = int(get_quest_name(line).strip())
+            quest_obj = Quest(qid=_qid)
             qid += 1
         elif line.startswith("	global.quest[qid, QUEST_NAME] = "):
             quest_title = get_quest_name(line)
@@ -108,11 +110,11 @@ if __name__ == "__main__":
     print(f"needed {manual_ct}")
 
     import csv
-    with open("quest_title_desc.csv", "w+", newline='') as f:
-        reader = csv.DictWriter(f, ['title', 'desc', 'items_needed'])
+    with open("quest_title_desc_with_qids.csv", "w+", newline='') as f:
+        reader = csv.DictWriter(f, ['qid', 'title', 'desc', 'items_needed'])
         reader.writeheader()
         for quest in ultimate_quests:
-            reader.writerow({"title": quest.title, "desc": quest.desc, 'items_needed': quest.items_needed})
+            reader.writerow({"qid": quest.qid, "title": quest.title, "desc": quest.desc, 'items_needed': quest.items_needed})
 
 
 
