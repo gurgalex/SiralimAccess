@@ -49,6 +49,7 @@ class Config:
     enchanter: int = 100
     everett: int = 70
     exotic_portal: int = 100
+    realm_portal: int = 100
     favor_candle: int = 100
     large_chest: int = 100
     large_chest_key: int = 100
@@ -106,6 +107,7 @@ class Config:
             'enchanter': self.enchanter,
             "everett": self.everett,
             "exotic_portal": self.exotic_portal,
+            "realm_portal": self.realm_portal,
             "favor_candle": self.favor_candle,
             "large_chest": self.large_chest,
             "large_chest_key": self.large_chest_key,
@@ -161,6 +163,7 @@ class Config:
         default_config.enchanter = volume.getint("enchanter", fallback=default_config.enchanter)
         default_config.everett = volume.getint("everett", fallback=default_config.everett)
         default_config.exotic_portal = volume.getint("exotic_portal", fallback=default_config.exotic_portal)
+        default_config.realm_portal = volume.getint("realm_portal", fallback=default_config.realm_portal)
         default_config.favor_candle = volume.getint("favor_candle", fallback=default_config.favor_candle)
         default_config.large_chest = volume.getint("large_chest", fallback=default_config.large_chest)
         default_config.large_chest_key = volume.getint("large_chest_key", fallback=default_config.large_chest_key)
@@ -180,7 +183,6 @@ class Config:
         default_config.summoning_brazier = volume.getint('summoning_brazier', fallback=default_config.summoning_brazier)
         default_config.riddle_dwarf = volume.getint('riddle_dwarf', fallback=default_config.riddle_dwarf)
         default_config.wardrobe = volume.getint('wardrobe', fallback=default_config.wardrobe)
-
 
         ocr = ini["OCR"]
         default_config.ocr_enabled = ocr.getboolean("enabled", fallback=default_config.ocr_enabled)

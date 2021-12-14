@@ -16,11 +16,13 @@
      - zantai
      - standard portal
      - castle portal
+## refactors
+ - todo: add quest ID and description to quest table
 
 ## v0.14.2
 ### feat
 - read Field Items UI creature selection
-
+ 
 ## v0.14.1
 ### feat
 - Inspect UI screen

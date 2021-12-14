@@ -99,6 +99,7 @@ class TileType(Enum):
     LARGE_CHEST = (43, Color.temp, 'large chest')
     FAVOR_CANDLE = (44, Color.temp, 'favor candle')
     LARGE_CHEST_KEY = (45, Color.temp, "large key")
+    REALM_PORTAL = (46, Color.temp, "realm portal")
 
     def __init__(self, num, color: Color, description: str):
         self.num = num
