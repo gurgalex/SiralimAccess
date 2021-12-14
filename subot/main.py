@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 import signal
 import threading
@@ -26,7 +27,10 @@ from pynput.keyboard import KeyCode
 import win32process
 from winrt.windows.media.ocr import OcrResult
 
+from saver.save import DecorationMapping
 from subot import models, ocr
+from subot.game_log import GameState, determine_event, tail_log_file, BotMode, SaveUpdated
+from subot.save_monitor import GameConfigMonitor, SaveMonitor
 from subot.ui_areas.AnointmentClaimUI import AnointmentClaimUI
 from subot.ui_areas.CodexGeneric import CodexGeneric
 from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
@@ -179,16 +183,16 @@ class TileCoord:
 from enum import Enum, auto
 
 
-class BotMode(Enum):
-    UNDETERMINED = auto()
-    CASTLE = auto()
-    REALM = auto()
-    MINIMIZED = auto()
+# class BotMode(Enum):
+#     UNDETERMINED = auto()
+#     CASTLE = auto()
+#     REALM = auto()
+#     MINIMIZED = auto()
 
 
 @dataclass(frozen=True)
 class AssetGridLoc:
-    """Tile coordinate relative to player + game asset name on map"""
+    """Tile coordinate relative to player"""
     x: int
     y: int
 
@@ -287,12 +291,19 @@ class Bot:
         # queue to monitor for incoming hang alert
         self.action_queue = queue.Queue()
         self.config = config
-        self.mode: BotMode = BotMode.UNDETERMINED
+        # self.mode: BotMode = BotMode.UNDETERMINED
         self.game_is_foreground: bool = False
         self.paused: bool = False
+        self.nearby_scanning_paused = False
+
+        self.configMonitor = GameConfigMonitor()
+        root.info(f"monitoring game config.sav. most recent slot: {self.configMonitor.game_config.last_slot}")
+        self.saveMonitor = SaveMonitor(self.configMonitor.game_config)
+        root.info(f"monitoring sav: {self.saveMonitor.save_filepath}")
+        print(f"{self.saveMonitor.save.castle_decorations[DecorationMapping.SPAWN_POINT]}")
 
         self.player_direction: Optional[GameControl] = None
-        self.realm: Optional[Realm] = None
+        # self.realm: Optional[Realm] = None
 
         self.crash_notifier: queue.Queue[Optional[str]] = multiprocessing.Queue()
 
@@ -319,7 +330,8 @@ class Bot:
         try:
             self.su_client_rect = get_su_client_rect()
             self.game_is_foreground = True
-        except GameNotOpenException:
+        except GameNotOpenException as e:
+            raise e
             self.audio_system.speak_blocking("Siralim Access will not work unless Siralim Ultimate is open.")
 
             self.audio_system.speak_blocking("Shutting down")
@@ -330,6 +342,17 @@ class Bot:
 
             self.audio_system.speak_blocking("Shutting down")
             sys.exit(1)
+
+
+        # game state
+        self.game_state = GameState(self.saveMonitor.save)
+        self.prev_realm: Optional[Realm] = None
+        self.gotten_lines = queue.Queue()
+        self.su_log_thread = threading.Thread(daemon=True, target=tail_log_file, args=(self.gotten_lines,))
+        self.su_log_thread.start()
+
+        self.game_state.high_level_event(SaveUpdated(self.saveMonitor.save))
+
 
         """player tile position in grid"""
         self.player_position: Rect = Bot.compute_player_position(self.su_client_rect)
@@ -445,6 +468,25 @@ class Bot:
             self.font_surface, rect = self.game_font.render(self.current_menu.current_entry.title,
                                                             fgcolor=Color.white.rgb())
         signal.signal(signal.SIGINT, self.stop_signal)
+
+    @property
+    def realm(self):
+        return self.game_state.realm
+
+    def resume_nearby_scanning(self):
+        if not self.nearby_scanning_paused:
+            return
+        self.nearby_send_deque.put(Resume())
+        self.nearby_scanning_paused = False
+
+
+    def pause_nearby_scanning(self):
+        if not self.nearby_scanning_paused:
+            self.nearby_send_deque.put(Pause())
+            self.nearby_scanning_paused = True
+
+    def player_considered_stationary(self):
+        return time.time() - self.game_state.time_player_last_moved >= self.config.required_stationary_seconds
 
     def clear_all_matches(self):
         for match_group in self.all_found_matches.values():
@@ -695,6 +737,77 @@ class Bot:
             self.tx_window_queue.put(WindowDim(mss_dict=self.mon_full_window))
             self.tx_nearby_process_queue.put(WindowDim(mss_dict=self.nearby_mon))
 
+    def check_and_perform_action(self):
+        try:
+            msg = self.action_queue.get_nowait()
+            if msg is ActionType.READ_SECONDARY_INFO:
+                self.whole_window_thandle.speak_interaction_info()
+            elif msg is ActionType.REREAD_AUTO_TEXT:
+                self.whole_window_thandle.ocr_ui_system.speak_auto()
+            elif msg is ActionType.READ_ALL_INFO:
+                self.whole_window_thandle.speak_all_info()
+            elif msg is ActionType.COPY_ALL_INFO:
+                self.whole_window_thandle.copy_all_info()
+            elif msg is ActionType.HELP:
+                root.debug("got help request")
+                self.whole_window_thandle.speak_help()
+            elif msg is ActionType.SILENCE:
+                self.audio_system.silence()
+            elif msg is ActionType.OPEN_CONFIG_LOCATION:
+                open_config_file()
+            elif msg is ActionType.FORCE_OCR:
+                self.whole_window_thandle.force_ocr()
+            elif msg is ActionType.SCREENSHOT:
+
+                def send_to_clipboard(clip_type, data):
+                    """copy image to clipboard. Found at https://stackoverflow.com/a/62007792/17323787"""
+                    import win32clipboard
+                    win32clipboard.OpenClipboard()
+                    win32clipboard.EmptyClipboard()
+                    win32clipboard.SetClipboardData(clip_type, data)
+                    win32clipboard.CloseClipboard()
+
+                bgr_frame = self.whole_window_thandle.frame
+                is_success, buffer = cv2.imencode(".bmp", bgr_frame)
+                BMP_HEADER_LEN = 14
+                bmp_data = buffer[BMP_HEADER_LEN:].tobytes()
+                send_to_clipboard(win32clipboard.CF_DIB, bmp_data)
+
+                root.info("copied whole frame bytes to clipboard")
+        except queue.Empty:
+            pass
+
+    @property
+    def mode(self) -> BotMode:
+        return self.game_state.game_mode
+
+    def scan_for_items(self):
+        if self.paused:
+            return
+
+        if self.mode is BotMode.UNDETERMINED:
+            self.nearby_send_deque.put(ScanForItems())
+        elif self.mode is BotMode.REALM:
+            self.resume_nearby_scanning()
+            self.nearby_send_deque.put(ScanForItems())
+        elif self.mode is BotMode.CASTLE:
+            self.pause_nearby_scanning()
+            self.nearby_send_deque.put(ScanForItems())
+
+    def handle_pygame_event(self):
+        # pygame menu check events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.stop()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_DOWN:
+                    self.next_menu_item()
+                elif event.key == pygame.K_UP:
+                    self.previous_menu_item()
+                elif event.key in [pygame.K_SPACE, pygame.K_RETURN]:
+                    self.current_menu.current_entry.on_enter()
+            self.update()
+
     def run(self):
         self.audio_system.speak_nonblocking("Siralim Access has started")
         self.listener.start()
@@ -721,78 +834,43 @@ class Bot:
             if (time.time() - self.timer) > 1:
                 self.check_if_window_changed_position()
 
-            if not self.paused:
-                if self.mode is BotMode.UNDETERMINED:
-                    self.nearby_send_deque.put(ScanForItems())
-                    if self.realm:
-                        self.mode = BotMode.REALM
-                elif self.mode is BotMode.REALM:
-                    self.nearby_send_deque.put(ScanForItems())
-                elif self.mode is BotMode.CASTLE:
-                    self.nearby_send_deque.put(ScanForItems())
+            try:
+                while True:
+                    line = self.gotten_lines.get_nowait()
+                    if event := determine_event(line):
+                        self.game_state.update(event)
+            except queue.Empty:
+                pass
+
+            self.scan_for_items()
 
             if iters % every == 0:
                 root.debug(f"FPS: {clock.get_fps()}")
             iters += 1
 
-            try:
-                msg = self.action_queue.get_nowait()
-                if msg is ActionType.READ_SECONDARY_INFO:
-                    self.whole_window_thandle.speak_interaction_info()
-                elif msg is ActionType.REREAD_AUTO_TEXT:
-                    self.whole_window_thandle.ocr_ui_system.speak_auto()
-                elif msg is ActionType.READ_ALL_INFO:
-                    self.whole_window_thandle.speak_all_info()
-                elif msg is ActionType.COPY_ALL_INFO:
-                    self.whole_window_thandle.copy_all_info()
-                elif msg is ActionType.HELP:
-                    root.debug("got help request")
-                    self.whole_window_thandle.speak_help()
-                elif msg is ActionType.SILENCE:
-                    self.audio_system.silence()
-                elif msg is ActionType.OPEN_CONFIG_LOCATION:
-                    open_config_file()
-                elif msg is ActionType.FORCE_OCR:
-                    self.whole_window_thandle.force_ocr()
-                elif msg is ActionType.SCREENSHOT:
-
-
-                    def send_to_clipboard(clip_type, data):
-                        """copy image to clipboard. Found at https://stackoverflow.com/a/62007792/17323787"""
-                        import win32clipboard
-                        win32clipboard.OpenClipboard()
-                        win32clipboard.EmptyClipboard()
-                        win32clipboard.SetClipboardData(clip_type, data)
-                        win32clipboard.CloseClipboard()
-
-                    bgr_frame = self.whole_window_thandle.frame
-                    is_success, buffer = cv2.imencode(".bmp", bgr_frame)
-                    BMP_HEADER_LEN = 14
-                    bmp_data = buffer[BMP_HEADER_LEN:].tobytes()
-                    send_to_clipboard(win32clipboard.CF_DIB, bmp_data)
-
-
-                    root.info("copied whole frame bytes to clipboard")
-            except queue.Empty:
-                pass
-
+            self.check_and_perform_action()
             if self.config.show_ui:
-                # pygame menu check events
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        self.stop()
-                    elif event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_DOWN:
-                            self.next_menu_item()
-                        elif event.key == pygame.K_UP:
-                            self.previous_menu_item()
-                        elif event.key in [pygame.K_SPACE, pygame.K_RETURN]:
-                            self.current_menu.current_entry.on_enter()
-                    self.update()
+                self.handle_pygame_event()
 
             clock.tick(settings.FPS)
 
+    def mute_all_sounds(self):
+        for tile_type in self.all_found_matches.keys():
+            try:
+                sound_type = SoundType.from_tile_type(tile_type)
+                self.audio_system.stop(sound_type)
+            except KeyError:
+                pass
+
     def speak_nearby_objects(self):
+        if self.paused:
+            self.mute_all_sounds()
+            return
+
+        sound_should_mute = not self.config.repeat_sound_when_stationary and time.time() - self.game_state.time_player_last_moved >= self.config.required_stationary_seconds
+        if sound_should_mute:
+            self.mute_all_sounds()
+            return
 
         for tile_type, tiles in self.all_found_matches.items():
             try:
@@ -808,10 +886,6 @@ class Bot:
                     for tile in tiles:
                         audio_location = AudioLocation(distance=tile.point())
                         self.audio_system.play_sound(audio_location, sound_type)
-                    # current_direction_points = set([t.point() for t in tiles])
-                    # not_active_directions = self.all_directions - current_direction_points
-                    # for point in not_active_directions:
-                    #     self.audio_system.stop(sound_type, point)
                 else:
                     audio_location = AudioLocation(distance=tiles[0].point())
                     self.audio_system.play_sound(audio_location, sound_type)
@@ -838,6 +912,7 @@ class WholeWindowGrabber(multiprocessing.Process):
         self.rx_parent_queue = rx_queue
         self.hang_notifier = hang_notifier
         self.paused: bool = False
+
 
     def run(self):
 
@@ -1260,6 +1335,8 @@ class NearPlayerProcessing(Thread):
         self.was_match: bool = False
         self.match_streak: int = 0
         self.last_match_time: float = time.time()
+        self.last_player_location = self.parent.game_state.player_position
+        self.player_moved = True
         self.paused: bool = False
         self.got_first_frame = False
 
@@ -1306,7 +1383,46 @@ class NearPlayerProcessing(Thread):
                     queue.append(new_point)
                 marked.add(new_point)
 
+    def detect_if_can_scan_actual_realm(self):
+        if self.parent.mode is BotMode.CASTLE:
+            return False
+        if not (self.parent.mode is BotMode.REALM):
+            return False
+
+        # Scan the nearby tile area for lit tiles to determine what realm we are in currently
+        # This area was chosen since the player + 6 creatures are at most this long
+        # At least 1 tile will not be dimmed by the fog of war
+
+        floor_type = self.bfs_near()
+        if not floor_type:
+            return
+
+        if not floor_type.realm:
+            duration_since_last_match = time.time() - self.last_match_time
+            if duration_since_last_match >= 1 / 15 * 4:
+                self.parent.clear_all_matches()
+                self.parent.speak_nearby_objects()
+                root.info("stationary detected")
+            self.was_match = False
+            self.match_streak = 0
+            return False
+        self.match_streak += 1
+        self.was_match = True
+        self.last_match_time = time.time()
+
+        return True
+
     def detect_what_realm_in(self) -> Optional[Union[RealmAlignment, CastleAlignment]]:
+
+        if self.parent.game_state.game_mode is BotMode.CASTLE:
+            return CastleAlignment()
+        if not self.parent.game_state.realm:
+            return None
+        if self.parent.realm:
+            return RealmAlignment(self.parent.realm)
+
+        # old IMPL
+
 
         # Scan the nearby tile area for lit tiles to determine what realm we are in currently
         # This area was chosen since the player + 6 creatures are at most this long
@@ -1328,6 +1444,8 @@ class NearPlayerProcessing(Thread):
         elif img_info.sprite_type is SpriteType.WALL:
             return True
         elif s == "bck_FOW_Tile":
+            return True
+        elif s == "nowalk":
             return True
         else:
             return False
@@ -1356,6 +1474,14 @@ class NearPlayerProcessing(Thread):
             return TileType.ALTAR
         elif img_info.sprite_type is SpriteType.PROJ_ITEM:
             return TileType.PROJECT_ITEM
+        elif img_info.sprite_type is SpriteType.MATERIALS_COMMON:
+            return TileType.ARTIFACT_MATERIAL_BAG
+        elif img_info.sprite_type is SpriteType.MATERIALS_RARE:
+            return TileType.TRICK_MATERIAL_BOX
+        elif img_info.sprite_type is SpriteType.MATERIALS_LEGENDARY:
+            return TileType.TRAIT_MATERIAL_BOX
+        elif img_info.sprite_type is SpriteType.SPELL_MATERIAL_BAG:
+            return TileType.SPELL_MATERIAL_BAG
 
         # specific NPCs
         elif img_info.long_name == "ospr_blacksmith" and not self.parent.realm:
@@ -1364,6 +1490,8 @@ class NearPlayerProcessing(Thread):
             return TileType.ENCHANTER
         elif img_info.long_name == "NPC everett" and not self.parent.realm:
             return TileType.EVERETT
+        elif img_info.long_name == "ospr_hatcheryguy" and not self.parent.realm:
+            return TileType.MENAGERIE_NPC
 
         # all other NPCs
         elif img_info.sprite_type is SpriteType.NPC:
@@ -1376,15 +1504,21 @@ class NearPlayerProcessing(Thread):
             return TileType.FLOOR
         elif img_info.sprite_type is SpriteType.CHEST:
             return TileType.CHEST
-        elif img_info.long_name == "emblem":
+        elif img_info.sprite_type is SpriteType.LARGE_CHEST:
+            return TileType.LARGE_CHEST
+        elif img_info.sprite_type is SpriteType.LARGE_CHEST_KEY:
+            return TileType.LARGE_CHEST_KEY
+        elif img_info.sprite_type is SpriteType.EMBLEM:
             return TileType.EMBLEM
-        elif img_info.long_name == "divinationcandle":
+        elif img_info.sprite_type is SpriteType.DIVINATION_CANDLE:
             return TileType.DIVINATION_CANDLE
+        elif img_info.sprite_type is SpriteType.BIG_CANDLE:
+            return TileType.FAVOR_CANDLE
         elif img_info.long_name == "vital_wardrobe":
             return TileType.WARDROBE
         elif img_info.long_name in self.parent.treasure_map_item_names:
             return TileType.TREASURE_MAP_ITEM
-        elif img_info.long_name == "demonicstatue":
+        elif img_info.sprite_type is SpriteType.DEMONIC_STATUE:
             return TileType.PANDEMONIUM_STATUE
         elif img_info.long_name == "netherportal":
             return TileType.NETHER_PORTAL
@@ -1395,10 +1529,37 @@ class NearPlayerProcessing(Thread):
         else:
             return TileType.DECORATION
 
+    def scan_inside_castle(self):
+        """Efficient object detection from player while in castle"""
+        self.parent.clear_all_matches()
+        player_position = self.parent.game_state.player_position
+        castle_objs = self.parent.game_state.castle_objects
+        for obj_type, objs in castle_objs.items():
+            for obj in objs:
+                x_diff = obj.x - player_position.x
+                y_diff = obj.y - player_position.y
+                obj_location_from_player = AssetGridLoc(x=x_diff, y=y_diff)
+                self.parent.all_found_matches[obj_type].append(obj_location_from_player)
+
     def scan_for_items(self):
         """Scans for decorations and quests in the castle"""
-        max_stationary_streak = 60 * self.parent.config.required_stationary_seconds
-        if not self.parent.config.repeat_sound_when_stationary and self.match_streak >= max_stationary_streak:
+
+        if self.parent.mode is BotMode.CASTLE:
+            self.scan_inside_castle()
+            self.parent.speak_nearby_objects()
+            return
+
+        self.detect_if_can_scan_actual_realm()
+
+        if not self.was_match:
+            if time.time() - self.last_match_time > 1/15 * 4:
+                self.parent.clear_all_matches()
+                self.parent.speak_nearby_objects()
+            return
+
+        max_stationary_duration = self.parent.config.required_stationary_seconds
+        duration_since_last_moved = time.time() - self.parent.game_state.time_player_last_moved
+        if not self.parent.config.repeat_sound_when_stationary and duration_since_last_moved >= max_stationary_duration:
             self.parent.clear_all_matches()
             self.parent.speak_nearby_objects()
             return
@@ -1410,6 +1571,7 @@ class NearPlayerProcessing(Thread):
         for row in range(0, self.grid_near_rect.w, TILE_SIZE):
             for col in range(0, self.grid_near_rect.h, TILE_SIZE):
                 tile_gray = self.near_frame_gray[col:col + TILE_SIZE, row:row + TILE_SIZE]
+
                 start_point = (row + self.grid_near_rect.x, col + self.grid_near_rect.y)
                 end_point = (start_point[0] + TILE_SIZE, start_point[1] + TILE_SIZE)
                 asset_location = AssetGridLoc(
@@ -1456,22 +1618,16 @@ class NearPlayerProcessing(Thread):
 
     def handle_realm_alignment(self, realm_alignment: Optional[Union[RealmAlignment, CastleAlignment]]):
         if not realm_alignment:
-            self.match_streak = 0
-            if time.time() - self.last_match_time >= 1 / 15 * 4:
-                self.parent.clear_all_matches()
-                self.parent.speak_nearby_objects()
             return
-        else:
-            self.was_match = True
-            self.match_streak += 1
-            self.last_match_time = time.time()
 
         if isinstance(realm_alignment, CastleAlignment):
             if self.parent.mode is BotMode.CASTLE:
                 return
 
-            self.parent.mode = BotMode.CASTLE
-            self.parent.realm = None
+            # self.parent.mode = BotMode.CASTLE
+            # self.parent.realm = None
+            root.info("castle entered")
+            return
 
             self.parent.item_hashes = RealmSpriteHasher(floor_tiles=None)
             start = time.time()
@@ -1484,12 +1640,19 @@ class NearPlayerProcessing(Thread):
             return
 
         elif isinstance(realm_alignment, RealmAlignment):
-            self.parent.mode = BotMode.REALM
-            if realm_alignment.realm != self.parent.realm:
+            # self.parent.mode = BotMode.REALM
+            # print(f"prior-realm={self.parent.prev_realm} {self.parent.realm=}")
+
+            # todo: Issue with log of prior realms / castle entries occuping prev_realm
+            if self.parent.prev_realm != self.parent.realm:
+                if not self.parent.realm:
+                    return
+                print(f"new realm detected: {self.parent.realm}")
+                self.parent.prev_realm = self.parent.realm
                 new_realm = realm_alignment.realm
                 if new_realm in models.UNSUPPORTED_REALMS:
                     self.parent.audio_system.speak_blocking(f"Realm unsupported. {new_realm.realm_name}")
-                self.parent.realm = realm_alignment.realm
+                # self.parent.realm = realm_alignment.realm
 
                 self.parent.item_hashes = RealmSpriteHasher(floor_tiles=None)
                 start = time.time()
@@ -1498,12 +1661,15 @@ class NearPlayerProcessing(Thread):
                 print(
                     f"Took {math.ceil((end - start) * 1000)}ms to retrieve {len(self.parent.item_hashes)} phashes")
 
-                root.info(f"new realm entered: {self.parent.realm.name}")
+                root.info(f"new realm entered: {realm_alignment.realm.name}")
                 root.info(f"new realm alignment = {realm_alignment.realm.name}")
                 print(f"new item hashes = {len(self.parent.item_hashes)}")
 
     def handle_new_frame(self, data: NewFrame):
         self.got_first_frame = True
+        prev_location = self.last_player_location
+        self.last_player_location = self.parent.game_state.player_position
+        self.player_moved = prev_location != self.last_player_location
         self.near_frame_color = data.frame
         if settings.DEBUG:
             self.near_frame_color = self.near_frame_color.copy()
@@ -1518,13 +1684,13 @@ class NearPlayerProcessing(Thread):
         if self.paused:
             return
 
+        # skip realm check due to being handled by game log
         realm_alignment = self.detect_what_realm_in()
         self.handle_realm_alignment(realm_alignment)
 
     def handle_scan_for_item(self):
         start = time.time()
-        if self.was_match:
-            self.scan_for_items()
+        self.scan_for_items()
         end = time.time()
         latency = end - start
         root.debug(f"realm scanning took {math.ceil(latency * 1000)}ms")
@@ -1545,8 +1711,6 @@ class NearPlayerProcessing(Thread):
                     elif isinstance(comm_msg, Pause):
                         self.paused = True
                         self.parent.tx_nearby_process_queue.put(Pause())
-                        self.parent.clear_all_matches()
-                        self.parent.speak_nearby_objects()
                         clear_queue(self.nearby_queue)
                         root.debug("paused nearby analysis")
 
@@ -1628,6 +1792,9 @@ def init_bot() -> Bot:
             time.sleep(1)
         except GameNotForegroundException:
             root.info("Siralim Ultimate is not in foreground, waiting")
+            time.sleep(1)
+        except GameNotOpenException:
+            subprocess.Popen(r"C:\Program Files (x86)\Steam\steam.exe -applaunch 1289810 -output C:\Users\alex\newlog.txt")
             time.sleep(1)
 
 

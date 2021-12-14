@@ -48,6 +48,14 @@ class Config:
     enchanter: int = 100
     everett: int = 70
     exotic_portal: int = 100
+    favor_candle: int = 100
+    large_chest: int = 100
+    large_chest_key: int = 100
+    gembag: int = 100
+    materials_common_artifact: int = 100
+    materials_trick_artifact: int = 100
+    materials_trait_artifact: int = 100
+    menagerie: int = 100
     nether_portal: int = 100
     npc_master: int = 100
     npc_generic: int = 100
@@ -64,7 +72,7 @@ class Config:
 
     # repeat detected object sounds. If false, stops playing the sound if play has not moved
     repeat_sound_when_stationary: bool = False
-    required_stationary_seconds: float = 0.5
+    required_stationary_seconds: float = 0.75
 
     def save_config(self, path: Path):
         ini = configparser.ConfigParser()
@@ -96,6 +104,14 @@ class Config:
             'enchanter': self.enchanter,
             "everett": self.everett,
             "exotic_portal": self.exotic_portal,
+            "favor_candle": self.favor_candle,
+            "large_chest": self.large_chest,
+            "large_chest_key": self.large_chest_key,
+            "gembag": self.gembag,
+            "materials_common_artifact": self.materials_common_artifact,
+            "materials_trick_artifact": self.materials_trick_artifact,
+            "materials_trait_artifact": self.materials_trait_artifact,
+            "menagerie": self.menagerie,
             "nether_portal": self.nether_portal,
             "npc_master": self.npc_master,
             "npc_generic": self.npc_generic,
@@ -142,6 +158,14 @@ class Config:
         default_config.enchanter = volume.getint("enchanter", fallback=default_config.enchanter)
         default_config.everett = volume.getint("everett", fallback=default_config.everett)
         default_config.exotic_portal = volume.getint("exotic_portal", fallback=default_config.exotic_portal)
+        default_config.favor_candle = volume.getint("favor_candle", fallback=default_config.favor_candle)
+        default_config.large_chest = volume.getint("large_chest", fallback=default_config.large_chest)
+        default_config.large_chest_key = volume.getint("large_chest_key", fallback=default_config.large_chest_key)
+        default_config.gembag = volume.getint("gembag", fallback=default_config.gembag)
+        default_config.materials_common_artifact = volume.getint('materials_common_artifact', fallback=default_config.materials_common_artifact)
+        default_config.materials_trick_artifact = volume.getint('materials_trick_artifact', fallback=default_config.materials_trick_artifact)
+        default_config.materials_trait_artifact = volume.getint('materials_trait_artifact', fallback=default_config.materials_trait_artifact)
+        default_config.menagerie = volume.getint('menagerie', fallback=default_config.menagerie)
         default_config.nether_portal = volume.getint('nether_portal', fallback=default_config.nether_portal)
         default_config.npc_master = volume.getint('npc_master', fallback=default_config.npc_master)
         default_config.npc_generic = volume.getint("npc_generic", fallback=default_config.npc_generic)
@@ -165,7 +189,6 @@ class Config:
         object_detection = ini["REALM_OBJECT_DETECTION"]
         default_config.detect_objects_through_walls = object_detection.getboolean("detect_objects_through_walls", fallback=default_config.detect_objects_through_walls)
 
-        print(f"{default_config=}")
         return default_config
 
 

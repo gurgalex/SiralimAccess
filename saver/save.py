@@ -1,5 +1,7 @@
 from __future__ import annotations
 import json
+import sys
+import typing
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -9,8 +11,10 @@ import re
 
 from itertools import cycle
 from os import PathLike
+import os
 from pathlib import Path
 from typing import Optional
+from importlib import resources
 
 ENCRYPTION_KEY = "QWERTY"
 _UNSET = object()
@@ -184,10 +188,57 @@ class Decoration:
     kind: DecorationMapping = DecorationMapping.UNKNOWN
 
 
-def load_from_file(save_slot: PathLike) -> Save:
+def load_blank_config() -> ConfigOptions:
+    with resources.open_text(__package__, "black_config.sav") as f:
+        return load_config_from_fp(f)
+
+
+
+
+class ConfigOptions:
+    def __init__(self, decrypted_data: str):
+        config = MyConfigParser()
+        config.optionxform = str
+        config.read_string(decrypted_data)
+        self.config = config
+
+        # last save file location
+        self.last_slot: str = f'slot{self.config.get("Options", "LastSlot")}.sav'
+
+
+def load_save_from_filepath(save_slot: PathLike) -> Save:
     with Path(save_slot).open() as f:
-        decrypted_data = decrypt(f.readlines())
+        return load_save_from_fp(f)
+
+
+def load_save_from_fp(fp: typing.TextIO) -> Save:
+    decrypted_data = decrypt(fp.readlines())
     return Save(decrypted_data=decrypted_data)
+
+
+def load_config_from_fp(fp: typing.TextIO) -> ConfigOptions:
+    decrypted_data = decrypt(fp.readlines())
+    return ConfigOptions(decrypted_data=decrypted_data)
+
+
+def load_blank_save() -> Save:
+    with resources.open_text(__package__, "blank.sav") as f:
+        return load_save_from_fp(f)
+
+
+SIRALIM_ULTIMATE_SAVE_FOLDER_WINDOWS = Path(os.path.expandvars("%LOCALAPPDATA%")).joinpath("SiralimUltimate").joinpath("save")
+
+
+def load_most_recent_save(config: ConfigOptions) -> Optional[Save]:
+    if platform := sys.platform != "win32":
+        raise NotImplemented(f"Support for {platform} is not implemented for save file loading")
+
+    last_save = SIRALIM_ULTIMATE_SAVE_FOLDER_WINDOWS.joinpath(config.last_slot)
+    return last_save
+    # if last_save.exists():
+    #     return load_save_from_filepath(last_save)
+    # else:
+    #     return load_blank_save()
 
 
 class Save:
@@ -197,19 +248,12 @@ class Save:
         config.read_string(decrypted_data)
         self.config = config
 
-        self._castle_decorations: Optional[dict[DecorationMapping, list[Decoration]]] = None
-
+        self.castle_decorations: dict[DecorationMapping, list[Decoration]] = self._decode_castle_decorations()
 
     def castle_name(self) -> str:
         return self.config.get('Player', "CastleName")
 
-    @property
-    def castle_decorations(self) -> dict[DecorationMapping, list[Decoration]]:
-        if not self._castle_decorations:
-            self._castle_decorations = self.decode_castle_decorations()
-        return self._castle_decorations
-
-    def decode_castle_decorations(self):
+    def _decode_castle_decorations(self):
         decorations = self.config.get("Decorations", "String")
         json_decorations = json.loads(decorations)
         raw_decorations = split_into_dict(json_decorations)
@@ -226,3 +270,5 @@ class Save:
             except KeyError:
                 decorations_by_type[DecorationMapping.UNKNOWN].append(Decoration(x=_x, y=_y, d=_d))
         return decorations_by_type
+
+
