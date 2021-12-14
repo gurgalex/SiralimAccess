@@ -1,3 +1,22 @@
+# v0.15.0
+## fix
+- All 30 realms of breakable objects should now be identified correctly
+
+## feat
+ - Add more game sounds
+   - large chest
+   - large chest key
+   - favor candle
+   - material bags
+     - artifact common
+     - artifact rare/trick
+     - artifact trait material
+     - spell crafting material
+   - todo: portals
+     - zantai
+     - standard portal
+     - castle portal
+
 ## v0.14.2
 ### feat
 - read Field Items UI creature selection

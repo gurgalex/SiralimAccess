@@ -8,6 +8,8 @@ from numpy.typing import ArrayLike
 
 from subot.settings import GameControl
 from subot.utils import Point, PlayerDirection
+from saver.save import DecorationMapping
+
 import numpy as np
 
 from enum import Enum
@@ -89,12 +91,54 @@ class TileType(Enum):
     BLACKSMITH = (35, Color.temp, 'blacksmith')
     ENCHANTER = (36, Color.green, 'enchanter')
     EVERETT = (37, Color.temp, 'everett')
+    MENAGERIE_NPC = (38, Color.temp, 'menagerie NPC')
+    ARENA = (39, Color.red, "arena")
+    FUSION_CENTER = (40, Color.temp, "fusion")
+    GATE_OF_THE_GODS = (41, Color.temp, "gate of the gods")
+    SPAWN_POINT = (42, Color.temp, "spawn point")
+    LARGE_CHEST = (43, Color.temp, 'large chest')
+    FAVOR_CANDLE = (44, Color.temp, 'favor candle')
+    LARGE_CHEST_KEY = (45, Color.temp, "large key")
 
     def __init__(self, num, color: Color, description: str):
         self.num = num
         self.color = color
         self.description = description
 
+
+DECORATION_CASTLE_TO_TILE_TYPE: dict[DecorationMapping, TileType] = {
+    DecorationMapping.ARENA: TileType.ARENA,
+    DecorationMapping.BLACKSMITH_NPC: TileType.BLACKSMITH,
+    DecorationMapping.ENCHANTER_NPC: TileType.ENCHANTER,
+    DecorationMapping.EVERETT: TileType.EVERETT,
+    DecorationMapping.MENAGERIE: TileType.MENAGERIE_NPC,
+    DecorationMapping.SPAWN_POINT: TileType.SPAWN_POINT,
+    DecorationMapping.SUMMONING_BRAZIER: TileType.SUMMONING,
+    DecorationMapping.TELEPORTATION_SHRINE: TileType.TELEPORTATION_SHRINE,
+    DecorationMapping.UNKNOWN: TileType.UNKNOWN,
+    DecorationMapping.WARDROBE: TileType.WARDROBE,
+
+    # no tile yet
+    DecorationMapping.CHAOS_GUILD: TileType.DECORATION,
+    DecorationMapping.DEATH_GUILD: TileType.DECORATION,
+    DecorationMapping.FUSION_DEVICE: TileType.DECORATION,
+    DecorationMapping.KENO_DWARF: TileType.DECORATION,
+    DecorationMapping.LIFE_GUILD: TileType.DECORATION,
+    DecorationMapping.MAILBOX: TileType.DECORATION,
+    DecorationMapping.NATURE_GUILD: TileType.DECORATION,
+    DecorationMapping.PORTAL_RED: TileType.DECORATION,
+    DecorationMapping.PORTAL_BLUE: TileType.DECORATION,
+    DecorationMapping.PORTAL_GREEN: TileType.DECORATION,
+    DecorationMapping.PORTAL_PURPLE: TileType.DECORATION,
+    DecorationMapping.PORTAL_YELLOW: TileType.DECORATION,
+    DecorationMapping.REFINERY: TileType.MENAGERIE_NPC,
+    DecorationMapping.RELIQUARY: TileType.DECORATION,
+    DecorationMapping.SCRATCH_CARD_DWARF: TileType.DECORATION,
+    DecorationMapping.SIRALOPOLY_DWARF: TileType.DECORATION,
+    DecorationMapping.SLOT_MACHINE_DWARF: TileType.DECORATION,
+    DecorationMapping.SORCERY_GUILD: TileType.DECORATION,
+    DecorationMapping.TOME_OF_CREDITS: TileType.DECORATION,
+}
 
 class Movement(dataobject, fast_new=True, gc=False):
     x: int

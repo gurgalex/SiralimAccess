@@ -46,6 +46,24 @@ class SpriteType(enum.Enum):
     WALL = 12
     CHEST = 13
 
+    TELEPORTATION_SHRINE = 14
+    TREASURE_MAP = 15
+    DIVINATION_CANDLE = 16
+    EMBLEM = 17
+    BREAKABLE = 18
+    LARGE_CHEST = 19
+    DEMONIC_STATUE = 20
+    BIG_CANDLE = 21
+    LARGE_CHEST_KEY = 22
+    MATERIALS_COMMON = 23
+    MATERIALS_RARE = 24
+    MATERIALS_LEGENDARY = 25
+    SPELL_MATERIAL_BAG = 26
+    # portal belonging ot each realm. Enter to find a random creature + 2 treasure chests
+    REALM_PORTAL = 27
+
+
+
 
 @cache
 def read_data_color(filepath: str) -> ArrayLike:
@@ -268,6 +286,68 @@ class ChestSprite(Sprite):
     }
 
 
+class TreasureMap(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.TREASURE_MAP.value
+    }
+
+
+class DemonicStatue(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.DEMONIC_STATUE.value
+    }
+
+
+class FavorCandle(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.BIG_CANDLE.value
+    }
+
+
+class MaterialCommon(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.MATERIALS_COMMON.value
+    }
+
+
+class MaterialRare(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.MATERIALS_RARE.value
+    }
+
+
+class MaterialLegendary(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.MATERIALS_LEGENDARY.value
+    }
+
+
+class SpellMaterialBag(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.SPELL_MATERIAL_BAG.value
+    }
+
+class Breakable(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.BREAKABLE.value
+    }
+
+
+class LargeChestKey(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.LARGE_CHEST_KEY.value
+    }
+
+
 class OverlaySprite(Sprite):
     __tablename__ = 'overlay_sprite'
     sprite_id = Column(Integer, ForeignKey('sprite.id'), unique=True, primary_key=True)
@@ -354,6 +434,10 @@ class Quest(Base):
     """
     __tablename__ = 'quest'
     id = Column(Integer, primary_key=True, nullable=False)
+
+    # internal quest id used in-game
+    # qid = Column(Integer, unique=True, nullable=True)
+
     title = Column(String, nullable=False, unique=True, index=True)
 
     _computed_title_first_line_sql = """CASE

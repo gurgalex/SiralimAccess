@@ -48,6 +48,14 @@ class SoundType(enum.Enum):
     TREASURE_MAP_ITEM = (auto(), 'treasure map item')
     WARDROBE = (auto(), 'wardrobe')
     EVERETT = (auto(), 'everett')
+    MENAGERIE_NPC = (auto(), 'menagerie NPC')
+    LARGE_CHEST = (auto(), 'large chest')
+    FAVOR_CANDLE = (auto(), 'favor candle')
+    LARGE_CHEST_KEY = (auto(), "large key")
+    MATERIALS_COMMON = (auto(), "common artifact materials")
+    MATERIALS_RARE = (auto(), "trick artifact materials")
+    MATERIALS_LEGENDARY = (auto(), "trait artifact materials")
+    GEMBAG = (auto(), "spell crafting materials")
 
     mapping: dict[TileType, SoundType] = {}
 
@@ -81,6 +89,14 @@ SoundType.mapping = {
     TileType.TREASURE_MAP_ITEM: SoundType.TREASURE_MAP_ITEM,
     TileType.WARDROBE: SoundType.WARDROBE,
     TileType.EVERETT: SoundType.EVERETT,
+    TileType.MENAGERIE_NPC: SoundType.MENAGERIE_NPC,
+    TileType.LARGE_CHEST: SoundType.LARGE_CHEST,
+    TileType.LARGE_CHEST_KEY: SoundType.LARGE_CHEST_KEY,
+    TileType.FAVOR_CANDLE: SoundType.FAVOR_CANDLE,
+    TileType.ARTIFACT_MATERIAL_BAG: SoundType.MATERIALS_COMMON,
+    TileType.TRICK_MATERIAL_BOX: SoundType.MATERIALS_RARE,
+    TileType.TRAIT_MATERIAL_BOX: SoundType.MATERIALS_LEGENDARY,
+    TileType.SPELL_MATERIAL_BAG: SoundType.GEMBAG,
 }
 
 
@@ -302,32 +318,78 @@ class AudioSystem:
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("everett/high.wav").as_posix()),
                 )
             ),
-            # SoundType.REACHABLE_BLACK: SoundMapping(
-            #     channel=pygame.mixer.Channel(8),
-            #     sounds=SoundIndicator(
-            #         low=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-low.wav").as_posix()),
-            #         normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-normal.wav").as_posix()),
-            #         high=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-high.wav").as_posix()),
-            #     )
-            # ),
-            #
-            # SoundType.REACHABLE_DIRECTION: SoundMapping(
-            #     channel={
-            #         "up": pygame.mixer.Channel(9),
-            #         "down": pygame.mixer.Channel(10),
-            #         "left": pygame.mixer.Channel(11),
-            #         "right": pygame.mixer.Channel(12),
-            #     },
-            #     sounds=SoundIndicator(
-            #         # low=pygame.mixer.Sound(AUDIO_DIR.joinpath("wall-thud-low.wav").as_posix()),
-            #         # normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("wall-thud-normal.wav").as_posix()),
-            #         # high=pygame.mixer.Sound(AUDIO_DIR.joinpath("wall-thud-high.wav").as_posix()),
-            #         low=pygame.mixer.Sound(AUDIO_DIR.joinpath("laser3-low.wav").as_posix()),
-            #         normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("tone-normal.wav").as_posix()),
-            #         high=pygame.mixer.Sound(AUDIO_DIR.joinpath("laser3.wav").as_posix()),
-            #     )
-            # ),
-
+            SoundType.MENAGERIE_NPC: SoundMapping(
+                channel=pygame.mixer.Channel(20),
+                volume_adj=self.config.menagerie,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("menagerie/low.ogg").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("menagerie/normal.ogg").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("menagerie/high.ogg").as_posix()),
+                )
+            ),
+            SoundType.LARGE_CHEST: SoundMapping(
+                channel=pygame.mixer.Channel(21),
+                volume_adj=self.config.large_chest,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("large-chest/low.ogg").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("large-chest/normal.ogg").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("large-chest/high.ogg").as_posix()),
+                )
+            ),
+            SoundType.FAVOR_CANDLE: SoundMapping(
+                channel=pygame.mixer.Channel(22),
+                volume_adj=self.config.favor_candle,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("favor-candle/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("favor-candle/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("favor-candle/high.wav").as_posix()),
+                )
+            ),
+            SoundType.MATERIALS_COMMON: SoundMapping(
+                channel=pygame.mixer.Channel(23),
+                volume_adj=self.config.materials_common_artifact,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("materials-common/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("materials-common/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("materials-common/high.wav").as_posix()),
+                )
+            ),
+            SoundType.MATERIALS_RARE: SoundMapping(
+                channel=pygame.mixer.Channel(24),
+                volume_adj=self.config.materials_trick_artifact,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("materials-rare/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("materials-rare/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("materials-rare/high.wav").as_posix()),
+                )
+            ),
+            SoundType.MATERIALS_LEGENDARY: SoundMapping(
+                channel=pygame.mixer.Channel(25),
+                volume_adj=self.config.materials_trait_artifact,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("materials-legendary/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("materials-legendary/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("materials-legendary/high.wav").as_posix()),
+                )
+            ),
+            SoundType.GEMBAG: SoundMapping(
+                channel=pygame.mixer.Channel(26),
+                volume_adj=self.config.gembag,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("gembag/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("gembag/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("gembag/high.wav").as_posix()),
+                )
+            ),
+            SoundType.LARGE_CHEST_KEY: SoundMapping(
+                channel=pygame.mixer.Channel(27),
+                volume_adj=self.config.large_chest_key,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("large-chest-key/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("large-chest-key/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("large-chest-key/high.wav").as_posix()),
+                )
+            ),
         }
 
         # Windows TTS speaker
@@ -340,17 +402,6 @@ class AudioSystem:
 
         sound_mapping = self.sound_mappings[sound_type]
         channel = sound_mapping.channel
-
-        # if sound_type is SoundType.REACHABLE_DIRECTION:
-        #     position = audio_tile.distance
-        #     if position == Point(0,1):
-        #         channel = channel["down"]
-        #     elif position == Point(0,-1):
-        #         channel = channel["up"]
-        #     elif position == Point(1, 0):
-        #         channel = channel["right"]
-        #     elif position == Point(-1, 0):
-        #         channel = channel["left"]
 
         if distance_y > 0:
             sound = sound_mapping.sounds.low
@@ -371,23 +422,11 @@ class AudioSystem:
         channel.set_volume(*adjusted_volume)
 
     def stop(self, sound_type: SoundType, point: Optional[Point]=None):
-        channel = self.sound_mappings[sound_type].channel
-        # if sound_type is SoundType.REACHABLE_DIRECTION:
-        #     position = point
-        #     if not point:
-        #         for chan in channel.values():
-        #             chan.stop()
-        #         return
-        #
-        #     if position == Point(0,1):
-        #         channel = channel["down"]
-        #     elif position == Point(0,-1):
-        #         channel = channel["up"]
-        #     elif position == Point(1, 0):
-        #         channel = channel["right"]
-        #     elif position == Point(-1, 0):
-        #         channel = channel["left"]
-        channel.stop()
+        try:
+            channel = self.sound_mappings[sound_type].channel
+            channel.stop()
+        except KeyError:
+            return
 
     def speak_blocking(self, text):
         self.silenced = False
