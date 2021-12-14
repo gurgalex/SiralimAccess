@@ -34,6 +34,7 @@ class SoundType(enum.Enum):
     EMBLEM = (auto(), 'emblem')
     ENCHANTER = (auto(), 'enchanter')
     EXOTIC_PORTAL = (auto(), 'exotic portal')
+    REALM_PORTAL = (auto(), 'realm portal')
     MASTER_NPC = (auto(), "master")
     NPC_NORMAL = (auto(), "NPC")
     PANDEMONIUM_STATUE = (auto(), 'pandemonium statue')
@@ -77,6 +78,7 @@ SoundType.mapping = {
     TileType.EMBLEM: SoundType.EMBLEM,
     TileType.ENCHANTER: SoundType.ENCHANTER,
     TileType.EXOTIC_PORTAL: SoundType.EXOTIC_PORTAL,
+    TileType.REALM_PORTAL: SoundType.REALM_PORTAL,
     TileType.QUEST: SoundType.QUEST_ITEM,
     TileType.MASTER_NPC: SoundType.MASTER_NPC,
     TileType.NPC: SoundType.NPC_NORMAL,
@@ -388,6 +390,15 @@ class AudioSystem:
                     low=pygame.mixer.Sound(AUDIO_DIR.joinpath("large-chest-key/low.wav").as_posix()),
                     normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("large-chest-key/normal.wav").as_posix()),
                     high=pygame.mixer.Sound(AUDIO_DIR.joinpath("large-chest-key/high.wav").as_posix()),
+                )
+            ),
+            SoundType.REALM_PORTAL: SoundMapping(
+                channel=pygame.mixer.Channel(28),
+                volume_adj=self.config.realm_portal,
+                sounds=SoundIndicator(
+                    low=pygame.mixer.Sound(AUDIO_DIR.joinpath("realm-portal/low.wav").as_posix()),
+                    normal=pygame.mixer.Sound(AUDIO_DIR.joinpath("realm-portal/normal.wav").as_posix()),
+                    high=pygame.mixer.Sound(AUDIO_DIR.joinpath("realm-portal/high.wav").as_posix()),
                 )
             ),
         }

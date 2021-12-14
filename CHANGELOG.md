@@ -3,19 +3,27 @@
 - All 30 realms of breakable objects should now be identified correctly
 
 ## feat
- - Add more game sounds
-   - large chest
-   - large chest key
-   - favor candle
-   - material bags
-     - artifact common
-     - artifact rare/trick
-     - artifact trait material
-     - spell crafting material
-   - todo: portals
-     - zantai
-     - standard portal
-     - castle portal
+### Add more game sounds
+ - castle
+   - Menagerie NPC (goat sfx)
+ - large chest
+ - large chest key
+ - favor candle
+ - material bags
+   - artifact common
+   - artifact rare/trick
+   - artifact trait material
+   - spell crafting material
+   portal
+   - realm (enter to encounter a single enemy)
+ - todo: portals
+   - zantai
+   - castle portal
+ - todo: fusion center
+
+## refactors
+- todo: add quest ID and description to quest table
+- 
  
 # v0.14.0
 ## fix

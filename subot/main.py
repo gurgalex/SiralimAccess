@@ -1524,6 +1524,8 @@ class NearPlayerProcessing(Thread):
             return TileType.NETHER_PORTAL
         elif img_info.long_name == "portal_exotic":
             return TileType.EXOTIC_PORTAL
+        elif img_info.sprite_type is SpriteType.REALM_PORTAL:
+            return TileType.REALM_PORTAL
         elif img_info.long_name == "summoningbrazier":
             return TileType.SUMMONING
         else:
