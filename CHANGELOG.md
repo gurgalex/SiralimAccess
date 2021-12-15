@@ -1,6 +1,10 @@
 # v0.15.0
 ## fix
 - All 30 realms of breakable objects should now be identified correctly
+- The following quests are now detected properly
+  - Click, Clack, Reload quest is now detected properly
+  - Fury and Brimstone
+  - Keeper of the Orb
 
 ## feat
  - Add more game sounds

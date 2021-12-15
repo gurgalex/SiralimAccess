@@ -110,6 +110,7 @@ class SpriteTypeLookup(Base):
     __tablename__ = 'sprite_type'
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(db.Enum(SpriteType), unique=True, nullable=False)
+    description = Column(String, nullable=True)
 
     def __repr__(self):
         return f"{self.__class__}(enum={self.name})"
@@ -286,10 +287,24 @@ class ChestSprite(Sprite):
     }
 
 
+class TeleportationShrine(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.TELEPORTATION_SHRINE.value
+    }
+
+
 class TreasureMap(Sprite):
     __tablename__ = None
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.TREASURE_MAP.value
+    }
+
+
+class LargeChest(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.LARGE_CHEST.value
     }
 
 
@@ -333,6 +348,14 @@ class SpellMaterialBag(Sprite):
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.SPELL_MATERIAL_BAG.value
     }
+
+class RealmPortal(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.REALM_PORTAL.value
+    }
+
+
 
 class Breakable(Sprite):
     __tablename__ = None
@@ -436,7 +459,7 @@ class Quest(Base):
     id = Column(Integer, primary_key=True, nullable=False)
 
     # internal quest id used in-game
-    # qid = Column(Integer, unique=True, nullable=True)
+    qid = Column(Integer, unique=True, nullable=True)
 
     title = Column(String, nullable=False, unique=True, index=True)
 
