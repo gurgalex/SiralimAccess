@@ -1,6 +1,8 @@
 ## v0.14.1
 ### feat
 - Inspect UI screen
+### fix
+- The 2nd quest should read its description now
 
 # v0.14.0
 ## fix
