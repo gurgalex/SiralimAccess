@@ -30,6 +30,7 @@ class Config:
     whole_window_scanning_frequency: int = 7
     update_popup_browser: bool = True
     open_config_key: str = "C"
+    help_key: str = "?"
 
     # OCR
     ocr_enabled: bool = True
@@ -75,7 +76,8 @@ class Config:
             "repeat_sound_when_stationary": self.repeat_sound_when_stationary,
             "repeat_sound_seconds": self.required_stationary_seconds,
             'update_popup_browser': self.update_popup_browser,
-            'open_config_key': self.open_config_key
+            'open_config_key': self.open_config_key,
+            'help_key': self.help_key,
         }
 
         ini["OCR"] = {
@@ -130,6 +132,7 @@ class Config:
         default_config.required_stationary_seconds = general.getfloat('repeat_sound_seconds', fallback=default_config.required_stationary_seconds)
         default_config.update_popup_browser = general.getboolean('update_popup_browser', fallback=default_config.update_popup_browser)
         default_config.open_config_key = general.get('open_config_key', fallback=default_config.open_config_key)
+        default_config.help_key = general.get('help_key', fallback=default_config.help_key)
 
         volume = ini["VOLUME"]
 

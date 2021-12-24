@@ -30,6 +30,7 @@ from subot import models, ocr
 from subot.ui_areas.AnointmentClaimUI import AnointmentClaimUI
 from subot.ui_areas.CodexGeneric import CodexGeneric
 from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
+from subot.ui_areas.InspectScreenUI import InspectScreenUI
 from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
 from subot.ui_areas.OcrUnknownArea import OcrUnknownArea
 from subot.ui_areas.PerkScreen import PerkScreen
@@ -1006,6 +1007,12 @@ class WholeWindowAnalyzer(Thread):
                 print("nether stone item screen")
             elif lower_title.startswith("choose an anointment to claim"):
                 return AnointmentClaimUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+
+            # battle screens
+
+            elif lower_title.endswith("inspect creature"):
+                return InspectScreenUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+
 
         except IndexError:
             return unknown_system
