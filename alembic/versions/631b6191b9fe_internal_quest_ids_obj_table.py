@@ -24,6 +24,10 @@ def upgrade():
 
     op.execute("ALTER TABLE sprite_type ADD COLUMN description VARCHAR;")
 
+    # add game object
+    op.execute("CREATE TABLE game_object ( id INTEGER PRIMARY KEY NOT NULL, name VARCHAR NOT NULL, type_id INTEGER, description VARCHAR NULL PRIMARY KEY (id), FOREIGN KEY(type_id) REFERENCES sprite_type (id) )")
+    op.execute("CREATE TABLE game_object_sprite ( game_object_id INTEGER NOT NULL, sprite_id INTEGER NOT NULL, PRIMARY KEY (game_object_id, sprite_id), FOREIGN KEY(game_object_id) REFERENCES game_object (id), FOREIGN KEY(sprite_id) REFERENCES sprite (id) )")
+
     # ### end Alembic commands ###
 
 

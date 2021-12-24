@@ -61,9 +61,31 @@ class SpriteType(enum.Enum):
     SPELL_MATERIAL_BAG = 26
     # portal belonging ot each realm. Enter to find a random creature + 2 treasure chests
     REALM_PORTAL = 27
-
-
-
+    COCOON = 28
+    ALCHEMY = 29
+    REALM_BUFF = 30
+    REALM_DEBUFF = 31
+    FIGHT = 32
+    RANDOM_LOOT = 33
+    FAVOR_SIMPLE = 34
+    FAVOR_COMPLEX = 35
+    FETCH_ITEM = 36
+    ITEM_RECEIVER = 37
+    COMPLEX_RESOURCE = 38
+    TEMP_BATTLE_ADVANTAGE = 39
+    MIRROR_FIGHT = 40
+    MAYBE_FIGHT = 41
+    KNOWLEDGE = 42
+    REALM_STAT_REDUCE = 43
+    REALM_STAT_BOOST = 44
+    RUN_AWAY = 45
+    INSCRIPTION = 46
+    RANDOM_RESOURCE = 47
+    FRUIT_JUNGLE_ORANGE = 48
+    FRUIT_JUNGLE_PINK = 49
+    FRUIT_JUNGLE_YELLOW = 50
+    WISHING_STAR = 51
+    MIRRORBALL = 52
 
 @cache
 def read_data_color(filepath: str) -> ArrayLike:
@@ -146,6 +168,20 @@ class Sprite(Base):
         return f"{self.__tablename__}(id={self.id},short_name={self.short_name},long_name={self.long_name}, type={self.type},frames={self.frames})"
 
     # Todo: Add collision rect in tiles from top-left (x, y, w, h)
+
+
+class GameObject(Base):
+    __tablename__ = "game_object"
+    id = Column(Integer, primary_key=True, nullable=False)
+    name = Column(String, nullable=False, unique=True)
+    specific_realm_id = Column(Integer, ForeignKey("realm.id"), name="fk_go_realm_id", nullable=True)
+    type_id = Column(Integer, ForeignKey('sprite_type.id', name="fk_go_obj_type"))
+
+
+class GameObjSprite(Base):
+    __tablename__ = "game_object_sprite"
+    game_object_id = Column(Integer, ForeignKey('game_object.id', name="fk_gos_obj_id"), primary_key=True, nullable=False)
+    sprite_id = Column(Integer, ForeignKey("sprite.id", name="fk_gos_sprite_id"), primary_key=True, nullable=False)
 
 
 class QuestType(enum.Enum):
@@ -349,6 +385,7 @@ class SpellMaterialBag(Sprite):
         'polymorphic_identity': SpriteType.SPELL_MATERIAL_BAG.value
     }
 
+
 class RealmPortal(Sprite):
     __tablename__ = None
     __mapper_args__ = {
@@ -356,6 +393,160 @@ class RealmPortal(Sprite):
     }
 
 
+class Cocoon(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.COCOON.value
+    }
+
+class Alchemy(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.ALCHEMY.value
+    }
+
+class RealmBuff(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.REALM_BUFF.value
+    }
+
+class RealmDebuff(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.REALM_DEBUFF.value
+    }
+
+
+class Fight(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FIGHT.value
+    }
+
+class RandomLoot(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.RANDOM_LOOT.value
+    }
+
+
+class FavorSimple(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FAVOR_SIMPLE.value
+    }
+
+
+class FavorComplex(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FAVOR_COMPLEX.value
+    }
+
+class ItemReceiver(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.ITEM_RECEIVER.value
+    }
+
+class ComplexResource(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.COMPLEX_RESOURCE.value
+    }
+
+class TempBattleAdvantage(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.TEMP_BATTLE_ADVANTAGE.value
+    }
+
+class MirrorFight(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.MIRROR_FIGHT.value
+    }
+
+class MaybeFight(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.MAYBE_FIGHT.value
+    }
+
+class Knowledge(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.KNOWLEDGE.value
+    }
+
+
+class RealmStatReduce(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.REALM_STAT_REDUCE.value
+    }
+
+class RealmStatBoost(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.REALM_STAT_BOOST.value
+    }
+
+class RunAway(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.RUN_AWAY.value
+    }
+
+class Inscription(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.INSCRIPTION.value
+    }
+
+class RandomResource(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.RANDOM_RESOURCE.value
+    }
+
+class FruitJungleOrange(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FRUIT_JUNGLE_ORANGE.value
+    }
+
+class FruitJunglePink(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FRUIT_JUNGLE_PINK.value
+    }
+
+class FruitJungleYellow(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FRUIT_JUNGLE_YELLOW.value
+    }
+
+class WishingStar(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.WISHING_STAR.value
+    }
+
+class Mirrorball(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.MIRRORBALL.value
+    }
+
+
+class FetchItem(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FETCH_ITEM.value
+    }
 
 class Breakable(Sprite):
     __tablename__ = None

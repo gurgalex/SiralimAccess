@@ -115,8 +115,3 @@ if __name__ == "__main__":
         reader.writeheader()
         for quest in ultimate_quests:
             reader.writerow({"qid": quest.qid, "title": quest.title, "desc": quest.desc, 'items_needed': quest.items_needed})
-
-
-
-
-

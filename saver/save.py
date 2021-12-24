@@ -96,6 +96,8 @@ def decrypt(encrypted_data: list[str]) -> str:
 class MyConfigParser(configparser.ConfigParser):
     def get(self, section, option, *args, **kwargs):
         val = configparser.ConfigParser.get(self, section, option, *args, **kwargs)
+        if val is _UNSET:
+            raise configparser.NoOptionError(option, section)
         return val.strip('"')
 
     def getint(self, section, option, *, raw=False, vars=None,
@@ -234,11 +236,11 @@ def load_most_recent_save(config: ConfigOptions) -> Optional[Save]:
         raise NotImplemented(f"Support for {platform} is not implemented for save file loading")
 
     last_save = SIRALIM_ULTIMATE_SAVE_FOLDER_WINDOWS.joinpath(config.last_slot)
-    return last_save
-    # if last_save.exists():
-    #     return load_save_from_filepath(last_save)
-    # else:
-    #     return load_blank_save()
+    # return last_save
+    if last_save.exists():
+        return load_save_from_filepath(last_save)
+    else:
+        return load_blank_save()
 
 
 class Save:
@@ -252,6 +254,21 @@ class Save:
 
     def castle_name(self) -> str:
         return self.config.get('Player', "CastleName")
+
+    def story_quest(self) -> list[int]:
+        """ Current active story quest
+[Quest1]
+ItemsName=""
+ItemsMax="0"
+ItemsMin="0"
+QID="344"
+        """
+        try:
+            if qid := self.config.getint("Quest1", "QID"):
+                return [qid]
+        except (configparser.NoSectionError, configparser.NoOptionError):
+            return []
+
 
     def _decode_castle_decorations(self):
         decorations = self.config.get("Decorations", "String")

@@ -8,6 +8,8 @@
 
 ## feat
  - Add more game sounds
+   - castle
+     - Menagerie NPC (goat sfx)
    - large chest
    - large chest key
    - favor candle
@@ -16,13 +18,17 @@
      - artifact rare/trick
      - artifact trait material
      - spell crafting material
+   - portal
+     - realm (enter to encounter a single enemy)
    - todo: portals
      - zantai
-     - standard portal
      - castle portal
+     - todo: fetch quest item
+     - todo: receiver item (sound if not, sound if gotten)
+ - todo: fusion center
 ## refactors
  - todo: add quest ID and description to quest table
-
+ 
 ## v0.14.2
 ### feat
 - read Field Items UI creature selection

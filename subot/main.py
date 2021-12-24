@@ -29,7 +29,8 @@ from winrt.windows.media.ocr import OcrResult
 
 from saver.save import DecorationMapping
 from subot import models, ocr
-from subot.game_log import GameState, determine_event, tail_log_file, BotMode, SaveUpdated
+from subot.game_log import GameState, determine_event, tail_log_file, BotMode
+from subot.game_log_events import SaveUpdated
 from subot.save_monitor import GameConfigMonitor, SaveMonitor
 from subot.ui_areas.AnointmentClaimUI import AnointmentClaimUI
 from subot.ui_areas.CodexGeneric import CodexGeneric
@@ -43,7 +44,7 @@ from subot.ui_areas.creatures_display import OCRCreaturesDisplaySystem
 from subot.ui_areas.realm_select import OCRRealmSelect, SelectStep
 from subot.ui_areas.summoning import OcrSummoningSystem
 from subot.trait_info import TraitData
-
+from saver.events import ee
 
 import cv2
 import numpy as np
@@ -1262,7 +1263,7 @@ class NearbyFrameGrabber(multiprocessing.Process):
                             print(f"updated nearbyframeGrabber rect. new={msg.mss_dict} old={self.nearby_area}")
                             self.nearby_area = msg.mss_dict
                         elif isinstance(msg, Pause):
-                            root.debug("nearby got pause message. Pause grabbing frames")
+                            root.info("nearby got pause message. Pause grabbing frames")
                             self.paused = True
                             self.color_nearby_queue.put(Pause())
                         elif isinstance(msg, Resume):
