@@ -218,7 +218,7 @@ class OcrUnknownArea(SpeakAuto):
         :return: List of quests that appeared in the quest area. an empty list is returned if no quests were found
         """
         quests: list[Quest] = []
-        y_text_dim = int(gray_frame.shape[0] * 0.33)
+        y_text_dim = int(gray_frame.shape[0] * 0.55)
         x_text_dim = int(gray_frame.shape[1] * 0.30)
         quest_area = gray_frame[:y_text_dim, -x_text_dim:]
         thresh, threshold_white = cv2.threshold(quest_area, 215, 255, cv2.THRESH_BINARY_INV)
