@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-import dataclasses
 from collections import defaultdict
 from enum import Enum, auto
 
 # 3.10
 # from typing import TypeAlias, Union
-from typing import Union, NewType
+from typing import Union
 
-from saver.save import Save, load_blank_save
+from saver.save import Save, ConfigOptions, load_blank_config
+from subot.game_log_events import GameStart, GameSaved, PlayerMoved, ObjPlaced, TeleportToRealm, TeleportToCastle, \
+    InnerPortalEntered, SaveUpdated
 from subot.pathfinder.map import TileType
+from saver.events import ee, QuestReceivedRaw, QuestReceived
+from subot.settings import Session
 
 """
 Seems the location spawned into when entering a portal is the same.
@@ -24,17 +27,11 @@ import subprocess
 import time
 from typing import Optional
 
-from subot.models import Realm
+from subot.models import Realm, Quest
 from subot.utils import Point
-from constants import TILE_SIZE
-from dataclasses import dataclass
-
-
-
+from subot.constants import TILE_SIZE
 
 PORTAL_ENTER_PLAYER_LOCATION = Point(864//TILE_SIZE, 1056//TILE_SIZE)
-
-from dataclasses import dataclass
 
 import re
 
@@ -42,55 +39,12 @@ GAME_START_REGEX = re.compile(r"Entering main loop")
 PLAYER_LOCATION_REGEX = re.compile(r"Player is at (\d+), (\d+)")
 OBJ_PLACEMENT_REGEX = re.compile(r"placing (?P<obj>.*)  (?P<x>\d+), (?P<y>\d+)")
 QUEST_RECEIVED_REGEX = re.compile(r"Quest Received: (?P<desc>.*)")
+GAME_SAVED_REGEX = re.compile(r'{ "error": 0.0, "id": ')
 
+LowLevelEvent = Union[PlayerMoved, ObjPlaced, TeleportToRealm, QuestReceivedRaw, GameStart, GameSaved]
 
-@dataclass(frozen=True)
-class GameStart:
-    pass
-
-
-@dataclass(frozen=True)
-class PlayerMoved:
-    to: Point
-
-
-@dataclass(frozen=True)
-class ObjPlaced:
-    obj: str
-    placed_at: Point
-
-
-@dataclass(frozen=True)
-class TeleportToRealm:
-    spawn_point: Point
-
-
-@dataclass(frozen=True)
-class TeleportToCastle:
-    pass
-
-
-@dataclass(frozen=True)
-class InnerPortalEntered:
-    """The player entered a portal inside a realm
-    future: Portal type + objects spawned in if provided in the future game output
-    """
-    pass
-
-
-@dataclass(frozen=True)
-class QuestReceived:
-    quest_description: str
-
-
-@dataclass(frozen=True)
-class SaveUpdated:
-    save: Save
-
-
-LowLevelEvent = Union[PlayerMoved, ObjPlaced, QuestReceived, GameStart]
-
-HighLevelEvent = Union[GameStart, ObjPlaced, QuestReceived, TeleportToCastle, TeleportToRealm, InnerPortalEntered, SaveUpdated]
+HighLevelEvent = Union[
+    GameStart, ObjPlaced, QuestReceived, TeleportToCastle, TeleportToRealm, InnerPortalEntered, SaveUpdated, GameSaved]
 
 
 def tile_sum_diff(p1: Point, p2: Point) -> int:
@@ -156,11 +110,13 @@ def populate_castle_objects_from_save(save: Save) -> dict[TileType, list[Point]]
     return d
 
 
+CASTLE_REPLACEMENT_NAME = '" + global.castlename + "'
+
 class GameState:
-    def __init__(self, save: Save, player_position: Optional[Point] = None):
+    def __init__(self, save: Save, game_config: ConfigOptions = None, player_position: Optional[Point] = None):
+        self.current_config = game_config or load_blank_config()
         self.current_save: Save = save
         self.castle_objects: dict[TileType, list[Point]] = populate_castle_objects_from_save(save)
-        print(f"{self.castle_objects=}")
         self.castle_spawn_point: Point = self.castle_objects[TileType.SPAWN_POINT][0]
         self.prev_player_position: Point = player_position or self.castle_spawn_point
         self.player_position: Point = player_position or self.castle_spawn_point
@@ -168,17 +124,43 @@ class GameState:
         self.realm: Optional[Realm] = None
         self.realm_objs_stationary_locations: list[ObjPlaced] = []
         self.game_mode: BotMode = BotMode.UNDETERMINED
+        self.active_quests: list[int] = self.current_save.story_quest()
+        self.rewind: bool = True
 
     def _update_player_position(self, to: Point):
         self.prev_player_position = self.player_position
         self.player_position = to
         self.time_player_last_moved = time.time()
 
+    def _determine_quest(self, event: QuestReceivedRaw) -> Optional[int]:
+        orig_desc = event.desc
+        desc = orig_desc.replace(self.current_save.castle_name(), CASTLE_REPLACEMENT_NAME)
+        with Session() as session:
+            if quest := session.query(Quest.id).filter(Quest.description == desc).first():
+                return quest[0]
+            breakable_text = 'inside breakable objects in this Realm.'
+            if desc.endswith(breakable_text):
+                if quest := session.query(Quest.id).filter(Quest.description.endswith("inside breakable objects in this Realm.")).first():
+                    return quest[0]
+            rescue_random_citizen_text = f"Find and rescue {CASTLE_REPLACEMENT_NAME} citizen "
+            if desc.startswith(rescue_random_citizen_text):
+                if quest := session.query(Quest.id).filter(Quest.description.startswith(rescue_random_citizen_text)).first():
+                    return quest[0]
+
+            defeat_enemy_creature_text = "in this Realm by defeating enemy creatures."
+            if desc.endswith(defeat_enemy_creature_text):
+                if quest := session.query(Quest.id).filter(Quest.description.endswith(defeat_enemy_creature_text)).first():
+                    return quest[0]
+
+            recruit_citizen_text = "Recruit citizens from this Realm to populate"
+            if desc.startswith(recruit_citizen_text):
+                if quest := session.query(Quest.id).filter(Quest.description.startswith(recruit_citizen_text)).first():
+                    return quest[0]
+
+
+
     def high_level_event(self, event: HighLevelEvent):
-        if isinstance(event, TeleportToRealm):
-            self._update_player_position(event.spawn_point)
-            self.game_mode = BotMode.REALM_LOADING
-        elif isinstance(event, TeleportToCastle):
+        if isinstance(event, TeleportToCastle):
             self.realm = None
             self.realm_objs_stationary_locations = []
             self.game_mode = BotMode.CASTLE
@@ -198,21 +180,44 @@ class GameState:
             self.current_save = event.save
             self.castle_objects = populate_castle_objects_from_save(self.current_save)
 
+    def emit_event(self, event: Union[HighLevelEvent, LowLevelEvent]):
+        if self.rewind:
+            return
+        ee.emit(event.__name__, event)
+
     def update(self, event: LowLevelEvent):
         if isinstance(event, PlayerMoved):
             self._update_player_position(event.to)
+            self.emit_event(event)
             if tile_sum_diff(self.prev_player_position, self.player_position) > 1 and self.player_position == self.castle_spawn_point:
-                self.high_level_event(TeleportToCastle())
+                teleport_to_castle = TeleportToCastle()
+                self.high_level_event(teleport_to_castle)
+                self.emit_event(teleport_to_castle)
             if self.game_mode is BotMode.REALM_LOADING:
                 self.game_mode = BotMode.REALM
 
         elif isinstance(event, ObjPlaced):
-            if event.obj == "obj_player":
-                self.high_level_event(TeleportToRealm(spawn_point=event.placed_at))
+            self.high_level_event(event)
+        elif isinstance(event, TeleportToRealm):
+            self._update_player_position(event.spawn_point)
+            self.game_mode = BotMode.REALM_LOADING
+        elif isinstance(event, QuestReceivedRaw):
+            quest_db_id = self._determine_quest(event)
+            if quest_db_id:
+                self.active_quests.append(quest_db_id)
+                quest_received = QuestReceived(db_id=quest_db_id)
+                self.emit_event(quest_received)
+                # print(f"qid {quest.qid} for quest desc:{quest.description}")
             else:
-                self.high_level_event(event)
+                print(f"no match: {event.desc}")
         elif isinstance(event, GameStart):
             self.high_level_event(event)
+        elif isinstance(event, GameSaved):
+            from saver.save import load_most_recent_save
+            self.emit_event(event)
+            self.current_save = load_most_recent_save(self.current_config)
+            save_updated = SaveUpdated(save=self.current_save)
+            self.emit_event(save_updated)
         # print(f"game state = {self.player_position}, {self.game_mode}, realm={self.realm}")
 
 
@@ -223,15 +228,22 @@ def determine_event(line: str) -> Optional[LowLevelEvent]:
         return PlayerMoved(to=Point(tex_px_x // TILE_SIZE, tex_px_y // TILE_SIZE))
     elif match := OBJ_PLACEMENT_REGEX.match(line):
         obj_name, tex_px_x, tex_px_y = match.group(1), int(match.group(2)), int(match.group(3))
-        return ObjPlaced(obj=obj_name, placed_at=Point(tex_px_x // TILE_SIZE, tex_px_y // TILE_SIZE))
+        placed_at = Point(tex_px_x // TILE_SIZE, tex_px_y // TILE_SIZE)
+
+        if obj_name == "obj_player":
+            return TeleportToRealm(spawn_point=placed_at)
+        else:
+            return ObjPlaced(obj=obj_name, placed_at=placed_at)
     elif match := QUEST_RECEIVED_REGEX.match(line):
-        return QuestReceived(match.group(1))
+        return QuestReceivedRaw(match.group(1))
     elif GAME_START_REGEX.match(line):
         return GameStart()
+    elif GAME_SAVED_REGEX.match(line):
+        return GameSaved()
 
 
 def tail_log_file(outgoing_lines: queue.Queue[Optional[str]]):
-    proc_tail = subprocess.Popen("coreutils.exe tail -n 30000 -f C:\\Users\\alex\\output.txt", stdout=subprocess.PIPE)
+    proc_tail = subprocess.Popen("coreutils.exe tail -n 10000 -f C:\\Users\\alex\\output.txt", stdout=subprocess.PIPE)
     while True:
         line = proc_tail.stdout.readline()
         if line is None:
@@ -239,32 +251,5 @@ def tail_log_file(outgoing_lines: queue.Queue[Optional[str]]):
             continue
         line = str(line.decode('ascii')).strip()
         outgoing_lines.put(line)
-
-
-if __name__ == "__main__":
-    import threading
-    gotten_lines = queue.Queue()
-    save = load_blank_save()
-    game_state = GameState(save)
-    uniq_objs = set()
-    su_log_thread = threading.Thread(daemon=True, target=tail_log_file, args=(gotten_lines,))
-    su_log_thread.start()
-    while True:
-        try:
-            line = gotten_lines.get_nowait()
-            if event := determine_event(line):
-                game_state.update(event)
-                if isinstance(event, ObjPlaced):
-                    if event.obj not in uniq_objs:
-                        uniq_objs.add(event.obj)
-                        ct = len(uniq_objs)
-                        if ct >= 455:
-                            uniq_objs = sorted(uniq_objs)
-                            print(f"uniq objs = {ct}")
-                            for obj in uniq_objs:
-                                print(obj)
-        except queue.Empty:
-            time.sleep(2/1000)
-            pass
 
 

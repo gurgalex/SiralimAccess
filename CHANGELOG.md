@@ -23,6 +23,8 @@
  - todo: portals
    - zantai
    - castle portal
+   - todo: fetch quest item
+   - todo: receiver item (sound if not, sound if gotten)
  - todo: fusion center
 
 ## refactors
