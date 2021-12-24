@@ -1,5 +1,5 @@
 from __future__ import annotations
-from subot.ocr import OCR, OCRResult, detect_green_text, slice_img
+from subot.ocr import OCR, OCRResult, detect_green_text, slice_img, detect_any_text
 from subot.settings import Config
 from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode, SpeakCapability
 from numpy.typing import NDArray
@@ -10,13 +10,6 @@ def extract_text(ocr_result: OCRResult) -> str:
         return text
     else:
         return ""
-
-
-def detect_any_text(gray_frame, ocr_engine: OCR, x_start: float, x_end: float, y_start: float, y_end: float) -> OCRResult:
-    text_area = slice_img(gray_frame, x_start, x_end, y_start, y_end, resize_factor=2)
-
-    text_result = ocr_engine.recognize_cv2_image(text_area)
-    return text_result
 
 
 def extract_text_right_side_44(gray_frame: NDArray, engine: OCR) -> str:

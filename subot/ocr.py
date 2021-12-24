@@ -272,6 +272,14 @@ def extract_top_right_title_text(image: np.typing.ArrayLike, ocr_engine: OCR) ->
     return text
 
 
+def detect_any_text(gray_frame, ocr_engine: OCR, x_start: float, x_end: float, y_start: float, y_end: float) -> OCRResult:
+    text_area = slice_img(gray_frame, x_start, x_end, y_start, y_end, resize_factor=1)
+    text_area = cv2.bitwise_not(text_area)
+
+    text_result = ocr_engine.recognize_cv2_image(text_area)
+    return text_result
+
+
 def detect_green_text(image: np.typing.ArrayLike, x_start: float = 0.0, x_end: float = 1.0, y_start: float = 0.0,
                       y_end: float = 1.0) -> NDArray:
     """Using a source image of RGB color, extract highlighted menu items which are a green color"""

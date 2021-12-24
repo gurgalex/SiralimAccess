@@ -13,6 +13,7 @@ class OCRMode(Enum):
     SUMMON = auto()
     UNKNOWN = auto()
     INSPECT = auto()
+    INSPECT_SCREEN = auto()
     CREATURES_DISPLAY = auto()
     SELECT_GODFORGE_AVATAR = auto()
     CREATURE_REORDER_SELECT = auto()

@@ -27,6 +27,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
   - GodForge avatar select
   - Teleportation Shrine realm select
   - Wardrobe in castle
+  - Inspect UI screen
 
 ## Item sounds
 [video of sounds playing](https://youtu.be/2vVCJtCocbA)

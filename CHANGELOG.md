@@ -1,3 +1,7 @@
+## v0.14.1
+### feat
+- Inspect UI screen
+
 # v0.14.0
 ## fix
 - The hang monitor has been replaced with a crash handler. This should work much better on low-end computers
