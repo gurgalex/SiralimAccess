@@ -86,6 +86,10 @@ class SpriteType(enum.Enum):
     FRUIT_JUNGLE_YELLOW = 50
     WISHING_STAR = 51
     MIRRORBALL = 52
+    NEMESIS_SPAWN = 53
+    PORTAL = 54
+    REALM_DAMAGE = 55
+    FAVOR_DONATION = 56
 
 @cache
 def read_data_color(filepath: str) -> ArrayLike:
@@ -350,6 +354,24 @@ class DemonicStatue(Sprite):
         'polymorphic_identity': SpriteType.DEMONIC_STATUE.value
     }
 
+class NemesisSpawn(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.NEMESIS_SPAWN.value
+    }
+
+class Portal(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.PORTAL.value
+    }
+
+class RealmDamage(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.REALM_DAMAGE.value
+    }
+
 
 class FavorCandle(Sprite):
     __tablename__ = None
@@ -435,6 +457,12 @@ class FavorSimple(Sprite):
     __tablename__ = None
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.FAVOR_SIMPLE.value
+    }
+
+class FavorDonation(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FAVOR_DONATION.value
     }
 
 
