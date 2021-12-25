@@ -28,6 +28,7 @@ A program to aid in making [Siralim Ultimate](https://store.steampowered.com/app
   - Teleportation Shrine realm select
   - Wardrobe in castle
   - Inspect UI screen
+  - Field Items UI
 
 ## Item sounds
 [video of sounds playing](https://youtu.be/2vVCJtCocbA)
