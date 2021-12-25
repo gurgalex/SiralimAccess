@@ -30,6 +30,7 @@ from subot import models, ocr
 from subot.ui_areas.AnointmentClaimUI import AnointmentClaimUI
 from subot.ui_areas.CodexGeneric import CodexGeneric
 from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
+from subot.ui_areas.FieldItemSelect import FieldItemSelectUI
 from subot.ui_areas.InspectScreenUI import InspectScreenUI
 from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
 from subot.ui_areas.OcrUnknownArea import OcrUnknownArea
@@ -974,6 +975,10 @@ class WholeWindowAnalyzer(Thread):
             elif lower_title.startswith("choose a creature to swap"):
                 return OCRCreatureRecorderSwapWith(audio_system=self.parent.audio_system,
                                                               config=self.config, ocr_engine=self.ocr_engine)
+
+            elif lower_title.startswith("field items ("):
+                return FieldItemSelectUI(audio_system=self.parent.audio_system, config=self.config, ocr_engine=self.ocr_engine)
+
             elif step_type := _realm_select_step(title):
                 root.debug(f"realm step - {step_type} {title}")
                 return OCRRealmSelect(audio_system=self.parent.audio_system, config=self.config,
@@ -1012,7 +1017,6 @@ class WholeWindowAnalyzer(Thread):
 
             elif lower_title.endswith("inspect creature"):
                 return InspectScreenUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
-
 
         except IndexError:
             return unknown_system

@@ -22,6 +22,7 @@ class OCRMode(Enum):
     """Screen shown to select realm dept and realm to denter"""
     REALM_SELECT = auto()
     ANOINTMENT_CLAIM = auto()
+    FIELD_ITEM = auto()
 
 
 class FrameInfo(Protocol):
