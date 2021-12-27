@@ -90,6 +90,28 @@ class SpriteType(enum.Enum):
     PORTAL = 54
     REALM_DAMAGE = 55
     FAVOR_DONATION = 56
+    ANTIQUE_CLOCK = 57
+    ZANTAI_PORTAL = 58
+    MUSIC_CRYSTALS = 59
+    DUMPLING = 60
+    DUTY_CITIZEN = 61
+    DUTY_KNIGHT = 62
+    DUTY_NPC = 63
+    DUTY_RUNAWAY_CRIT = 64
+    CONDITIONAL_FIGHT = 65
+    FALSE_GOD_PORTAL = 66
+    LARGE_SLOT_MACHINE = 67
+    TAROT_CARD = 68
+    NETHER_BOSS_PORTAL = 69
+    NETHER_PORTAL = 70
+    NETHER_STONE = 71
+    EXOTIC_PORTAL = 72
+    PLAYER = 73
+    RENEGADE = 74
+    RIDDLE_DWARF = 75
+    REBEL = 76
+    TREASURE_GOLEM = 77
+    TREASURE_SPOT = 78
 
 @cache
 def read_data_color(filepath: str) -> ArrayLike:
@@ -340,11 +362,40 @@ class TreasureMap(Sprite):
         'polymorphic_identity': SpriteType.TREASURE_MAP.value
     }
 
+class TreasureSpot(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.TREASURE_SPOT.value
+    }
 
 class LargeChest(Sprite):
     __tablename__ = None
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.LARGE_CHEST.value
+    }
+
+class Player(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.PLAYER.value
+    }
+
+class Rebel(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.REBEL.value
+    }
+
+class Renegade(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.RENEGADE.value
+    }
+
+class RiddleDwarf(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.RIDDLE_DWARF.value
     }
 
 
@@ -365,6 +416,57 @@ class Portal(Sprite):
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.PORTAL.value
     }
+
+class NetherStone(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.NETHER_STONE.value
+    }
+
+class ExoticPortal(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.EXOTIC_PORTAL.value
+    }
+
+
+class NetherPortal(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.NETHER_PORTAL.value
+    }
+
+class NetherBossPortal(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.NETHER_BOSS_PORTAL.value
+    }
+
+class FalseGodPortal(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.FALSE_GOD_PORTAL.value
+    }
+
+class LargeSlotMachine(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.LARGE_SLOT_MACHINE.value
+    }
+
+
+class ZantaiPortal(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.ZANTAI_PORTAL.value
+    }
+
+class TarotCard(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.TAROT_CARD.value
+    }
+
 
 class RealmDamage(Sprite):
     __tablename__ = None
@@ -444,6 +546,12 @@ class Fight(Sprite):
     __tablename__ = None
     __mapper_args__ = {
         'polymorphic_identity': SpriteType.FIGHT.value
+    }
+
+class ConditionalFight(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.CONDITIONAL_FIGHT.value
     }
 
 class RandomLoot(Sprite):
@@ -563,6 +671,13 @@ class WishingStar(Sprite):
         'polymorphic_identity': SpriteType.WISHING_STAR.value
     }
 
+class AntiqueClock(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.ANTIQUE_CLOCK.value
+    }
+
+
 class Mirrorball(Sprite):
     __tablename__ = None
     __mapper_args__ = {
@@ -589,6 +704,35 @@ class LargeChestKey(Sprite):
         'polymorphic_identity': SpriteType.LARGE_CHEST_KEY.value
     }
 
+class MusicCrystals(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.MUSIC_CRYSTALS.value
+    }
+
+class DutyCitizen(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.DUTY_CITIZEN.value
+    }
+
+class DutyKnight(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.DUTY_KNIGHT.value
+    }
+
+class DutyNPC(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.DUTY_NPC.value
+    }
+
+class DutyRunawayCrit(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.DUTY_RUNAWAY_CRIT.value
+    }
 
 class OverlaySprite(Sprite):
     __tablename__ = 'overlay_sprite'
@@ -771,6 +915,17 @@ class EnemySprite(Sprite):
         'polymorphic_identity': SpriteType.ENEMY.value
     }
 
+class Dumpling(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.DUMPLING.value
+    }
+
+class TreasureGolem(Sprite):
+    __tablename__ = None
+    __mapper_args__ = {
+        'polymorphic_identity': SpriteType.TREASURE_GOLEM.value
+    }
 
 class CreatureSprite(Sprite):
     __tablename__ = "creature_sprite"
