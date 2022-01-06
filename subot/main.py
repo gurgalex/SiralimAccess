@@ -27,6 +27,9 @@ import win32process
 from winrt.windows.media.ocr import OcrResult
 
 from subot import models, ocr
+from subot.actions import ActionType, EnemyStatsAction, ReadSecondaryInfoAction, ReadAllInfoAction, CopyAllInfoAction, \
+    RereadAutoTextAction, HelpAction, ScreenshotAction, OpenConfigLocationAction, ForceOCRAction, ActionU, \
+    EnemyLowestHPAction, EnemyHighestHPAction, EnemySortedHPAction
 from subot.ui_areas.AnointmentClaimUI import AnointmentClaimUI
 from subot.ui_areas.CodexGeneric import CodexGeneric
 from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
@@ -35,6 +38,7 @@ from subot.ui_areas.InspectScreenUI import InspectScreenUI
 from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
 from subot.ui_areas.OcrUnknownArea import OcrUnknownArea
 from subot.ui_areas.PerkScreen import PerkScreen
+from subot.ui_areas.battle_menu import BattleScreenUI, is_battle_screen
 from subot.ui_areas.creatures_display import OCRCreaturesDisplaySystem
 from subot.ui_areas.realm_select import OCRRealmSelect, SelectStep
 from subot.ui_areas.summoning import OcrSummoningSystem
@@ -68,9 +72,8 @@ from subot.hash_image import ImageInfo, RealmSpriteHasher, compute_hash
 
 from dataclasses import dataclass
 
-from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, NPCSprite, HashFrameWithFloor, \
-    QuestType, ResourceNodeSprite, \
-    SpriteTypeLookup, SpriteType, ChestSprite
+from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, HashFrameWithFloor, \
+    SpriteTypeLookup, SpriteType
 
 from subot.utils import Point, read_version
 import traceback
@@ -242,19 +245,6 @@ def is_foreground_process(pid: int) -> bool:
     return pid == active_pid
 
 
-class ActionType(enum.Enum):
-    """Actions to control Siralim Access (usually invoked by keyboard keys"""
-    READ_SECONDARY_INFO = auto()
-    REREAD_AUTO_TEXT = auto()
-    READ_ALL_INFO = auto()
-    COPY_ALL_INFO = auto()
-    HELP = auto()
-    SCREENSHOT = auto()
-    SILENCE = auto()
-    OPEN_CONFIG_LOCATION = auto()
-    FORCE_OCR = auto()
-
-
 def open_config_file():
     os.startfile(settings.config_file_path(), 'edit')
 
@@ -264,22 +254,10 @@ class Bot:
         if self.paused:
             return
         root.debug(f"key released: {key}")
-        if key == KeyCode.from_char(self.config.read_secondary_key):
-            self.action_queue.put_nowait(ActionType.READ_SECONDARY_INFO)
-        elif key == KeyCode.from_char(self.config.read_menu_entry_key):
-            self.action_queue.put_nowait(ActionType.REREAD_AUTO_TEXT)
-        elif key == KeyCode.from_char(self.config.read_all_info_key):
-            self.action_queue.put_nowait(ActionType.READ_ALL_INFO)
-        elif key == KeyCode.from_char(self.config.copy_all_info_key):
-            self.action_queue.put_nowait(ActionType.COPY_ALL_INFO)
-        elif key == KeyCode.from_char('?'):
-            self.action_queue.put_nowait(ActionType.HELP)
-        elif key == KeyCode.from_char("P"):
-            self.action_queue.put_nowait(ActionType.SCREENSHOT)
-        elif key == KeyCode.from_char(self.config.open_config_key):
-            self.action_queue.put_nowait(ActionType.OPEN_CONFIG_LOCATION)
-        elif key == KeyCode.from_char("O"):
-            self.action_queue.put_nowait(ActionType.FORCE_OCR)
+        try:
+            self.action_queue.put_nowait(self.keys[key])
+        except KeyError:
+            pass
 
     def on_press(self, key):
         pass
@@ -287,8 +265,29 @@ class Bot:
     def __init__(self, audio_system: AudioSystem, config: settings.Config):
         self.queue_whole_analyzer_comm_send: queue.Queue = queue.Queue()
         # queue to monitor for incoming hang alert
-        self.action_queue = queue.Queue()
+        self.action_queue: queue[ActionU] = queue.Queue()
         self.config = config
+        self.keys: dict[KeyCode, ActionU] = {
+            KeyCode.from_char(self.config.read_secondary_key): ReadSecondaryInfoAction(),
+            KeyCode.from_char(self.config.read_all_info_key): ReadAllInfoAction(),
+            KeyCode.from_char(self.config.copy_all_info_key): CopyAllInfoAction(),
+            KeyCode.from_char(self.config.read_menu_entry_key): RereadAutoTextAction(),
+            KeyCode.from_char(self.config.help_key): HelpAction(),
+            KeyCode.from_char("P"): ScreenshotAction(),
+            KeyCode.from_char(self.config.open_config_key): OpenConfigLocationAction(),
+            KeyCode.from_char("O"): ForceOCRAction(),
+
+            # Battle Screens
+            KeyCode.from_char(self.config.enemy_1_key): EnemyStatsAction(1),
+            KeyCode.from_char(self.config.enemy_2_key): EnemyStatsAction(2),
+            KeyCode.from_char(self.config.enemy_3_key): EnemyStatsAction(3),
+            KeyCode.from_char(self.config.enemy_4_key): EnemyStatsAction(4),
+            KeyCode.from_char(self.config.enemy_5_key): EnemyStatsAction(5),
+            KeyCode.from_char(self.config.enemy_6_key): EnemyStatsAction(6),
+            KeyCode.from_char(self.config.lowest_hp_key): EnemyLowestHPAction(),
+            KeyCode.from_char(self.config.highest_hp_key): EnemyHighestHPAction(),
+            KeyCode.from_char(self.config.sorted_enemy_hp_key): EnemySortedHPAction(),
+        }
         self.mode: BotMode = BotMode.UNDETERMINED
         self.game_is_foreground: bool = False
         self.paused: bool = False
@@ -712,9 +711,9 @@ class Bot:
 
             # check for incoming hang messages
             try:
-                msg = self.crash_notifier.get_nowait()
-                root.warning(f"got hang alert msg = {msg=}")
-                self.audio_system.speak_blocking(f"Bot has stopped responding. {msg} Shutting down")
+                kind = self.crash_notifier.get_nowait()
+                root.warning(f"got hang alert msg = {kind=}")
+                self.audio_system.speak_blocking(f"Bot has stopped responding. {kind} Shutting down")
                 self.stop()
                 sys.exit(1)
 
@@ -739,25 +738,27 @@ class Bot:
 
             try:
                 msg = self.action_queue.get_nowait()
-                if msg is ActionType.READ_SECONDARY_INFO:
+                kind = msg.kind
+                if kind is ActionType.READ_SECONDARY_INFO:
                     self.whole_window_thandle.speak_interaction_info()
-                elif msg is ActionType.REREAD_AUTO_TEXT:
+                elif kind is ActionType.REREAD_AUTO_TEXT:
                     self.whole_window_thandle.ocr_ui_system.speak_auto()
-                elif msg is ActionType.READ_ALL_INFO:
+                elif kind is ActionType.READ_ALL_INFO:
                     self.whole_window_thandle.speak_all_info()
-                elif msg is ActionType.COPY_ALL_INFO:
+                elif kind is ActionType.COPY_ALL_INFO:
                     self.whole_window_thandle.copy_all_info()
-                elif msg is ActionType.HELP:
+                elif kind is ActionType.HELP:
                     root.debug("got help request")
                     self.whole_window_thandle.speak_help()
-                elif msg is ActionType.SILENCE:
+                elif kind is ActionType.SILENCE:
                     self.audio_system.silence()
-                elif msg is ActionType.OPEN_CONFIG_LOCATION:
+                elif kind is ActionType.OPEN_CONFIG_LOCATION:
                     open_config_file()
-                elif msg is ActionType.FORCE_OCR:
+                elif kind is ActionType.FORCE_OCR:
                     self.whole_window_thandle.force_ocr()
-                elif msg is ActionType.SCREENSHOT:
-
+                elif kind in (ActionType.ENEMY_STATS, ActionType.ENEMY_LOWEST_HP, ActionType.ENEMY_HIGHEST_HP, ActionType.ENEMY_SORTED_HP):
+                    self.whole_window_thandle.handle_action(msg)
+                elif kind is ActionType.SCREENSHOT:
 
                     def send_to_clipboard(clip_type, data):
                         """copy image to clipboard. Found at https://stackoverflow.com/a/62007792/17323787"""
@@ -1018,6 +1019,9 @@ class WholeWindowAnalyzer(Thread):
             elif lower_title.endswith("inspect creature"):
                 return InspectScreenUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
 
+            elif is_battle_screen(lower_title):
+                return BattleScreenUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+
         except IndexError:
             return unknown_system
         return unknown_system
@@ -1043,6 +1047,12 @@ class WholeWindowAnalyzer(Thread):
             pass
 
         self.ocr_mode = self.ocr_ui_system.mode
+
+    def handle_action(self, msg: ActionU):
+        try:
+            self.ocr_ui_system.perform_action(msg)
+        except AttributeError:
+            pass
 
     def speak_interaction_info(self):
         if not self.config.ocr_enabled:

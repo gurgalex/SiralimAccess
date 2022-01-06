@@ -61,6 +61,19 @@ class Config:
     treasure_map_item: int = 100
     wardrobe: int = 100
 
+    # battle screen
+
+    enemy_1_key: str = "1"
+    enemy_2_key: str = "2"
+    enemy_3_key: str = "3"
+    enemy_4_key: str = "4"
+    enemy_5_key: str = "5"
+    enemy_6_key: str = "6"
+    all_enemies: str = "0"
+    lowest_hp_key: str = "-"
+    highest_hp_key: str = "="
+    sorted_enemy_hp_key: str = "0"
+
     detect_objects_through_walls: bool = True
 
     # repeat detected object sounds. If false, stops playing the sound if play has not moved
@@ -80,6 +93,18 @@ class Config:
             'help_key': self.help_key,
         }
 
+        ini["BATTLE"] = {
+            "enemy_1_key": self.enemy_1_key,
+            "enemy_2_key": self.enemy_2_key,
+            "enemy_3_key": self.enemy_3_key,
+            "enemy_4_key": self.enemy_4_key,
+            "enemy_5_key": self.enemy_5_key,
+            "enemy_6_key": self.enemy_6_key,
+            "lowest_hp_key": self.lowest_hp_key,
+            "highest_hp_key": self.highest_hp_key,
+            "sorted_enemy_hp_key": self.sorted_enemy_hp_key
+
+        }
         ini["OCR"] = {
             "enabled": self.ocr_enabled,
             "read_secondary_key": self.read_secondary_key,
@@ -133,6 +158,18 @@ class Config:
         default_config.update_popup_browser = general.getboolean('update_popup_browser', fallback=default_config.update_popup_browser)
         default_config.open_config_key = general.get('open_config_key', fallback=default_config.open_config_key)
         default_config.help_key = general.get('help_key', fallback=default_config.help_key)
+        if not ini.has_section("BATTLE"):
+            ini.add_section("BATTLE")
+        battle = ini["BATTLE"]
+        default_config.enemy_1_key = battle.get("enemy_1_key", fallback=default_config.enemy_1_key)
+        default_config.enemy_2_key = battle.get("enemy_2_key", fallback=default_config.enemy_2_key)
+        default_config.enemy_3_key = battle.get("enemy_3_key", fallback=default_config.enemy_3_key)
+        default_config.enemy_4_key = battle.get("enemy_4_key", fallback=default_config.enemy_4_key)
+        default_config.enemy_5_key = battle.get("enemy_5_key", fallback=default_config.enemy_5_key)
+        default_config.enemy_6_key = battle.get("enemy_6_key", fallback=default_config.enemy_6_key)
+        default_config.lowest_hp_key = battle.get("lowest_hp_key", fallback=default_config.lowest_hp_key)
+        default_config.highest_hp_key = battle.get("highest_hp_key", fallback=default_config.highest_hp_key)
+        default_config.sorted_enemy_hp_key = battle.get("sorted_enemy_hp_key", fallback=default_config.sorted_enemy_hp_key)
 
         volume = ini["VOLUME"]
 

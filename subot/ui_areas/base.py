@@ -23,6 +23,7 @@ class OCRMode(Enum):
     REALM_SELECT = auto()
     ANOINTMENT_CLAIM = auto()
     FIELD_ITEM = auto()
+    BATTLE = auto()
 
 
 class FrameInfo(Protocol):
