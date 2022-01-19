@@ -28,15 +28,24 @@ from winrt.windows.media.ocr import OcrResult
 
 from subot import models, ocr
 from subot.ui_areas.AnointmentClaimUI import AnointmentClaimUI
-from subot.ui_areas.CodexGeneric import CodexGeneric
+from subot.ui_areas.CodexGeneric import CodexGeneric, CodexSpells
 from subot.ui_areas.CreatureReorderSelectFirst import OCRCreatureRecorderSelectFirst, OCRCreatureRecorderSwapWith
 from subot.ui_areas.FieldItemSelect import FieldItemSelectUI
 from subot.ui_areas.InspectScreenUI import InspectScreenUI
 from subot.ui_areas.OCRGodForgeSelect import OCRGodForgeSelectSystem
 from subot.ui_areas.OcrUnknownArea import OcrUnknownArea
 from subot.ui_areas.PerkScreen import PerkScreen
+from subot.ui_areas.battle.cast import BattleCastUI
 from subot.ui_areas.creatures_display import OCRCreaturesDisplaySystem
-from subot.ui_areas.realm_select import OCRRealmSelect, SelectStep
+from subot.ui_areas.enchanter.choose_enchantment import SpellChooseEnchantmentUI
+from subot.ui_areas.enchanter.disenchant import SpellDisenchantUI
+from subot.ui_areas.enchanter.enchant_screen import SpellEnchantUI
+from subot.ui_areas.enchanter.upgrade import SpellUpgradeUI
+from subot.ui_areas.equip_spell_gem import EquipSpellGemUI
+from subot.ui_areas.manage_spell_gems import ManageSpellGemsUI
+from subot.ui_areas.realm_select import OCRRealmSelect, _realm_select_step
+from subot.ui_areas.enchanter.spell_craft_screen import SpellCraftUI
+from subot.ui_areas.refinery.spell import SalvageSpellUI
 from subot.ui_areas.summoning import OcrSummoningSystem
 from subot.trait_info import TraitData
 
@@ -46,7 +55,7 @@ import numpy as np
 import mss
 from subot.settings import Session, GameControl
 import subot.settings as settings
-from subot.ocr import detect_title, OCR, LanguageNotInstalledException
+from subot.ocr import detect_title, OCR, LanguageNotInstalledException, detect_title_resized_text
 from subot.ui_areas.ui_ocr_types import OCR_UI_SYSTEMS
 from subot.ui_areas.base import OCRMode
 import win32gui
@@ -68,9 +77,8 @@ from subot.hash_image import ImageInfo, RealmSpriteHasher, compute_hash
 
 from dataclasses import dataclass
 
-from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, NPCSprite, HashFrameWithFloor, \
-    QuestType, ResourceNodeSprite, \
-    SpriteTypeLookup, SpriteType, ChestSprite
+from subot.models import Sprite, SpriteFrame, Quest, FloorSprite, Realm, RealmLookup, HashFrameWithFloor, \
+    SpriteTypeLookup, SpriteType
 
 from subot.utils import Point, read_version
 import traceback
@@ -896,16 +904,6 @@ class WholeWindowGrabber(multiprocessing.Process):
             raise e
 
 
-def _realm_select_step(title: str) -> Optional[SelectStep]:
-    if title.startswith("Choose a Realm Depth"):
-        return SelectStep.DEPTH
-    elif title.startswith("Set the Realm Insta"):
-        return SelectStep.INSTABILITY
-    elif title.startswith("Choose a Realm Type"):
-        return SelectStep.REALM
-    else:
-        return None
-
 class WholeWindowAnalyzer(Thread):
     def __init__(self, incoming_frame_queue: Queue, queue_child_comm_send: queue.Queue, out_quests_queue: Queue,
                  su_client_rect: Rect, parent: Bot, stop_event: threading.Event,
@@ -958,6 +956,7 @@ class WholeWindowAnalyzer(Thread):
             title = ocr_result.merged_text
             root.debug(f"{title=}")
             lower_title = title.lower()
+
             first_word = ocr_result.lines[0].words[0]
             if lower_title.startswith("select a creature to summon"):
                 return OcrSummoningSystem(self.creature_data, self.parent.audio_system, self.config,
@@ -1000,11 +999,12 @@ class WholeWindowAnalyzer(Thread):
             # todo:-Problematic codex entries  "Castle", "Character", "Events", "Gods", "Items", "Realms", "Relics", "Spell Gems"
             elif lower_title.startswith("spells"):
                 # todo: proper spell gem screen
+                return CodexSpells(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config, title=title)
+            elif lower_title.endswith("skins"):
+                pass
+                # return CodexGeneric(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config, title=title)
+            elif lower_title.endswith("traits"):
                 return CodexGeneric(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config, title=title)
-            elif lower_title.startswith("skins"):
-                pass
-            elif lower_title.startswith("traits"):
-                pass
             # codex artifact info
             elif lower_title.startswith("artifacts") and first_word.bounding_rect.x/self.frame.shape[1] < 0.1:
                 print("art screen")
@@ -1015,8 +1015,32 @@ class WholeWindowAnalyzer(Thread):
 
             # battle screens
 
+            elif lower_title.startswith("select a spell for your"):
+                return BattleCastUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+
             elif lower_title.endswith("inspect creature"):
                 return InspectScreenUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+
+            # spell screens
+            elif lower_title.startswith("choose a gem to craft"):
+                return SpellCraftUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+            elif lower_title.startswith("choose a gem to enchant"):
+                return SpellEnchantUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+            elif lower_title.startswith("choose an enchant"):
+                return SpellChooseEnchantmentUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+            elif lower_title.startswith("choose a gem to disenchant") or lower_title.startswith("choose a slot to disenchant"):
+                return SpellDisenchantUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+            elif lower_title.startswith("choose a gem to upgrade"):
+                return SpellUpgradeUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+            elif lower_title.startswith("manage spell gems for your"):
+                return ManageSpellGemsUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config, title=lower_title)
+            elif lower_title.startswith("select a spell gem to equip to your"):
+                return EquipSpellGemUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+
+            # refinery
+            elif lower_title.startswith("select a spell gem to grind"):
+                return SalvageSpellUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
+
 
         except IndexError:
             return unknown_system
@@ -1026,15 +1050,10 @@ class WholeWindowAnalyzer(Thread):
         if not self.config.ocr_enabled:
             return
 
-        mask = detect_title(self.frame)
-        resize_factor = 2
-        mask = cv2.resize(mask, (mask.shape[1] * resize_factor, mask.shape[0] * resize_factor),
-                          interpolation=cv2.INTER_LINEAR)
-
-        ocr_result = self.ocr_engine.recognize_cv2_image(mask)
+        ocr_result = detect_title_resized_text(self.frame, self.ocr_engine)
         detected_system = self.determine_ocr_system(ocr_result)
 
-        if detected_system.mode != self.ocr_ui_system.mode or self.ocr_ui_system.step != detected_system.step:
+        if detected_system.mode != self.ocr_ui_system.mode:# or self.ocr_ui_system.step != detected_system.step:
             root.debug(f"new ocr system: {detected_system.mode}, {self.ocr_ui_system.mode}")
             # silence prior system output to prepare for next system
             self.parent.audio_system.silence()

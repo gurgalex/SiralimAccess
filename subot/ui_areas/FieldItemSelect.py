@@ -2,7 +2,7 @@ from typing import Optional
 
 from numpy.typing import NDArray
 
-from subot.ocr import detect_green_text, detect_white_text, OCR, detect_dialog_text, OCRResult
+from subot.ocr import detect_green_text, detect_white_text, OCR, detect_dialog_text_both_frames, OCRResult
 from subot.settings import Config
 from enum import Enum, auto
 from logging import getLogger
@@ -129,7 +129,7 @@ class FieldItemSelectUI(SpeakAuto):
         self._ocr_left_side(parent.frame, parent.gray_frame)
         self._ocr_right_side(parent.frame, parent.gray_frame)
 
-        dialog_text = detect_dialog_text(parent.frame, parent.gray_frame, self.ocr_engine)
+        dialog_text = detect_dialog_text_both_frames(parent.frame, parent.gray_frame, self.ocr_engine)
         self._update_dialog_text(dialog_text)
 
         pos = detect_creature_party_selection(parent.frame)
