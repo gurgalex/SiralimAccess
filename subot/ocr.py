@@ -400,4 +400,4 @@ def detect_dialog_text_both_frames(frame: NDArray, gray_frame: NDArray, ocr_engi
     :param gray_frame BGR whole window frame
     :param ocr_engine: engine that can perform OCR on image
     """
-    detect_dialog_text_color(frame, ocr_engine)
+    return detect_dialog_text_color(frame, ocr_engine)
