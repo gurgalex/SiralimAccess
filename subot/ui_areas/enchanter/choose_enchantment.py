@@ -11,7 +11,8 @@ from subot.ocr import slice_img
 from subot.ui_areas.enchanter.spell_craft_screen import center_crop
 
 from subot.ui_areas.spell_components import ComponentSortUI, ComponentSpellDescription, ComponentSpellInfo, \
-    ComponentSpellEnchanterDescription, ComponentDialogBox, ComponentSpellProperties
+    ComponentSpellEnchanterDescription, ComponentDialogBox, ComponentSpellProperties, enchantment_property_number_text, \
+    enchantment_empty_slots_text
 
 
 class SpellChooseEnchantmentUI(SpeakAuto):
@@ -24,7 +25,6 @@ class SpellChooseEnchantmentUI(SpeakAuto):
         self.spell_properties_component = ComponentSpellProperties(self.ocr_engine)
         self.prev_enchantment_name: str = ""
         self.enchantment_name: str = ""
-        # self.spell_info_component = ComponentSpellInfo(self.ocr_engine)
         self.dialog_box_component = ComponentDialogBox(self.ocr_engine)
 
         self.help_text = f"Press {self.program_config.read_secondary_key} for spell description and read current properties"
@@ -49,7 +49,6 @@ class SpellChooseEnchantmentUI(SpeakAuto):
 
         self.description_component.ocr(spell_description_roi)
 
-
     def speak_interaction(self):
         text = f"{self.spell_properties_component.text} \nspell description: {self.description_component.description}\n {self.enchantment_name}"
         self.audio_system.speak_nonblocking(text)
@@ -61,20 +60,6 @@ class SpellChooseEnchantmentUI(SpeakAuto):
 
         return self.enchantment_name == self.prev_enchantment_name and self.spell_properties_component.is_same_state
 
-    def _enchantment_property_number_text(self) -> str:
-        if not self.spell_properties_component.has_enchantment_slot:
-            return "no enchantment slots left"
-
-        if self.spell_properties_component.is_same_state:
-            return ""
-
-        if self.spell_properties_component.number_of_properties > 0:
-            prop_count = self.spell_properties_component.number_of_properties
-            ending = "property" if prop_count == 1 else "properties"
-            return f"{self.spell_properties_component.number_of_properties} {ending}"
-        else:
-            return ""
-
     def speak_auto(self):
         if self.is_same_state:
             return
@@ -83,7 +68,7 @@ class SpellChooseEnchantmentUI(SpeakAuto):
             self.audio_system.speak_nonblocking(text)
             return
 
-        enchantment_text = f"{self.enchantment_name}, {self._enchantment_property_number_text()}"
+        enchantment_text = f"{self.enchantment_name}, {enchantment_empty_slots_text(self.spell_properties_component)}"
 
         text = f"{enchantment_text}"
         self.audio_system.speak_nonblocking(text)

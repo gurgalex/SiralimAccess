@@ -1,10 +1,12 @@
 ## v0.15.0
 ### feat
-- spell gem class and ethereal status, and description are available in battle screen now
 - add many spell gem UI screens
+  - battle
+    - cast
+      - spell gem class and ethereal status, and description are available in the cast battle screen now
   - refinery
     - grind spell gem
-  - manage spell gem on your creature
+  - manage spell gems on your creatures
     - will speak class, whether it is the default, and speak when you change the creature page
     - spell gem equip interface when managing spell gems
   - enchanter
@@ -13,7 +15,7 @@
       - will speak number of properties and if you can't enchant anymore at the end of each enchant name on 1st UI change
     - disenchant
     - upgrade
-  - codex - spells
+    - codex - spells
 
 ## v0.14.2
 ### feat

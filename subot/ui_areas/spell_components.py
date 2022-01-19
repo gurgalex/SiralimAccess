@@ -221,6 +221,8 @@ class ComponentSpellProperties:
             if "Empty Property Slot" in line.merged_text:
                 self.empty_slots += 1
                 continue
+            if line.merged_text == "none":
+                continue
             num_properties += 1
         self.number_of_properties = num_properties
 
@@ -231,6 +233,36 @@ class ComponentSpellProperties:
     @property
     def has_enchantment_slot(self) -> bool:
         return self.empty_slots > 0
+
+
+def enchantment_property_number_text(cls: ComponentSpellProperties) -> str:
+    if not cls.has_enchantment_slot:
+        return "no enchantment slots left"
+
+    if cls.is_same_state:
+        return ""
+
+    if cls.number_of_properties > 0:
+        prop_count = cls.number_of_properties
+        ending = "property" if prop_count == 1 else "properties"
+        return f"{cls.number_of_properties} {ending}"
+    else:
+        return ""
+
+
+def enchantment_empty_slots_text(cls: ComponentSpellProperties) -> str:
+    if not cls.has_enchantment_slot:
+        return "no enchantment slots left"
+
+    if cls.is_same_state:
+        return ""
+
+    if cls.empty_slots > 0:
+        empty_slot_count = cls.empty_slots
+        ending = "slot" if empty_slot_count == 1 else "slots"
+        return f"{cls.empty_slots} empty {ending}"
+    else:
+        return ""
 
 
 class ComponentSpellEnchanterDescription:
