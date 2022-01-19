@@ -12,7 +12,7 @@ from subot.ocr import slice_img
 from subot.ui_areas.enchanter.spell_craft_screen import center_crop
 
 from subot.ui_areas.spell_components import ComponentSortUI, ComponentSpellDescription, ComponentSpellInfo, \
-    ComponentSpellEnchanterDescription
+    ComponentSpellEnchanterDescription, ComponentSpellProperties, enchantment_empty_slots_text
 
 
 class SpellEnchantUI(SpeakAuto):
@@ -23,6 +23,7 @@ class SpellEnchantUI(SpeakAuto):
         self.description_component = ComponentSpellEnchanterDescription(self.ocr_engine)
         self.sort_component = ComponentSortUI(self.ocr_engine)
         self.spell_info_component = ComponentSpellInfo(self.ocr_engine)
+        self.spell_properties_component = ComponentSpellProperties(self.ocr_engine)
         self.help_text = f"Press {self.program_config.read_secondary_key} for description, press f to change sort order of spells"
 
     def ocr(self, parent: FrameInfo):
@@ -37,6 +38,9 @@ class SpellEnchantUI(SpeakAuto):
         spell_description_roi = slice_img(bgr_cropped, x_start=0.46, x_end=1.0, y_start=0.09, y_end=0.9)
         self.description_component.ocr(spell_description_roi)
 
+        spell_properties_roi = slice_img(bgr_cropped, x_start=0.47, x_end=1.0, y_start=0.55, y_end=0.85)
+        self.spell_properties_component.ocr(spell_properties_roi)
+
         sort_text_roi = slice_img(bgr_cropped, x_start=0.75, x_end=1.0, y_start=0.0, y_end=0.09)
         self.sort_component.ocr(sort_text_roi)
 
@@ -45,8 +49,7 @@ class SpellEnchantUI(SpeakAuto):
 
     @property
     def is_same_state(self) -> bool:
-        return self.spell_info_component.is_same_state and self.sort_component.is_same_state
-
+        return self.spell_info_component.is_same_state and self.sort_component.is_same_state and self.spell_properties_component.is_same_state
 
     def speak_auto(self):
         if self.is_same_state:
@@ -55,7 +58,8 @@ class SpellEnchantUI(SpeakAuto):
         sort_text = self.sort_component.new_text
 
         equipped_text = "equipped" if self.spell_info_component.has_yellow_star else ""
-        spell_gem_text = f"{self.spell_info_component.spell_name}, {equipped_text}, {self.spell_info_component.spell_class.name} class"
+        remaining_slots_text = enchantment_empty_slots_text(self.spell_properties_component)
+        spell_gem_text = f"{self.spell_info_component.spell_name}, {equipped_text}, {self.spell_info_component.spell_class.name} class, {remaining_slots_text}"
 
         text = f"{spell_gem_text}. {sort_text}"
         self.audio_system.speak_nonblocking(text)
