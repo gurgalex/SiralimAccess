@@ -2,7 +2,7 @@ from typing import Optional
 
 from numpy.typing import NDArray
 
-from subot.ocr import detect_green_text, detect_white_text, OCR, detect_dialog_text, OCRResult
+from subot.ocr import detect_green_text, detect_white_text, OCR, detect_dialog_text_both_frames, OCRResult
 from subot.settings import Config
 import numpy as np
 import pyclip as clip
@@ -44,7 +44,7 @@ class OCRCreaturesDisplaySystem(SpeakAuto):
     def ocr(self, parent: FrameInfo):
         self._ocr_creature(parent.frame, parent.gray_frame)
         self.previous_dialog_text = self.current_dialog_text
-        self.current_dialog_text = detect_dialog_text(parent.frame, parent.gray_frame, self.ocr_engine)
+        self.current_dialog_text = detect_dialog_text_both_frames(parent.frame, parent.gray_frame, self.ocr_engine)
 
     def creature_text(self) -> str:
         menu_item = self.auto_text

@@ -1,6 +1,6 @@
 from typing import Optional
 
-from subot.ocr import detect_green_text, OCR, detect_dialog_text, extract_top_right_title_text, OCRResult
+from subot.ocr import detect_green_text, OCR, detect_dialog_text_both_frames, extract_top_right_title_text, OCRResult
 from subot.settings import Config
 from subot.ui_areas.CodexGeneric import detect_any_text
 from subot.ui_areas.base import SpeakAuto, OCRMode, FrameInfo, SpeakCapability
@@ -52,7 +52,7 @@ class PerkScreen(SpeakAuto):
         result = self.side_extract(parent.gray_frame, self.ocr_engine)
 
         self.previous_dialog_text = self.current_dialog_text
-        self.current_dialog_text = detect_dialog_text(parent.frame, parent.gray_frame, self.ocr_engine)
+        self.current_dialog_text = detect_dialog_text_both_frames(parent.frame, parent.gray_frame, self.ocr_engine)
         self.unspent_perk_points_text = extract_top_right_title_text(parent.gray_frame, self.ocr_engine)
 
         self.interactive_text = result

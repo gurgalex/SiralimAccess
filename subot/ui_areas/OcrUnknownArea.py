@@ -6,7 +6,7 @@ import cv2
 from numpy.typing import NDArray
 
 from subot.models import Quest, QuestType, ChestSprite, ResourceNodeSprite, NPCSprite
-from subot.ocr import OCR, detect_dialog_text, detect_green_text, OCRResult
+from subot.ocr import OCR, detect_dialog_text_both_frames, detect_green_text, OCRResult
 from subot.settings import Config, Session
 from subot.ui_areas.CodexGeneric import detect_any_text
 from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode, SpeakCapability
@@ -160,7 +160,7 @@ class OcrUnknownArea(SpeakAuto):
     def ocr_dialog_box(self, frame: NDArray, gray_frame: NDArray):
         self.previous_dialog_text = self.current_dialog_text
         self.current_dialog_text = ""
-        dialog_result = detect_dialog_text(frame, gray_frame, self.ocr_engine)
+        dialog_result = detect_dialog_text_both_frames(frame, gray_frame, self.ocr_engine)
 
         # don't count no text at all as dialog text
         if not dialog_result:

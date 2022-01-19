@@ -1,8 +1,9 @@
 from enum import Enum, auto
+from typing import Optional
 
 from numpy.typing import NDArray
 
-from subot.ocr import OCR, detect_green_text, detect_white_text
+from subot.ocr import OCR, detect_green_text, detect_white_text, detect_title_resized_text
 from subot.settings import Config
 from subot.ui_areas.base import SpeakAuto, FrameInfo, OCRMode, SpeakCapability
 
@@ -19,7 +20,9 @@ class OCRRealmSelect(SpeakAuto):
     def __init__(self, audio_system: SpeakCapability, config: Config, ocr_engine: OCR, step: SelectStep):
         super().__init__(ocr_engine, config, audio_system)
         self.help_text: str = ""
+
         self.step = step
+        self.last_step = step
         self.interactive_text: str = ""
         self.realm_info_text: str = ""
 
@@ -82,6 +85,9 @@ class OCRRealmSelect(SpeakAuto):
         self.help_text = f"Press {self.program_config.read_all_info_key} to speak realm properties"
 
     def ocr(self, parent: FrameInfo):
+        title = detect_title_resized_text(parent.frame, self.ocr_engine)
+        self.last_step = self.step
+        self.step = _realm_select_step(title.merged_text)
         self.realm_info_text = self._realm_properties(parent.frame)
         self.prev_auto_text = self.auto_text
         if self.step is SelectStep.DEPTH:
@@ -90,6 +96,8 @@ class OCRRealmSelect(SpeakAuto):
             self._realm_instability(parent.gray_frame)
         elif self.step is SelectStep.REALM:
             self._realm_select(parent.frame)
+        else:
+            return
 
     def speak_interaction(self):
         text = self.interactive_text
@@ -98,3 +106,14 @@ class OCRRealmSelect(SpeakAuto):
     def speak_all_info(self):
         text = f"{self.realm_info_text}"
         self.audio_system.speak_nonblocking(text)
+
+
+def _realm_select_step(title: str) -> Optional[SelectStep]:
+    if title.startswith("Choose a Realm Depth"):
+        return SelectStep.DEPTH
+    elif title.startswith("Set the Realm Insta"):
+        return SelectStep.INSTABILITY
+    elif title.startswith("Choose a Realm Type"):
+        return SelectStep.REALM
+    else:
+        return None

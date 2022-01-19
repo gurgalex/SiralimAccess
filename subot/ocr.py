@@ -262,7 +262,14 @@ class OCR:
         return is_installed
 
     def recognize_cv2_image(self, frame: np.typing.NDArray) -> OCRResult:
-        return self._executor.submit(lambda: asyncio.run(self._recognize_cv2_image(frame))).result()
+        if len(frame.shape) == 3:
+            # convert to grayscale, assume BGR
+            gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        elif len(frame.shape) ==2:
+            gray_frame = frame
+        else:
+            raise ValueError(f"frame is not a color or grayscale img (3 or 2 dimensions), {frame.shape}")
+        return self._executor.submit(lambda: asyncio.run(self._recognize_cv2_image(gray_frame))).result()
 
 
 def extract_top_right_title_text(image: np.typing.ArrayLike, ocr_engine: OCR) -> str:
@@ -282,16 +289,12 @@ def detect_any_text(gray_frame, ocr_engine: OCR, x_start: float, x_end: float, y
 
 def detect_green_text(image: np.typing.ArrayLike, x_start: float = 0.0, x_end: float = 1.0, y_start: float = 0.0,
                       y_end: float = 1.0) -> NDArray:
-    """Using a source image of RGB color, extract highlighted menu items which are a green color"""
-    lower_green = np.array([60, 50, 100])
+    """Using a source image of BGR color, extract highlighted menu items which are a green color by converting to HSV"""
+    lower_green = np.array([60, 140, 100])
     upper_green = np.array([60, 255, 255])
 
-    y_start = int(image.shape[0] * y_start)
-    y_end = int(image.shape[0] * y_end)
-    x_start = int(image.shape[1] * x_start)
-    x_end = int(image.shape[1] * x_end)
+    roi = slice_img(image, x_start=x_start, x_end=x_end, y_start=y_start, y_end=y_end)
 
-    roi = image[y_start:y_end, x_start:x_end]
     img = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(img, lower_green, upper_green)
     return mask
@@ -304,6 +307,9 @@ def slice_img(frame: np.typing.NDArray, x_start: float, x_end: float, y_start: f
     x_end = int(frame.shape[1] * x_end)
 
     text_area = frame[y_start:y_end, x_start:x_end]
+    if not any([text_area.shape[0], text_area.shape[1]]):
+        print(frame.shape)
+        return cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
     if resize_factor > 1:
         text_area = cv2.resize(text_area, (text_area.shape[1] * resize_factor, text_area.shape[0] * resize_factor),
@@ -311,14 +317,10 @@ def slice_img(frame: np.typing.NDArray, x_start: float, x_end: float, y_start: f
     return text_area
 
 
-def detect_white_text(frame: np.typing.NDArray, x_start: float, x_end: float, y_start: float, y_end: float, resize_factor: int=1,
+def detect_white_text(frame: np.typing.NDArray, x_start: float = 0.0, x_end: float = 1.0, y_start: float = 0.0, y_end: float = 1.0, resize_factor: int = 1,
                       sensitivity: int = 30) -> np.typing.NDArray:
-    y_start = int(frame.shape[0] * y_start)
-    y_end = int(frame.shape[0] * y_end)
-    x_start = int(frame.shape[1] * x_start)
-    x_end = int(frame.shape[1] * x_end)
 
-    text_area = frame[y_start:y_end, x_start:x_end]
+    text_area = slice_img(frame, x_start=x_start, x_end=x_end, y_start=y_start, y_end=y_end)
 
     if resize_factor > 1:
         text_area = cv2.resize(text_area, (text_area.shape[1] * resize_factor, text_area.shape[0] * resize_factor),
@@ -331,12 +333,16 @@ def detect_white_text(frame: np.typing.NDArray, x_start: float, x_end: float, y_
     return mask
 
 
-def detect_title(frame: np.typing.ArrayLike) -> np.typing.ArrayLike:
-    y_start = 0
-    y_end = int(frame.shape[0] * 0.1)
-    x_start = int(frame.shape[1] * 0.00)
-    x_end = int(frame.shape[1] * 0.75)
-    title_area = frame[y_start:y_end, x_start:x_end]
+def detect_title_resized_text(frame: np.typing.NDArray, ocr_engine: OCR) -> OCRResult:
+    resize_factor = 2
+    resized = cv2.resize(frame, (frame.shape[1] * resize_factor, frame.shape[0] * resize_factor),
+                      interpolation=cv2.INTER_LINEAR)
+    mask = detect_title(resized)
+
+    return ocr_engine.recognize_cv2_image(mask)
+
+def detect_title(frame: np.typing.NDArray) -> np.typing.NDArray:
+    title_area = slice_img(frame, x_start=0.0, x_end=0.75, y_start=0.0, y_end=0.1)
 
     img = cv2.cvtColor(title_area, cv2.COLOR_BGR2HLS)
     sensitivity = 30
@@ -357,18 +363,8 @@ def timeit(func):
 
     return wrap_timer
 
-
-def detect_dialog_text(frame: NDArray, gray_frame: NDArray, ocr_engine: OCR) -> Optional[str]:
-    """detect dialog text from frame
-
-    :param gray_frame BGR whole window frame
-    :param ocr_engine: engine that can perform OCR on image
-    """
-    y_start = int(gray_frame.shape[0] * 0.70)
-    y_end = int(gray_frame.shape[0] * 0.95)
-    x_start = int(gray_frame.shape[1] * 0.01)
-    x_end = int(gray_frame.shape[1] * 0.995)
-    dialog_area = frame[y_start:y_end, x_start:x_end]
+def detect_dialog_text_color(bgr_frame: NDArray, ocr_engine: OCR) -> Optional[str]:
+    dialog_area = slice_img(bgr_frame, x_start=0.01, x_end=0.995, y_start=0.70, y_end=0.95)
 
     img = cv2.cvtColor(dialog_area, cv2.COLOR_BGR2HLS)
     sensitivity = 30
@@ -393,13 +389,15 @@ def detect_dialog_text(frame: NDArray, gray_frame: NDArray, ocr_engine: OCR) -> 
         if is_not_dialog_box:
             return None
         return ocr_result.merged_text
-        # if is_not_dialog_box and not self.has_menu_entry_text:
-        #     return
     except IndexError:
         root.debug("no dialog text")
         return None
-        # no text was found
-        if not self.has_menu_entry_text and not self.has_dialog_text and not self.quest_text:
-            root.info("Pause, menu system. both not present")
-            self.audio_system.silence()
-        return
+
+
+def detect_dialog_text_both_frames(frame: NDArray, gray_frame: NDArray, ocr_engine: OCR) -> Optional[str]:
+    """detect dialog text from frame
+
+    :param gray_frame BGR whole window frame
+    :param ocr_engine: engine that can perform OCR on image
+    """
+    detect_dialog_text_color(frame, ocr_engine)
