@@ -108,7 +108,7 @@ def spell_gem_description(spell_description_roi_bgr: NDArray, ocr_engine: OCR) -
         spell_name = lines[0].merged_text
         charges = lines[1].merged_text.replace(" 1 ", " out of ")
         description = ' '.join(line.merged_text for line in lines[2:])
-        return f"\n{charges}\n{description}\n{spell_name}"
+        return f"{charges}\n{description}\n{spell_name}"
     except IndexError:
         return ' '.join(line.merged_text for line in text_result.lines)
 
@@ -196,7 +196,8 @@ class ComponentSpellProperties:
         self._properties: Optional[OCRResult] = None
         self.prev_number_of_properties: int = 0
         self.number_of_properties: int = 0
-        self.empty_slots: int = 3
+        self.empty_slots: int = 0
+        self.prev_empty_slots = self.empty_slots
 
     @property
     def text(self) -> str:
@@ -215,30 +216,34 @@ class ComponentSpellProperties:
         if not self._properties.lines[0].merged_text.startswith("Properties"):
             return
 
-        num_properties = 0
+        self.prev_empty_slots = self.empty_slots
         self.empty_slots = 0
         for line in self._properties.lines[1:]:
             if "Empty Property Slot" in line.merged_text:
                 self.empty_slots += 1
                 continue
-            if line.merged_text == "none":
-                continue
-            num_properties += 1
-        self.number_of_properties = num_properties
+            has_zero_property_slots = line.merged_text == "none"
+            if has_zero_property_slots:
+                self.number_of_properties = 0
+                break
+            self.number_of_properties += 1
 
     @property
     def is_same_state(self) -> bool:
-        return self.number_of_properties == self.prev_number_of_properties
+        return self.number_of_properties == self.prev_number_of_properties and self.empty_slots == self.prev_empty_slots
 
     @property
-    def has_enchantment_slot(self) -> bool:
+    def has_empty_slots(self) -> bool:
         return self.empty_slots > 0
+
+    @property
+    def tier(self) -> int:
+        return self.empty_slots + self.number_of_properties + 1
 
 
 def enchantment_property_number_text(cls: ComponentSpellProperties) -> str:
-    if not cls.has_enchantment_slot:
-        return "no enchantment slots left"
-
+    if not cls.has_empty_slots:
+        return "already disenchanted"
     if cls.is_same_state:
         return ""
 
@@ -251,13 +256,16 @@ def enchantment_property_number_text(cls: ComponentSpellProperties) -> str:
 
 
 def enchantment_empty_slots_text(cls: ComponentSpellProperties) -> str:
-    if not cls.has_enchantment_slot:
-        return "no enchantment slots left"
+    if not cls.has_empty_slots and cls.tier == 4:
+        return "fully enchanted already"
+
+    if cls.tier < 4 and not cls.has_empty_slots:
+        return "upgrade to enchant further"
 
     if cls.is_same_state:
         return ""
 
-    if cls.empty_slots > 0:
+    if cls.has_empty_slots:
         empty_slot_count = cls.empty_slots
         ending = "slot" if empty_slot_count == 1 else "slots"
         return f"{cls.empty_slots} empty {ending}"

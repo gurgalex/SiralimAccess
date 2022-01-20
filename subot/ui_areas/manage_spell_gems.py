@@ -24,7 +24,7 @@ class ManageSpellGemsUI(SpeakAuto):
     mode = OCRMode.MANAGE_SPELL_GEMS
     CREATURE_NAME_OFFSET: int = len("manage spell gems for your ")
 
-    def __init__(self, ocr_engine: OCR, config: Config, audio_system: SpeakCapability, title: str):
+    def __init__(self, ocr_engine: OCR, config: Config, audio_system: SpeakCapability):
         super().__init__(ocr_engine, config, audio_system)
         self.step = StepManageSpell.SELECT_CURRENT
         self.last_step = self.step
@@ -100,7 +100,7 @@ class ManageSpellGemsUI(SpeakAuto):
         self.prev_title = self.title
 
         if self.empty_slot:
-            text = f"{creature_name} empty slot"
+            text = f"{creature_name} Empty Slot"
             self.audio_system.speak_nonblocking(text)
             return
 

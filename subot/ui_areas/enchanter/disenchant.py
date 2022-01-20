@@ -11,7 +11,7 @@ from subot.ocr import slice_img
 from subot.ui_areas.enchanter.spell_craft_screen import center_crop
 
 from subot.ui_areas.spell_components import ComponentSortUI, ComponentSpellDescription, ComponentSpellInfo, \
-    ComponentSpellEnchanterDescription, ComponentDialogBox
+    ComponentSpellEnchanterDescription, ComponentDialogBox, ComponentSpellProperties
 
 
 class DisenchantStep(Enum):
@@ -26,10 +26,10 @@ class SpellDisenchantUI(SpeakAuto, Step):
         super().__init__(ocr_engine, config, audio_system)
         self._step = DisenchantStep.SELECT_SPELL
 
-        self.description_component = ComponentSpellEnchanterDescription(self.ocr_engine)
-        # self.spell_properties_component = ComponentSpellProperties(self.ocr_engine)
-        self.sort_component = ComponentSortUI(self.ocr_engine)
         self.spell_info_component = ComponentSpellInfo(self.ocr_engine)
+        self.description_component = ComponentSpellEnchanterDescription(self.ocr_engine)
+        self.spell_properties_component = ComponentSpellProperties(self.ocr_engine)
+        self.sort_component = ComponentSortUI(self.ocr_engine)
         self.dialog_box_component = ComponentDialogBox(self.ocr_engine)
 
         self.prev_slot_text = ""
@@ -57,6 +57,8 @@ class SpellDisenchantUI(SpeakAuto, Step):
 
         spell_name_roi = slice_img(bgr_cropped, x_start=0.00, x_end=0.45, y_start=0.00, y_end=1.0)
         spell_description_roi = slice_img(bgr_cropped, x_start=0.46, x_end=1.0, y_start=0.09, y_end=0.9)
+        spell_properties_roi = slice_img(bgr_cropped, x_start=0.47, x_end=1.0, y_start=0.55, y_end=0.85)
+
         if self.step is DisenchantStep.SELECT_SPELL:
             self.dialog_box_component.ocr(bgr_cropped)
             if self.dialog_box_component.dialog_text:
@@ -65,6 +67,7 @@ class SpellDisenchantUI(SpeakAuto, Step):
             self.spell_info_component.ocr(spell_name_roi)
 
             self.description_component.ocr(spell_description_roi)
+            self.spell_properties_component.ocr(spell_properties_roi)
 
             sort_text_roi = slice_img(bgr_cropped, x_start=0.75, x_end=1.0, y_start=0.0, y_end=0.09)
             self.sort_component.ocr(sort_text_roi)
@@ -77,10 +80,9 @@ class SpellDisenchantUI(SpeakAuto, Step):
 
             self.description_component.ocr(spell_description_roi)
 
-            spell_properties_roi = slice_img(bgr_cropped, x_start=0.47, x_end=1.0, y_start=0.55, y_end=0.85)
-            properties_text = self.ocr_engine.recognize_cv2_image(detect_green_text(spell_properties_roi)).merged_text
+            selected_property_text = self.ocr_engine.recognize_cv2_image(detect_green_text(spell_properties_roi)).merged_text
             self.prev_slot_text = self.slot_text
-            self.slot_text = properties_text
+            self.slot_text = selected_property_text
 
     def speak_interaction(self):
         if self.step is DisenchantStep.SELECT_SPELL:
@@ -97,7 +99,7 @@ class SpellDisenchantUI(SpeakAuto, Step):
             return self.dialog_box_component.is_same_state
 
         if self.step is DisenchantStep.SELECT_SPELL:
-            return self.spell_info_component.is_same_state and self.sort_component.is_same_state
+            return self.spell_info_component.is_same_state and self.spell_properties_component.is_same_state and self.sort_component.is_same_state
         elif self.step is DisenchantStep.SLOT_DISENCHANT:
             return self.slot_text == self.prev_slot_text
 
@@ -115,7 +117,9 @@ class SpellDisenchantUI(SpeakAuto, Step):
             equipped_text = "equipped" if self.spell_info_component.has_yellow_star else ""
             spell_gem_text = f"{self.spell_info_component.spell_name}, {equipped_text}, {self.spell_info_component.spell_class.name} class"
 
-            text = f"{spell_gem_text}. {sort_text}"
+            remaining_properties_text = "already fully disenchanted" if self.spell_properties_component.number_of_properties == 0 else ""
+
+            text = f"{spell_gem_text}, {remaining_properties_text}. {sort_text}"
             self.audio_system.speak_nonblocking(text)
         elif self.step is DisenchantStep.SLOT_DISENCHANT:
             text = self.slot_text

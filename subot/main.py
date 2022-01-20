@@ -1033,7 +1033,7 @@ class WholeWindowAnalyzer(Thread):
             elif lower_title.startswith("choose a gem to upgrade"):
                 return SpellUpgradeUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
             elif lower_title.startswith("manage spell gems for your"):
-                return ManageSpellGemsUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config, title=lower_title)
+                return ManageSpellGemsUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
             elif lower_title.startswith("select a spell gem to equip to your"):
                 return EquipSpellGemUI(audio_system=self.parent.audio_system, ocr_engine=self.ocr_engine, config=self.config)
 

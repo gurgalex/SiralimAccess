@@ -26,10 +26,10 @@ class SalvageSpellUI(SpeakAuto):
         ui_border = center_crop(gray, 21)
         bgr_cropped = bgr[ui_border.top:ui_border.bottom, ui_border.left:ui_border.right]
 
-        spell_name_roi = slice_img(bgr_cropped, x_start=0.00, x_end=0.45, y_start=0.00, y_end=1.0)
+        spell_name_roi = slice_img(bgr_cropped, x_start=0.00, x_end=0.38, y_start=0.00, y_end=1.0)
         self.spell_info_component.ocr(spell_name_roi)
 
-        spell_description_roi = slice_img(bgr_cropped, x_start=0.46, x_end=1.0, y_start=0.09, y_end=0.9)
+        spell_description_roi = slice_img(bgr_cropped, x_start=0.38, x_end=1.0, y_start=0.09, y_end=0.9)
         self.description_component.ocr(spell_description_roi)
 
         sort_text_roi = slice_img(bgr_cropped, x_start=0.75, x_end=1.0, y_start=0.0, y_end=0.09)
