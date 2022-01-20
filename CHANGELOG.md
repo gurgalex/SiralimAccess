@@ -1,6 +1,6 @@
 ## v0.15.0
 ### feat
-- add many spell gem UI screens
+- add many spell gem UI screens. All speak spell name, and class.
   - battle
     - cast
       - spell gem class and ethereal status, and description are available in the cast battle screen now
@@ -14,6 +14,7 @@
     - enchant
       - will speak number of properties and if you can't enchant anymore at the end of each enchant name on 1st UI change
     - disenchant
+      - will tell if the spell gem is already fully disenchanted.
     - upgrade
     - codex - spells
 
