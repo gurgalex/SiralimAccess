@@ -178,7 +178,7 @@ if __name__ == "__main__":
     spell_screen_ui.speak_auto()
 
     # not part of test
-    img = cv2.imread("../../../tests/ui_screens/spell-cast/nature-ethereal.png", cv2.IMREAD_UNCHANGED)
+    img = cv2.imread("../../../tests/ui_screens/battle/nature-ethereal.png", cv2.IMREAD_UNCHANGED)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     frame_info = FrameHolderTest(img, gray)
     spell_screen_ui.ocr(frame_info)

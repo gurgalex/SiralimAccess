@@ -17,7 +17,7 @@ class BattleCastUI(SpeakAuto):
         super().__init__(ocr_engine, config, audio_system)
         self.description_component = ComponentSpellDescription(self.ocr_engine)
         self.spell_info_component = ComponentSpellInfo(self.ocr_engine)
-        self.help_text = f"Press {self.program_config.read_secondary_key} for description"
+        self.help_text = f"Press {self.program_config.read_secondary_key} for spell description and properties"
 
     def ocr(self, parent: FrameInfo):
         bgr = parent.frame
@@ -26,9 +26,6 @@ class BattleCastUI(SpeakAuto):
         bgr_cropped = bgr[ui_border.top:ui_border.bottom, ui_border.left:ui_border.right]
 
         spell_name_roi = slice_img(bgr_cropped, x_start=0.00, x_end=0.39, y_start=0.1, y_end=0.66)
-        cv2.imshow("dd", bgr_cropped)
-        if cv2.waitKey(1):
-            pass
         self.spell_info_component.ocr(spell_name_roi)
 
         spell_description_roi = slice_img(bgr_cropped, x_start=0.40, x_end=1.0, y_start=0.1, y_end=0.66)
